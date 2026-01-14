@@ -211,7 +211,7 @@ class MainViewModel @Inject constructor(
     }
 
     /**
-     * 开始爬取
+     * 开始爬取（Magic.gg - 已弃用）
      */
     fun startScraping(formatFilter: String?, dateFilter: String?) {
         viewModelScope.launch {
@@ -240,6 +240,36 @@ class MainViewModel @Inject constructor(
             } catch (e: Exception) {
                 _statusMessage.value = "Scraping failed: ${e.message}"
                 _uiState.value = UiState.Error("Scraping failed")
+            }
+        }
+    }
+
+    /**
+     * 开始爬取（MTGTop8）
+     */
+    fun startMtgTop8Scraping(format: String, maxDecks: Int) {
+        viewModelScope.launch {
+            _uiState.value = UiState.Scraping
+            try {
+                val result = repository.scrapeFromMtgTop8(format, maxDecks)
+
+                result.fold(
+                    onSuccess = { count ->
+                        _statusMessage.value = "Scraped $count decklists from MTGTop8"
+                        _uiState.value = UiState.Success("MTGTop8 scraping complete")
+
+                        // 重新加载数据
+                        loadFilterOptions()
+                        loadDecklists()
+                    },
+                    onFailure = { error ->
+                        _statusMessage.value = "MTGTop8 scraping failed: ${error.message}"
+                        _uiState.value = UiState.Error("MTGTop8 scraping failed")
+                    }
+                )
+            } catch (e: Exception) {
+                _statusMessage.value = "MTGTop8 scraping failed: ${e.message}"
+                _uiState.value = UiState.Error("MTGTop8 scraping failed")
             }
         }
     }

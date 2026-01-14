@@ -5,6 +5,7 @@ import com.mtgo.decklistmanager.data.local.dao.CardInfoDao
 import com.mtgo.decklistmanager.data.local.dao.DecklistDao
 import com.mtgo.decklistmanager.data.local.database.AppDatabase
 import com.mtgo.decklistmanager.data.remote.api.MagicScraper
+import com.mtgo.decklistmanager.data.remote.api.MtgTop8Scraper
 import com.mtgo.decklistmanager.data.remote.api.ScryfallApi
 import dagger.Module
 import dagger.Provides
@@ -107,5 +108,14 @@ object AppModule {
     @Singleton
     fun provideMagicScraper(): MagicScraper {
         return MagicScraper()
+    }
+
+    /**
+     * 提供 MtgTop8Scraper
+     */
+    @Provides
+    @Singleton
+    fun provideMtgTop8Scraper(): MtgTop8Scraper {
+        return MtgTop8Scraper()
     }
 }

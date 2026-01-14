@@ -7,6 +7,7 @@ import com.mtgo.decklistmanager.data.local.entity.CardEntity
 import com.mtgo.decklistmanager.data.local.entity.CardInfoEntity
 import com.mtgo.decklistmanager.data.local.entity.DecklistEntity
 import com.mtgo.decklistmanager.data.remote.api.MagicScraper
+import com.mtgo.decklistmanager.data.remote.api.MtgTop8Scraper
 import com.mtgo.decklistmanager.data.remote.api.ScryfallApi
 import com.mtgo.decklistmanager.data.remote.api.dto.ScryfallCardDto
 import com.mtgo.decklistmanager.domain.model.*
@@ -25,6 +26,7 @@ class DecklistRepository @Inject constructor(
     private val cardDao: CardDao,
     private val cardInfoDao: CardInfoDao,
     private val magicScraper: MagicScraper,
+    private val mtgTop8Scraper: MtgTop8Scraper,
     private val scryfallApi: ScryfallApi
 ) {
 
@@ -461,4 +463,126 @@ class DecklistRepository @Inject constructor(
         imageUriLarge = imageUriLarge,
         lastUpdated = lastUpdated
     )
+
+    /**
+     * 从 MTGTop8 爬取牌组数据
+     */
+    suspend fun scrapeFromMtgTop8(format: String, maxDecks: Int): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            // 从 MTGTop8 获取牌组列表
+            val decklistLinks = mtgTop8Scraper.fetchDecklistPage(format, maxDecks)
+
+            if (decklistLinks.isEmpty()) {
+                return@withContext Result.failure(Exception("Unable to fetch decklists from MTGTop8"))
+            }
+
+            var successCount = 0
+            for (link in decklistLinks) {
+                try {
+                    // 获取牌组详情
+                    val detail = mtgTop8Scraper.fetchDecklistDetail(link.url)
+                    if (detail != null) {
+                        val decklistId = saveMtgTop8DecklistData(link, detail, format)
+
+                        // 自动从 Scryfall 获取卡牌详情
+                        fetchScryfallDetails(decklistId)
+
+                        successCount++
+                    }
+                    // 延迟避免请求过快
+                    kotlinx.coroutines.delay(1500)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            if (successCount == 0) {
+                Result.failure(Exception("Failed to scrape any decklists"))
+            } else {
+                Result.success(successCount)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 保存 MTGTop8 牌组数据
+     */
+    private suspend fun saveMtgTop8DecklistData(
+        link: com.mtgo.decklistmanager.data.remote.api.dto.MtgTop8DecklistDto,
+        detail: com.mtgo.decklistmanager.data.remote.api.dto.MtgTop8DecklistDetailDto,
+        format: String
+    ): Long {
+        // 检查是否已存在相同的牌组（根据 URL）
+        val existing = decklistDao.getDecklistByUrl(link.url)
+
+        val decklistId = if (existing != null) {
+            // 如果已存在，更新并删除旧卡牌
+            decklistDao.update(
+                DecklistEntity(
+                    id = existing.id,
+                    eventName = link.eventName,
+                    eventType = "MTGTop8",
+                    format = format,
+                    date = link.eventDate,
+                    url = link.url,
+                    playerName = link.playerName,
+                    playerId = null,
+                    record = null
+                )
+            )
+            cardDao.deleteByDecklistId(existing.id)
+            existing.id
+        } else {
+            // 新增
+            val decklist = DecklistEntity(
+                eventName = link.eventName,
+                eventType = "MTGTop8",
+                format = format,
+                date = link.eventDate,
+                url = link.url,
+                playerName = link.playerName,
+                playerId = null,
+                record = null
+            )
+            decklistDao.insert(decklist)
+        }
+
+        // 保存主牌
+        val mainDeckCards = detail.mainDeck.mapIndexed { index, card ->
+            CardEntity(
+                decklistId = decklistId,
+                cardName = card.name,
+                quantity = card.quantity,
+                location = "main",
+                cardOrder = index,
+                manaCost = null,
+                rarity = null,
+                color = null,
+                cardType = null,
+                cardSet = null
+            )
+        }
+        cardDao.insertAll(mainDeckCards)
+
+        // 保存备牌
+        val sideboardCards = detail.sideboardDeck.mapIndexed { index, card ->
+            CardEntity(
+                decklistId = decklistId,
+                cardName = card.name,
+                quantity = card.quantity,
+                location = "sideboard",
+                cardOrder = index,
+                manaCost = null,
+                rarity = null,
+                color = null,
+                cardType = null,
+                cardSet = null
+            )
+        }
+        cardDao.insertAll(sideboardCards)
+
+        return decklistId
+    }
 }
