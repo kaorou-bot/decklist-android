@@ -247,11 +247,11 @@ class MainViewModel @Inject constructor(
     /**
      * 开始爬取（MTGTop8）
      */
-    fun startMtgTop8Scraping(format: String, maxDecks: Int) {
+    fun startMtgTop8Scraping(format: String, date: String?, maxDecks: Int) {
         viewModelScope.launch {
             _uiState.value = UiState.Scraping
             try {
-                val result = repository.scrapeFromMtgTop8(format, maxDecks)
+                val result = repository.scrapeFromMtgTop8(format, date, maxDecks)
 
                 result.fold(
                     onSuccess = { count ->

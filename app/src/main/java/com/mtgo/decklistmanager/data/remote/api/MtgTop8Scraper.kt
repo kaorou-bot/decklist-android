@@ -42,18 +42,28 @@ class MtgTop8Scraper {
      * 获取指定格式的牌组列表
      *
      * @param format 格式代码 (ST, MO, LE, etc.)
+     * @param date 可选日期筛选 (YYYY-MM-DD)，null 表示所有日期
      * @param maxEvents 最大抓取比赛数量
      * @return 牌组链接列表
      */
     suspend fun fetchDecklistPage(
         format: String = FORMAT_MODERN,
+        date: String? = null,
         maxEvents: Int = 10
     ): List<MtgTop8DecklistDto> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Fetching format page: $format")
+            Log.d(TAG, "Fetching format page: $format, date: $date")
+
+            // 构建URL
+            val url = if (date != null) {
+                // MTGTop8 日期筛选URL格式
+                "$BASE_URL/format?f=$format&date=$date"
+            } else {
+                "$BASE_URL/format?f=$format"
+            }
 
             // MTGTop8 需要特殊的 User-Agent
-            val doc = Jsoup.connect("$BASE_URL/format?f=$format")
+            val doc = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 .timeout(30000)
                 .get()
@@ -69,6 +79,11 @@ class MtgTop8Scraper {
                     // 提取比赛信息
                     val eventName = event.select("td:nth-child(2)").text()
                     val eventDate = event.select("td:nth-child(3)").text()
+
+                    // 如果指定了日期，只爬取匹配的牌组
+                    if (date != null && !eventDate.contains(date)) {
+                        continue
+                    }
 
                     // 提取牌组链接
                     val deckLinks = event.select("td:nth-child(2) a")

@@ -467,10 +467,10 @@ class DecklistRepository @Inject constructor(
     /**
      * 从 MTGTop8 爬取牌组数据
      */
-    suspend fun scrapeFromMtgTop8(format: String, maxDecks: Int): Result<Int> = withContext(Dispatchers.IO) {
+    suspend fun scrapeFromMtgTop8(format: String, date: String?, maxDecks: Int): Result<Int> = withContext(Dispatchers.IO) {
         try {
             // 从 MTGTop8 获取牌组列表
-            val decklistLinks = mtgTop8Scraper.fetchDecklistPage(format, maxDecks)
+            val decklistLinks = mtgTop8Scraper.fetchDecklistPage(format, date, maxDecks)
 
             if (decklistLinks.isEmpty()) {
                 return@withContext Result.failure(Exception("Unable to fetch decklists from MTGTop8"))

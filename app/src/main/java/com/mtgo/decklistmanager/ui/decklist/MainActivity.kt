@@ -229,13 +229,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showScrapingOptionsDialog() {
-        // 数据源选项
-        val dataSourceOptions = arrayOf("MTGTop8 (Recommended)", "Magic.gg (Legacy)")
-        val formatOptions = arrayOf("Modern", "Standard", "Pioneer", "Legacy", "Pauper", "Vintage", "Limited")
+        // MTGTop8 格式选项
+        val formatOptions = arrayOf("Modern", "Standard", "Pioneer", "Legacy", "Pauper", "Vintage")
 
         val builder = android.app.AlertDialog.Builder(this)
-            .setTitle("Scrape MTG Decklists")
-            .setMessage("Select data source and format to scrape decklists.\n\n• MTGTop8: Large database with tournament results\n• Magic.gg: Official MTGO data (limited)")
+            .setTitle("Scrape from MTGTop8")
+            .setMessage("Select format, date range, and number of decklists to scrape.\n\n• MTGTop8: Large tournament database\n• Multiple formats supported")
 
         // 创建自定义视图
         val container = android.widget.LinearLayout(this).apply {
@@ -243,24 +242,10 @@ class MainActivity : AppCompatActivity() {
             setPadding(50, 20, 50, 20)
         }
 
-        // 数据源选择
-        val dataSourceLabel = android.widget.TextView(this).apply {
-            text = "Data Source:"
-            textSize = 16f
-        }
-        val dataSourceSpinner = android.widget.Spinner(this).apply {
-            adapter = android.widget.ArrayAdapter(
-                this@MainActivity,
-                android.R.layout.simple_spinner_item,
-                dataSourceOptions
-            )
-        }
-
         // 格式选择
         val formatLabel = android.widget.TextView(this).apply {
             text = "Format:"
             textSize = 16f
-            setPadding(0, 20, 0, 0)
         }
         val formatSpinner = android.widget.Spinner(this).apply {
             adapter = android.widget.ArrayAdapter(
@@ -270,9 +255,52 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
+        // 日期选择按钮
+        val dateLabel = android.widget.TextView(this).apply {
+            text = "Date (Optional):"
+            textSize = 16f
+            setPadding(0, 20, 0, 0)
+        }
+        val dateButton = android.widget.Button(this).apply {
+            text = "All Dates"
+            setPadding(0, 10, 0, 0)
+            setBackgroundColor(getColor(android.R.color.holo_blue_light))
+            setTextColor(getColor(android.R.color.white))
+        }
+
+        var selectedDate: String? = null
+
+        dateButton.setOnClickListener {
+            val datePickerDialog = android.app.DatePickerDialog(
+                this@MainActivity,
+                { _, year, month, dayOfMonth ->
+                    selectedDate = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                    dateButton.text = "Selected: $selectedDate"
+                    dateButton.setBackgroundColor(getColor(android.R.color.holo_green_light))
+                },
+                2025,  // Default year
+                0,      // Default month (January)
+                15      // Default day
+            )
+            datePickerDialog.show()
+        }
+
+        // 清除日期按钮
+        val clearDateButton = android.widget.Button(this).apply {
+            text = "Clear Date"
+            setPadding(0, 10, 0, 0)
+            setBackgroundColor(getColor(android.R.color.darker_gray))
+            setTextColor(getColor(android.R.color.white))
+        }
+        clearDateButton.setOnClickListener {
+            selectedDate = null
+            dateButton.text = "All Dates"
+            dateButton.setBackgroundColor(getColor(android.R.color.holo_blue_light))
+        }
+
         // 最大牌组数
         val maxDecksLabel = android.widget.TextView(this).apply {
-            text = "Max Decks (1-20):"
+            text = "Max Decks (1-50):"
             textSize = 16f
             setPadding(0, 20, 0, 0)
         }
@@ -282,17 +310,17 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, 10, 0, 0)
         }
 
-        container.addView(dataSourceLabel)
-        container.addView(dataSourceSpinner)
         container.addView(formatLabel)
         container.addView(formatSpinner)
+        container.addView(dateLabel)
+        container.addView(dateButton)
+        container.addView(clearDateButton)
         container.addView(maxDecksLabel)
         container.addView(maxDecksInput)
 
         builder.setView(container)
 
         builder.setPositiveButton("Start Scraping") { dialog, _ ->
-            val dataSourceIndex = dataSourceSpinner.selectedItemPosition
             val format = when (formatSpinner.selectedItemPosition) {
                 0 -> "MO"  // Modern
                 1 -> "ST"  // Standard
@@ -302,16 +330,10 @@ class MainActivity : AppCompatActivity() {
                 5 -> "VI"  // Vintage
                 else -> "MO"
             }
-            val maxDecks = maxDecksInput.text.toString().toIntOrNull()?.coerceIn(1, 20) ?: 10
+            val maxDecks = maxDecksInput.text.toString().toIntOrNull()?.coerceIn(1, 50) ?: 10
 
-            // 根据数据源选择不同的爬取方式
-            if (dataSourceIndex == 0) {
-                // MTGTop8
-                startMtgTop8Scraping(format, maxDecks)
-            } else {
-                // Magic.gg (需要日期)
-                showMagicGGDialog(format)
-            }
+            // 使用 MTGTop8 爬取
+            startMtgTop8Scraping(format, selectedDate, maxDecks)
             dialog.dismiss()
         }
         .setNegativeButton("Cancel", null)
@@ -319,73 +341,18 @@ class MainActivity : AppCompatActivity() {
         builder.show()
     }
 
-    private fun startMtgTop8Scraping(format: String, maxDecks: Int) {
+    private fun startMtgTop8Scraping(format: String, date: String?, maxDecks: Int) {
         // 显示进度对话框
         val progressDialog = android.app.AlertDialog.Builder(this)
             .setTitle("Scraping from MTGTop8")
-            .setMessage("Fetching decklists...\n\nFormat: ${format}\nMax decks: $maxDecks\n\nPlease wait.\n\nThis may take a few minutes.")
+            .setMessage("Fetching decklists...\n\nFormat: ${format}\n${if (date != null) "Date: $date\n" else ""}Max decks: $maxDecks\n\nPlease wait.\n\nThis may take a few minutes.")
             .setCancelable(false)
             .create()
 
         progressDialog.show()
 
         lifecycleScope.launch {
-            viewModel.startMtgTop8Scraping(format, maxDecks)
-
-            // 观察UI状态变化
-            viewModel.uiState.collect { state ->
-                when (state) {
-                    is MainViewModel.UiState.Loading,
-                    is MainViewModel.UiState.Scraping -> {
-                        // 继续显示进度
-                    }
-                    is MainViewModel.UiState.Success -> {
-                        progressDialog.dismiss()
-                        android.widget.Toast.makeText(
-                            this@MainActivity,
-                            state.message,
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
-                    }
-                    is MainViewModel.UiState.Error -> {
-                        progressDialog.dismiss()
-                        android.widget.Toast.makeText(
-                            this@MainActivity,
-                            "Error: ${state.message}",
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
-                    }
-                    else -> {
-                        progressDialog.dismiss()
-                    }
-                }
-            }
-        }
-    }
-
-    private fun showMagicGGDialog(format: String) {
-        // Magic.gg 的旧对话框（保持向后兼容）
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Magic.gg requires date selection")
-            .setMessage("Magic.gg data source requires a specific date. Please use MTGTop8 for better results.")
-            .setPositiveButton("OK") { _, _ ->
-                // 可以在这里添加日期选择对话框
-            }
-            .show()
-    }
-
-    private fun startScraping(format: String?, date: String?) {
-        // 显示进度对话框
-        val progressDialog = android.app.AlertDialog.Builder(this)
-            .setTitle("Scraping from Magic.gg")
-            .setMessage("Fetching decklists...\n\nPlease wait.\n\nThis may take a few minutes.")
-            .setCancelable(false)
-            .create()
-
-        progressDialog.show()
-
-        lifecycleScope.launch {
-            viewModel.startScraping(format, date)
+            viewModel.startMtgTop8Scraping(format, date, maxDecks)
 
             // 观察UI状态变化
             viewModel.uiState.collect { state ->
