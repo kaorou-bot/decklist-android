@@ -1,8 +1,8 @@
 # MTGO Decklist Manager - 开发者文档
 
-> **文档版本**: v2.3.0 (Kotlin/Android - Search & Feedback Improvements)
+> **文档版本**: v2.4.0 (Kotlin/Android - MTGTop8 Integration)
 > **最后更新**: 2026-01-14
-> **项目状态**: ✅ 已添加搜索功能和改进用户反馈
+> **项目状态**: ✅ 已集成 MTGTop8 数据源
 
 ## 📍 快速导航
 
@@ -4079,6 +4079,121 @@ for (link in filteredLinks) {
 - [ ] 实现增量更新（只下载新牌组）
 - [ ] 添加爬取进度显示
 - [ ] 支持后台爬取
+
+---
+
+### v2.4.0 (2026-01-14) - ✨ MTGTop8 数据源集成
+
+#### 新功能
+
+**1. MTGTop8 数据源集成** ✨
+- **功能**: 集成 MTGTop8.com 作为新的牌组数据源
+- **实现**:
+  - 创建 MtgTop8Scraper.kt 爬虫
+  - 支持 Modern、Standard、Pioneer、Legacy、Pauper、Vintage
+  - 可自定义抓取牌组数量（1-20）
+  - 自动集成 Scryfall API 获取卡牌详情
+- **用户体验**:
+  - 更大的牌组数据库
+  - 无需选择日期
+  - 更快的爬取速度
+  - 推荐作为主要数据源
+
+**2. 卡牌显示修复 v2.3.2** 🐛
+- **问题**: 卡牌仍然堆叠显示
+- **解决方案**: 完全移除 RecyclerView，使用 LinearLayout
+- **修改**:
+  - `activity_deck_detail.xml` - RecyclerView → LinearLayout
+  - `DeckDetailActivity.kt` - 重写卡牌列表逻辑
+  - 动态创建卡牌视图，100% 可靠
+
+**3. 数据源选择对话框** 🎨
+- **功能**: 爬取时支持选择数据源
+- **选项**:
+  - MTGTop8 (Recommended) - 推荐使用
+  - Magic.gg (Legacy) - 保留兼容
+- **UI 改进**:
+  - 添加数据源下拉菜单
+  - 添加最大牌组数输入
+  - 优化对话框布局
+
+#### 技术实现细节
+
+**MTGTop8 爬虫**:
+```kotlin
+class MtgTop8Scraper {
+    suspend fun fetchDecklistPage(format: String, maxEvents: Int): List<MtgTop8DecklistDto>
+    suspend fun fetchDecklistDetail(url: String): MtgTop8DecklistDetailDto?
+}
+```
+
+**数据流程**:
+1. 用户选择格式和最大牌组数
+2. 调用 `MtgTop8Scraper.fetchDecklistPage()` 获取牌组列表
+3. 对每个牌组调用 `fetchDecklistDetail()` 获取详情
+4. 保存到数据库
+5. 自动调用 `ScryfallApi` 获取卡牌详情
+
+**格式代码映射**:
+- Modern → MO
+- Standard → ST
+- Pioneer → PI
+- Legacy → LE
+- Pauper → PA
+- Vintage → VI
+
+#### 文件修改清单
+
+```
+✅ 新增: MtgTop8Scraper.kt
+   └── MTGTop8 爬虫实现（206 行）
+
+✅ 新增: MtgTop8DecklistDto.kt
+   └── MTGTop8 数据传输对象
+
+✅ 修改: DecklistRepository.kt
+   ├── 新增 scrapeFromMtgTop8() 方法
+   ├── 新增 saveMtgTop8DecklistData() 方法
+   └── 注入 MtgTop8Scraper
+
+✅ 修改: MainActivity.kt
+   ├── 更新 showScrapingOptionsDialog()
+   ├── 添加 startMtgTop8Scraping()
+   └── 添加 showMagicGGDialog()
+
+✅ 修改: MainViewModel.kt
+   ├── 新增 startMtgTop8Scraping() 方法
+   └── 标记 startScraping() 为已弃用
+
+✅ 修改: AppModule.kt
+   └── 添加 MtgTop8Scraper 依赖注入
+
+✅ 修改: activity_deck_detail.xml
+   └── RecyclerView → LinearLayout
+
+✅ 修改: DeckDetailActivity.kt
+   ├── 移除 RecyclerView 相关代码
+   ├── 新增 createCardView() 方法
+   └── 新增 populateCardList() 方法
+```
+
+#### 版本信息
+- 📦 版本号: v2.4.0 (versionCode: 14)
+- 📦 APK: `decklist-manager-v2.4.0-debug.apk`
+- 📦 大小: 8.0 MB
+- 📦 构建时间: 2026-01-14
+
+#### 参考资源
+- [MTGTop8 官网](https://mtgtop8.com/)
+- [MtgTop8Scraper](https://github.com/creepymooy1/MtgTop8Scraper) - Python 参考实现
+- [Jsoup 文档](https://jsoup.org/) - HTML 解析库
+
+#### 下一步计划
+- [ ] 添加深色模式支持
+- [ ] 实现牌组收藏功能
+- [ ] 添加单元测试
+- [ ] 支持更多数据源
+- [ ] 性能优化
 
 ---
 
