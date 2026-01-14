@@ -87,14 +87,19 @@ class DeckDetailActivity : AppCompatActivity() {
             showCardInfo(cardName)
         }
 
+        // Use WrappedLinearLayoutManager for correct measurement in NestedScrollView
         binding.rvMainDeck.apply {
-            layoutManager = LinearLayoutManager(this@DeckDetailActivity)
+            layoutManager = WrappedLinearLayoutManager(this@DeckDetailActivity)
             adapter = mainDeckAdapter
+            // Important: Set to false when in NestedScrollView
+            isNestedScrollingEnabled = false
         }
 
         binding.rvSideboard.apply {
-            layoutManager = LinearLayoutManager(this@DeckDetailActivity)
+            layoutManager = WrappedLinearLayoutManager(this@DeckDetailActivity)
             adapter = sideboardAdapter
+            // Important: Set to false when in NestedScrollView
+            isNestedScrollingEnabled = false
         }
     }
 
