@@ -37,6 +37,18 @@
             android:screenOrientation="portrait"
             android:parentActivityName=".ui.decklist.DeckDetailActivity" />
 
+        <activity
+            android:name=".ui.decklist.EventListActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".ui.decklist.MainActivity" />
+
+        <activity
+            android:name=".ui.decklist.EventDetailActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".ui.decklist.EventListActivity" />
+
     </application>
 
 </manifest>

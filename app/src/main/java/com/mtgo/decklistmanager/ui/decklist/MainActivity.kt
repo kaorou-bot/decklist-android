@@ -3,6 +3,7 @@ package com.mtgo.decklistmanager.ui.decklist
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -340,6 +341,11 @@ class MainActivity : AppCompatActivity() {
             // 使用 MTGTop8 爬取
             startMtgTop8Scraping(format, selectedDate, maxDecks)
             dialog.dismiss()
+        }
+        .setNeutralButton("Events View") { _, _ ->
+            // Navigate to EventListActivity (three-level structure)
+            val intent = Intent(this, EventListActivity::class.java)
+            startActivity(intent)
         }
         .setNegativeButton("Cancel", null)
 

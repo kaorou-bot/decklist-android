@@ -3,6 +3,7 @@ package com.mtgo.decklistmanager.di
 import com.mtgo.decklistmanager.data.local.dao.CardDao
 import com.mtgo.decklistmanager.data.local.dao.CardInfoDao
 import com.mtgo.decklistmanager.data.local.dao.DecklistDao
+import com.mtgo.decklistmanager.data.local.dao.EventDao
 import com.mtgo.decklistmanager.data.local.database.AppDatabase
 import com.mtgo.decklistmanager.data.remote.api.MagicScraper
 import com.mtgo.decklistmanager.data.remote.api.MtgTop8Scraper
@@ -59,6 +60,15 @@ object AppModule {
     @Singleton
     fun provideCardInfoDao(database: AppDatabase): CardInfoDao {
         return database.cardInfoDao()
+    }
+
+    /**
+     * 提供 EventDao
+     */
+    @Provides
+    @Singleton
+    fun provideEventDao(database: AppDatabase): EventDao {
+        return database.eventDao()
     }
 
     /**

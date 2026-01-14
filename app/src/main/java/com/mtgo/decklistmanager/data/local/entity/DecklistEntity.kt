@@ -45,6 +45,9 @@ data class DecklistEntity(
 
     val record: String?,
 
+    @ColumnInfo(name = "event_id")
+    val eventId: Long?,  // 外键，关联到 EventEntity.id
+
     @ColumnInfo(name = "created_at")
     @SerializedName("created_at")
     val createdAt: Long = System.currentTimeMillis()

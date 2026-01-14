@@ -117,4 +117,50 @@ interface DecklistDao {
      */
     @Query("SELECT * FROM decklists WHERE url = :url LIMIT 1")
     suspend fun getDecklistByUrl(url: String): DecklistEntity?
+
+    /**
+     * 根据赛事ID获取该赛事的所有牌组
+     */
+    @Query("SELECT * FROM decklists WHERE event_id = :eventId ORDER BY id")
+    suspend fun getDecklistsByEventId(eventId: Long): List<DecklistEntity>
+
+    /**
+     * 根据赛事ID获取该赛事的所有牌组ID
+     */
+    @Query("SELECT id FROM decklists WHERE event_id = :eventId ORDER BY id")
+    suspend fun getDecklistIdsByEventId(eventId: Long): List<Long>
+
+    /**
+     * 获取有事件关联的牌组（新数据）
+     */
+    @Query("""
+        SELECT * FROM decklists
+        WHERE event_id IS NOT NULL
+        AND (:format IS NULL OR format = :format)
+        AND (:date IS NULL OR date = :date)
+        ORDER BY date DESC, id DESC
+        LIMIT :limit
+    """)
+    suspend fun getDecklistsWithEvent(
+        format: String? = null,
+        date: String? = null,
+        limit: Int = 100
+    ): List<DecklistEntity>
+
+    /**
+     * 获取没有事件关联的牌组（旧数据）
+     */
+    @Query("""
+        SELECT * FROM decklists
+        WHERE event_id IS NULL
+        AND (:format IS NULL OR format = :format)
+        AND (:date IS NULL OR date = :date)
+        ORDER BY date DESC, id DESC
+        LIMIT :limit
+    """)
+    suspend fun getDecklistsWithoutEvent(
+        format: String? = null,
+        date: String? = null,
+        limit: Int = 100
+    ): List<DecklistEntity>
 }
