@@ -4,12 +4,14 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.LinearLayout
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
 import com.mtgo.decklistmanager.R
 import com.mtgo.decklistmanager.databinding.ActivityDeckDetailBinding
@@ -30,8 +32,8 @@ class DeckDetailActivity : AppCompatActivity() {
     private lateinit var binding: ActivityDeckDetailBinding
     private lateinit var exporter: DecklistExporter
 
-    private lateinit var mainDeckAdapter: CardAdapter
-    private lateinit var sideboardAdapter: CardAdapter
+    private lateinit var llMainDeck: LinearLayout
+    private lateinit var llSideboard: LinearLayout
 
     private var currentDecklist: Decklist? = null
     private var allCards: List<Card> = emptyList()
@@ -44,7 +46,7 @@ class DeckDetailActivity : AppCompatActivity() {
         exporter = DecklistExporter(this)
 
         setupToolbar()
-        setupRecyclerViews()
+        setupCardLists()
         setupObservers()
         loadData()
     }
@@ -78,28 +80,41 @@ class DeckDetailActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupRecyclerViews() {
-        mainDeckAdapter = CardAdapter { cardName ->
-            showCardInfo(cardName)
-        }
+    private fun setupCardLists() {
+        llMainDeck = binding.llMainDeck
+        llSideboard = binding.llSideboard
+    }
 
-        sideboardAdapter = CardAdapter { cardName ->
-            showCardInfo(cardName)
-        }
+    /**
+     * 创建卡牌视图
+     */
+    private fun createCardView(card: Card): View {
+        // 创建卡牌项布局
+        val cardView = layoutInflater.inflate(R.layout.item_card, llMainDeck, false)
 
-        // Use WrappedLinearLayoutManager for correct measurement in NestedScrollView
-        binding.rvMainDeck.apply {
-            layoutManager = WrappedLinearLayoutManager(this@DeckDetailActivity)
-            adapter = mainDeckAdapter
-            // Important: Set to false when in NestedScrollView
-            isNestedScrollingEnabled = false
+        // 设置卡牌数据
+        cardView.findViewById<MaterialTextView>(R.id.tvQuantity).text = card.quantity.toString()
+        val btnCardName = cardView.findViewById<MaterialButton>(R.id.btnCardName)
+        btnCardName.text = card.cardName
+        btnCardName.setOnClickListener {
+            showCardInfo(card.cardName)
         }
+        cardView.findViewById<MaterialTextView>(R.id.tvManaCost).text = card.manaCost ?: ""
 
-        binding.rvSideboard.apply {
-            layoutManager = WrappedLinearLayoutManager(this@DeckDetailActivity)
-            adapter = sideboardAdapter
-            // Important: Set to false when in NestedScrollView
-            isNestedScrollingEnabled = false
+        return cardView
+    }
+
+    /**
+     * 填充卡牌列表
+     */
+    private fun populateCardList(linearLayout: LinearLayout, cards: List<Card>) {
+        // 清空现有视图
+        linearLayout.removeAllViews()
+
+        // 添加卡牌视图
+        cards.forEach { card ->
+            val cardView = createCardView(card)
+            linearLayout.addView(cardView)
         }
     }
 
@@ -114,12 +129,12 @@ class DeckDetailActivity : AppCompatActivity() {
 
         // Observe main deck
         viewModel.mainDeck.observe(this) { cards ->
-            mainDeckAdapter.submitList(cards)
+            populateCardList(llMainDeck, cards)
         }
 
         // Observe sideboard
         viewModel.sideboard.observe(this) { cards ->
-            sideboardAdapter.submitList(cards)
+            populateCardList(llSideboard, cards)
         }
 
         // Observe loading state
@@ -194,9 +209,7 @@ class DeckDetailActivity : AppCompatActivity() {
         }
 
         // Collect all cards
-        val mainCards = viewModel.mainDeck.value ?: emptyList()
-        val sideCards = viewModel.sideboard.value ?: emptyList()
-        allCards = mainCards + sideCards
+        allCards = (viewModel.mainDeck.value ?: emptyList()) + (viewModel.sideboard.value ?: emptyList())
 
         val formatName = if (format == "text") "Text" else "JSON"
 
