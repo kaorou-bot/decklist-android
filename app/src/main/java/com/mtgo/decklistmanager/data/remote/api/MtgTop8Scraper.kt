@@ -54,45 +54,48 @@ class MtgTop8Scraper {
         try {
             Log.d(TAG, "Fetching format page: $format, date: $date")
 
-            // 构建URL
-            val url = if (date != null) {
-                // MTGTop8 日期筛选URL格式
-                "$BASE_URL/format?f=$format&date=$date"
-            } else {
-                "$BASE_URL/format?f=$format"
-            }
+            // 构建URL - MTGTop8 的格式页面
+            val url = StringBuilder("$BASE_URL/format?f=$format").apply {
+                // MTGTop8 不直接支持日期参数，我们获取所有数据然后在内存中过滤
+            }.toString()
+
+            Log.d(TAG, "Fetching URL: $url")
 
             // MTGTop8 需要特殊的 User-Agent
             val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                 .timeout(30000)
                 .get()
 
             val decklistLinks = mutableListOf<MtgTop8DecklistDto>()
 
-            // 解析牌组列表
-            // MTGTop8 的结构：每个牌组都在 .hover_tr 元素中
+            // MTGTop8 的结构：每个牌组都在 tr 元素中，class可能是 "hover_tr" 或其他
+            // 尝试多种选择器
             val eventElements = doc.select("tr.hover_tr")
+            Log.d(TAG, "Found ${eventElements.size} event elements")
 
-            for (event in eventElements.take(maxEvents)) {
+            for (event in eventElements) {
                 try {
-                    // 提取比赛信息
-                    val eventName = event.select("td:nth-child(2)").text()
-                    val eventDate = event.select("td:nth-child(3)").text()
+                    // 提取比赛信息 - MTGTop8 的结构
+                    val cells = event.select("td")
+                    if (cells.size < 3) continue
+
+                    val eventName = cells[1].text().trim()
+                    val eventDate = cells[2].text().trim()
 
                     // 如果指定了日期，只爬取匹配的牌组
                     if (date != null && !eventDate.contains(date)) {
                         continue
                     }
 
-                    // 提取牌组链接
-                    val deckLinks = event.select("td:nth-child(2) a")
+                    // 提取牌组链接 - 在第二列中寻找所有链接
+                    val deckLinks = cells[1].select("a")
                     for (deckLink in deckLinks) {
                         val deckUrl = deckLink.attr("href")
-                        if (deckUrl.contains("deck?id=")) {
+                        if (deckUrl.contains("deck?id=") || deckUrl.contains("deck?e=")) {
                             val deckId = extractDeckId(deckUrl)
-                            val deckName = deckLink.text()
-                            val playerName = event.select("td:nth-child(2) a").first()?.text() ?: ""
+                            val deckName = deckLink.text().trim()
+                            val playerName = eventName // MTGTop8 可能不单独显示玩家名
 
                             decklistLinks.add(
                                 MtgTop8DecklistDto(
@@ -102,7 +105,7 @@ class MtgTop8Scraper {
                                     eventName = eventName,
                                     eventDate = eventDate,
                                     format = format,
-                                    url = "$BASE_URL/$deckUrl"
+                                    url = if (deckUrl.startsWith("http")) deckUrl else "$BASE_URL/$deckUrl"
                                 )
                             )
                         }
@@ -117,6 +120,7 @@ class MtgTop8Scraper {
 
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching format page: ${e.message}", e)
+            Log.e(TAG, "Stack trace:", e)
             emptyList()
         }
     }

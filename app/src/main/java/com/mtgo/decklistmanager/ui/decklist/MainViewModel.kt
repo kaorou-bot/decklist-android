@@ -85,12 +85,12 @@ class MainViewModel @Inject constructor(
                 _decklists.postValue(items)
                 _uiState.value = UiState.Success("Loaded ${items.size} decklists")
 
-                // 如果没有数据，提示用户
+                // 如果没有结果，提示用户
                 if (items.isEmpty()) {
-                    _statusMessage.value = "No decklists found. Try scraping or adding test data."
+                    _statusMessage.value = "No decklists found. Try scraping from MTGTop8."
                 }
             } catch (e: Exception) {
-                _uiState.value = UiState.Error("Failed to load: ${e.message}")
+                _uiState.value = UiState.Error("Error loading decklists: ${e.message}")
                 _statusMessage.value = "Error: ${e.message}"
             }
         }

@@ -271,16 +271,21 @@ class MainActivity : AppCompatActivity() {
         var selectedDate: String? = null
 
         dateButton.setOnClickListener {
+            val calendar = java.util.Calendar.getInstance()
+            val year = calendar.get(java.util.Calendar.YEAR)
+            val month = calendar.get(java.util.Calendar.MONTH)
+            val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+
             val datePickerDialog = android.app.DatePickerDialog(
                 this@MainActivity,
-                { _, year, month, dayOfMonth ->
-                    selectedDate = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                { _, selectedYear, selectedMonth, dayOfMonth ->
+                    selectedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, dayOfMonth)
                     dateButton.text = "Selected: $selectedDate"
                     dateButton.setBackgroundColor(getColor(android.R.color.holo_green_light))
                 },
-                2025,  // Default year
-                0,      // Default month (January)
-                15      // Default day
+                year,   // Current year
+                month,  // Current month
+                day     // Current day
             )
             datePickerDialog.show()
         }
