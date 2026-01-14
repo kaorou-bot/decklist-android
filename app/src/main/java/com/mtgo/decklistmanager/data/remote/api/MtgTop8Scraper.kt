@@ -52,75 +52,128 @@ class MtgTop8Scraper {
         maxEvents: Int = 10
     ): List<MtgTop8DecklistDto> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Fetching format page: $format, date: $date")
+            Log.d(TAG, "========== MTGTop8 Scraping Started ==========")
+            Log.d(TAG, "Format: $format")
+            Log.d(TAG, "Date filter: $date")
+            Log.d(TAG, "Max events: $maxEvents")
 
             // 构建URL - MTGTop8 的格式页面
-            val url = StringBuilder("$BASE_URL/format?f=$format").apply {
-                // MTGTop8 不直接支持日期参数，我们获取所有数据然后在内存中过滤
-            }.toString()
-
+            val url = "$BASE_URL/format?f=$format"
             Log.d(TAG, "Fetching URL: $url")
 
-            // MTGTop8 需要特殊的 User-Agent
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .timeout(30000)
-                .get()
+            // MTGTop8 需要特殊的 User-Agent 和 Referer
+            val doc = try {
+                Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .referrer("https://www.google.com")
+                    .timeout(30000)
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+                    .header("Accept-Language", "en-US,en;q=0.9")
+                    .get()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to fetch URL: ${e.message}", e)
+                return@withContext emptyList()
+            }
+
+            Log.d(TAG, "Page fetched successfully, title: ${doc.title()}")
+            Log.d(TAG, "Page HTML length: ${doc.html().length}")
 
             val decklistLinks = mutableListOf<MtgTop8DecklistDto>()
 
-            // MTGTop8 的结构：每个牌组都在 tr 元素中，class可能是 "hover_tr" 或其他
-            // 尝试多种选择器
-            val eventElements = doc.select("tr.hover_tr")
-            Log.d(TAG, "Found ${eventElements.size} event elements")
+            // 尝试多种选择器来找到牌组列表
+            val possibleSelectors = listOf(
+                "tr.hover_tr",
+                "tr[style*=\"hover\"]",
+                "table.Stable tr",
+                "tr:has(td)",
+                "tr"
+            )
 
-            for (event in eventElements) {
-                try {
-                    // 提取比赛信息 - MTGTop8 的结构
-                    val cells = event.select("td")
-                    if (cells.size < 3) continue
+            var foundRows = false
+            for (selector in possibleSelectors) {
+                val rows = doc.select(selector)
+                Log.d(TAG, "Selector '$selector' found ${rows.size} rows")
 
-                    val eventName = cells[1].text().trim()
-                    val eventDate = cells[2].text().trim()
+                if (rows.isNotEmpty()) {
+                    foundRows = true
+                    var processedCount = 0
 
-                    // 如果指定了日期，只爬取匹配的牌组
-                    if (date != null && !eventDate.contains(date)) {
-                        continue
-                    }
+                    for (event in rows) {
+                        if (processedCount >= maxEvents) break
 
-                    // 提取牌组链接 - 在第二列中寻找所有链接
-                    val deckLinks = cells[1].select("a")
-                    for (deckLink in deckLinks) {
-                        val deckUrl = deckLink.attr("href")
-                        if (deckUrl.contains("deck?id=") || deckUrl.contains("deck?e=")) {
-                            val deckId = extractDeckId(deckUrl)
-                            val deckName = deckLink.text().trim()
-                            val playerName = eventName // MTGTop8 可能不单独显示玩家名
+                        try {
+                            val cells = event.select("td")
+                            if (cells.size < 3) {
+                                Log.v(TAG, "Skipping row with only ${cells.size} cells")
+                                continue
+                            }
 
-                            decklistLinks.add(
-                                MtgTop8DecklistDto(
-                                    deckId = deckId,
-                                    deckName = deckName,
-                                    playerName = playerName,
-                                    eventName = eventName,
-                                    eventDate = eventDate,
-                                    format = format,
-                                    url = if (deckUrl.startsWith("http")) deckUrl else "$BASE_URL/$deckUrl"
-                                )
-                            )
+                            // 提取信息
+                            val col0 = cells[0].text().trim()
+                            val col1 = cells[1].text().trim()
+                            val col2 = if (cells.size > 2) cells[2].text().trim() else ""
+
+                            Log.v(TAG, "Row data: [$col0] [$col1] [$col2]")
+
+                            // 查找牌组链接
+                            val links = cells[1].select("a")
+                            for (link in links) {
+                                val href = link.attr("href")
+                                val linkText = link.text().trim()
+
+                                if (href.isNotEmpty() && (href.contains("deck") || href.contains("event"))) {
+                                    Log.d(TAG, "Found link: $linkText -> $href")
+
+                                    val fullUrl = if (href.startsWith("http")) {
+                                        href
+                                    } else if (href.startsWith("/")) {
+                                        "$BASE_URL$href"
+                                    } else {
+                                        "$BASE_URL/$href"
+                                    }
+
+                                    decklistLinks.add(
+                                        MtgTop8DecklistDto(
+                                            deckId = extractDeckId(fullUrl),
+                                            deckName = linkText,
+                                            playerName = col1,
+                                            eventName = col1,
+                                            eventDate = col2,
+                                            format = format,
+                                            url = fullUrl
+                                        )
+                                    )
+                                    processedCount++
+                                }
+                            }
+
+                            if (decklistLinks.size >= maxEvents) break
+
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error parsing row: ${e.message}")
                         }
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error parsing event: ${e.message}", e)
+
+                    if (decklistLinks.isNotEmpty()) {
+                        Log.d(TAG, "Successfully parsed ${decklistLinks.size} decklists")
+                        break
+                    }
                 }
             }
 
-            Log.d(TAG, "Found ${decklistLinks.size} decklists")
+            if (!foundRows) {
+                Log.w(TAG, "No table rows found with any selector!")
+            }
+
+            Log.d(TAG, "========== MTGTop8 Scraping Completed ==========")
+            Log.d(TAG, "Total decklists found: ${decklistLinks.size}")
             decklistLinks
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error fetching format page: ${e.message}", e)
-            Log.e(TAG, "Stack trace:", e)
+            Log.e(TAG, "========== MTGTop8 Scraping Failed ==========")
+            Log.e(TAG, "Error: ${e.message}")
+            Log.e(TAG, "Error type: ${e.javaClass.simpleName}")
+            e.printStackTrace()
             emptyList()
         }
     }
