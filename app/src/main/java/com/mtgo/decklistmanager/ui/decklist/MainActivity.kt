@@ -2,12 +2,9 @@ package com.mtgo.decklistmanager.ui.decklist
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,6 +13,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
 import com.mtgo.decklistmanager.R
 import com.mtgo.decklistmanager.domain.model.Decklist
+import com.mtgo.decklistmanager.ui.base.BaseActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -23,14 +21,13 @@ import kotlinx.coroutines.launch
  * Main Activity - 主界面
  */
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity() {
+class MainActivity : BaseActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
     private lateinit var rvDecklists: RecyclerView
     private lateinit var decklistAdapter: DecklistAdapter
     private lateinit var tvStatus: MaterialTextView
-    private lateinit var progressOverlay: View
     private lateinit var etSearch: TextInputEditText
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,7 +39,6 @@ class MainActivity : AppCompatActivity() {
         setupObservers()
         setupClickListeners()
 
-        // Initial load
         viewModel.loadDecklists()
     }
 
@@ -69,55 +65,39 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupObservers() {
-        // Observe decklists
         viewModel.decklists.observe(this) { items ->
             val decklists = items.map { item ->
-                com.mtgo.decklistmanager.domain.model.Decklist(
+                Decklist(
                     id = item.id,
                     eventName = item.eventName,
-                    eventType = null, // Not available in DecklistItem
+                    eventType = null,
                     format = item.format,
                     date = item.date,
-                    url = "", // Not available in DecklistItem
+                    url = "",
                     playerName = item.playerName,
-                    playerId = null, // Not available in DecklistItem
+                    playerId = null,
                     record = item.record
                 )
             }
             decklistAdapter.submitList(decklists)
         }
 
-        // Observe UI state to control progress overlay
-        lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                when (state) {
-                    is MainViewModel.UiState.Loading,
-                    is MainViewModel.UiState.Scraping -> {
-                        progressOverlay.visibility = View.VISIBLE
-                    }
-                    else -> {
-                        progressOverlay.visibility = View.GONE
-                    }
-                }
+        collectFlow(viewModel.uiState) { state ->
+            when (state) {
+                is MainViewModel.UiState.Loading,
+                is MainViewModel.UiState.Scraping -> showLoading()
+                else -> hideLoading()
             }
         }
 
-        // Observe statistics using StateFlow collect
-        lifecycleScope.launch {
-            viewModel.statistics.collect { stats ->
-                stats?.let {
-                    updateStatusBar(it)
-                }
-            }
+        collectFlow(viewModel.statistics) { stats ->
+            stats?.let { updateStatusBar(it) }
         }
 
-        // Observe status messages using StateFlow collect
-        lifecycleScope.launch {
-            viewModel.statusMessage.collect { message ->
-                message?.let {
-                    Toast.makeText(this@MainActivity, it, Toast.LENGTH_SHORT).show()
-                    viewModel.clearStatusMessage()
-                }
+        collectFlow(viewModel.statusMessage) { message ->
+            message?.let {
+                Toast.makeText(this@MainActivity, it, Toast.LENGTH_SHORT).show()
+                viewModel.clearStatusMessage()
             }
         }
     }
@@ -153,28 +133,23 @@ class MainActivity : AppCompatActivity() {
             viewModel.loadDecklists()
         }
 
-        // Format filter button
-        findViewById<MaterialButton>(R.id.btnFilterFormat).setOnClickListener {
+        btnFilterFormat.setOnClickListener {
             showFormatFilterDialog()
         }
 
-        // Date filter button
-        findViewById<MaterialButton>(R.id.btnFilterDate).setOnClickListener {
+        btnFilterDate.setOnClickListener {
             showDateFilterDialog()
         }
 
-        // Scraping button - 打开爬取对话框
-        findViewById<MaterialButton>(R.id.btnScraping).setOnClickListener {
+        btnScraping.setOnClickListener {
             showScrapingOptionsDialog()
         }
 
-        // Statistics button
-        findViewById<MaterialButton>(R.id.btnStats).setOnClickListener {
+        btnStats.setOnClickListener {
             viewModel.loadStatistics()
         }
 
-        // Clear data button
-        findViewById<MaterialButton>(R.id.btnClear).setOnClickListener {
+        btnClear.setOnClickListener {
             showClearDataConfirmation()
         }
     }
@@ -189,16 +164,10 @@ class MainActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     val items = arrayOf("All Formats") + formats.toTypedArray()
-
-                    android.app.AlertDialog.Builder(this@MainActivity)
-                        .setTitle("Select Format")
-                        .setSingleChoiceItems(items, -1) { dialog, which ->
-                            val selected = if (which == 0) null else formats[which - 1]
-                            viewModel.applyFormatFilter(selected)
-                            dialog.dismiss()
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
+                    showSingleChoiceDialog("Select Format", items) { _, selected ->
+                        val format = if (selected == "All Formats") null else selected
+                        viewModel.applyFormatFilter(format)
+                    }
                 }
             }
         }
@@ -214,16 +183,10 @@ class MainActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     val items = arrayOf("All Dates") + dates.toTypedArray()
-
-                    android.app.AlertDialog.Builder(this@MainActivity)
-                        .setTitle("Select Date")
-                        .setSingleChoiceItems(items, -1) { dialog, which ->
-                            val selected = if (which == 0) null else dates[which - 1]
-                            viewModel.applyDateFilter(selected)
-                            dialog.dismiss()
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
+                    showSingleChoiceDialog("Select Date", items) { _, selected ->
+                        val date = if (selected == "All Dates") null else selected
+                        viewModel.applyDateFilter(date)
+                    }
                 }
             }
         }
@@ -397,14 +360,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showClearDataConfirmation() {
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Clear All Data")
-            .setMessage("Are you sure you want to delete all decklists and cards?")
-            .setPositiveButton("Clear") { _, _ ->
-                viewModel.clearData()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        showConfirmationDialog(
+            title = "Clear All Data",
+            message = "Are you sure you want to delete all decklists and cards?"
+        ) {
+            viewModel.clearData()
+        }
     }
 
     private fun updateStatusBar(stats: com.mtgo.decklistmanager.domain.model.Statistics) {

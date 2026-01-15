@@ -1,5 +1,11 @@
 package com.mtgo.decklistmanager.data.remote.api
 
+import com.mtgo.decklistmanager.data.remote.api.MagicConfig.BASE_URL
+import com.mtgo.decklistmanager.data.remote.api.MagicConfig.SHOWCASE_URLS
+import com.mtgo.decklistmanager.data.remote.api.MagicConfig.Selectors
+import com.mtgo.decklistmanager.data.remote.api.MagicConfig.Network
+import com.mtgo.decklistmanager.data.remote.api.MagicConfig.DateFormat
+import com.mtgo.decklistmanager.util.AppLogger
 import com.mtgo.decklistmanager.data.remote.api.dto.MtgoDecklistDetailDto
 import com.mtgo.decklistmanager.data.remote.api.dto.MtgoDecklistLinkDto
 import com.mtgo.decklistmanager.data.remote.api.dto.MtgoCardDto
@@ -17,15 +23,7 @@ import javax.inject.Singleton
 class MagicScraper @Inject constructor() {
 
     companion object {
-        private const val BASE_URL = "https://magic.gg"
-
-        // MTGO Champions Showcase 2025 赛事URL
-        private val SHOWCASE_URLS = listOf(
-            "https://magic.gg/decklists/2026-magic-online-champions-showcase-season-1-modern-decklists",
-            "https://magic.gg/decklists/2025-magic-online-champions-showcase-season-3-modern-decklists",
-            "https://magic.gg/decklists/2025-magic-online-champions-showcase-season-2-modern-decklists",
-            "https://magic.gg/decklists/2025-magic-online-champions-showcase-season-1-modern-decklists"
-        )
+        private const val TAG = "MagicScraper"
     }
 
     /**
@@ -35,20 +33,18 @@ class MagicScraper @Inject constructor() {
         return try {
             val links = mutableListOf<MtgoDecklistLinkDto>()
 
-            // 爬取所有 Champions Showcase 赛事
             for (url in SHOWCASE_URLS) {
                 try {
                     val decklists = fetchShowcaseDecklists(url)
                     links.addAll(decklists)
                 } catch (e: Exception) {
-                    e.printStackTrace()
-                    // 继续尝试下一个URL
+                    AppLogger.e(TAG, "Error fetching showcase: ${e.message}")
                 }
             }
 
             links
         } catch (e: Exception) {
-            e.printStackTrace()
+            AppLogger.e(TAG, "Error fetching decklist page: ${e.message}")
             emptyList()
         }
     }
@@ -59,12 +55,11 @@ class MagicScraper @Inject constructor() {
     private suspend fun fetchShowcaseDecklists(url: String): List<MtgoDecklistLinkDto> {
         return try {
             val doc = Jsoup.connect(url)
-                .timeout(30000)
-                .userAgent("Mozilla/5.0 (Android 13; Mobile)")
+                .timeout(Network.TIMEOUT_MS)
+                .userAgent(Network.USER_AGENT)
                 .get()
 
-            // 直接从HTML中查找 <deck-list> 标签
-            val deckLists = doc.select("deck-list")
+            val deckLists = doc.select(Selectors.DECK_LIST)
 
             if (deckLists.isEmpty()) {
                 return emptyList()
@@ -86,19 +81,19 @@ class MagicScraper @Inject constructor() {
                                 url = "$url#$player".replace(" ", "-"),
                                 eventName = eventName,
                                 format = format,
-                                date = formatDate(eventDate),
+                                date = DateFormat.formatDate(eventDate),
                                 eventType = "Champions Showcase"
                             )
                         )
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    AppLogger.e(TAG, "Error parsing deck list: ${e.message}")
                 }
             }
 
             links
         } catch (e: Exception) {
-            e.printStackTrace()
+            AppLogger.e(TAG, "Error fetching showcase decklists: ${e.message}")
             emptyList()
         }
     }
@@ -108,25 +103,20 @@ class MagicScraper @Inject constructor() {
      */
     suspend fun fetchDecklistDetail(url: String): MtgoDecklistDetailDto? {
         return try {
-            // 移除 URL 中的片段标识符
             val cleanUrl = url.substringBefore("#")
 
             val doc = Jsoup.connect(cleanUrl)
-                .timeout(30000)
-                .userAgent("Mozilla/5.0 (Android 13; Mobile)")
+                .timeout(Network.TIMEOUT_MS)
+                .userAgent(Network.USER_AGENT)
                 .get()
 
-            // 从URL中提取玩家名称
             val playerName = url.substringAfter("#", "").replace("-", " ")
 
-            // 查找所有 <deck-list> 标签
-            val deckLists = doc.select("deck-list")
+            val deckLists = doc.select(Selectors.DECK_LIST)
 
-            // 找到匹配的牌组
             for (deckList in deckLists) {
                 val player = deckList.attr("deck-title")
 
-                // 检查是否匹配URL中的玩家名称
                 if (player.equals(playerName, ignoreCase = true) ||
                     playerName.isEmpty() ||
                     player.replace(" ", "-").equals(playerName.replace(" ", "-"), ignoreCase = true)) {
@@ -134,7 +124,6 @@ class MagicScraper @Inject constructor() {
                 }
             }
 
-            // 如果没有找到匹配的，返回第一个
             if (deckLists.isNotEmpty()) {
                 val firstDeck = deckLists.first() ?: return null
                 val player = firstDeck.attr("deck-title")
@@ -143,7 +132,7 @@ class MagicScraper @Inject constructor() {
 
             null
         } catch (e: Exception) {
-            e.printStackTrace()
+            AppLogger.e(TAG, "Error fetching decklist detail: ${e.message}")
             null
         }
     }
@@ -152,16 +141,14 @@ class MagicScraper @Inject constructor() {
      * 解析单个牌组
      */
     private fun parseSingleDecklist(deckListElement: org.jsoup.nodes.Element, player: String): MtgoDecklistDetailDto {
-        // 提取主牌
-        val mainDeckElement = deckListElement.selectFirst("main-deck")
+        val mainDeckElement = deckListElement.selectFirst(Selectors.MAIN_DECK)
         val mainDeck = if (mainDeckElement != null) {
             parseCards(mainDeckElement.html())
         } else {
             emptyList()
         }
 
-        // 提取备牌
-        val sideboardElement = deckListElement.selectFirst("side-board")
+        val sideboardElement = deckListElement.selectFirst(Selectors.SIDEBOARD)
         val sideboard = if (sideboardElement != null) {
             parseCards(sideboardElement.html())
         } else {
@@ -205,7 +192,7 @@ class MagicScraper @Inject constructor() {
      * 格式: "4 Lightning Bolt" 或 "1 Lightning Bolt"
      */
     private fun parseCardLine(line: String): MtgoCardDto? {
-        try {
+        return try {
             val trimmed = line.trim()
             if (trimmed.isEmpty()) return null
 
@@ -214,58 +201,23 @@ class MagicScraper @Inject constructor() {
                 val quantity = parts[0].toIntOrNull() ?: 1
                 val cardName = parts[1].trim()
 
-                return MtgoCardDto(
+                MtgoCardDto(
                     quantity = quantity,
                     cardAttributes = MtgoCardAttributesDto(
                         cardName = cardName,
-                        manaCost = null, // Magic.gg 不提供法术力值
+                        manaCost = null,
                         rarity = null,
                         color = null,
                         cardType = null,
                         cardSet = null
                     )
                 )
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        return null
-    }
-
-    /**
-     * 格式化日期
-     */
-    private fun formatDate(eventDate: String): String {
-        // 输入格式: "January 11, 2026"
-        // 输出格式: "2026-01-11"
-        return try {
-            val months = mapOf(
-                "January" to "01",
-                "February" to "02",
-                "March" to "03",
-                "April" to "04",
-                "May" to "05",
-                "June" to "06",
-                "July" to "07",
-                "August" to "08",
-                "September" to "09",
-                "October" to "10",
-                "November" to "11",
-                "December" to "12"
-            )
-
-            val parts = eventDate.replace(",", "").split(" ")
-            if (parts.size >= 3) {
-                val year = parts[2]
-                val month = months[parts[0]] ?: "01"
-                val day = parts[1].padStart(2, '0')
-                "$year-$month-$day"
             } else {
-                eventDate
+                null
             }
         } catch (e: Exception) {
-            eventDate
+            AppLogger.e(TAG, "Error parsing card line: ${e.message}")
+            null
         }
     }
 }
