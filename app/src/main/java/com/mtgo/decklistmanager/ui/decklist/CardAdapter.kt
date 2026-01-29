@@ -39,7 +39,15 @@ class CardAdapter(
                 tvQuantity.text = card.quantity.toString()
                 // v4.0.0: 优先显示中文名，回退到英文名
                 btnCardName.text = card.cardNameZh ?: card.cardName
-                tvManaCost.text = ManaSymbolRenderer.renderManaCost(card.manaCost, btnCardName.context)
+
+                // v4.0.0: 法术力值显示
+                // 土地等没有法术力值的卡牌显示空字符串是正常的
+                val manaDisplay = if (card.manaCost.isNullOrEmpty()) {
+                    ""  // 土地卡没有法术力值
+                } else {
+                    ManaSymbolRenderer.renderManaCost(card.manaCost, btnCardName.context)
+                }
+                tvManaCost.text = manaDisplay
 
                 btnCardName.setOnClickListener {
                     // 点击时使用原始卡名（英文）进行查询
