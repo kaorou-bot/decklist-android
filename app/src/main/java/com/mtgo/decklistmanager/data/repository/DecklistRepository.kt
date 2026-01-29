@@ -267,18 +267,30 @@ class DecklistRepository @Inject constructor(
                             val results = searchResponse.data
                             if (results != null && results.isNotEmpty()) {
                                 // 严格精确匹配（忽略大小写）
+                                // v4.0.0: 支持双面牌匹配（name 可能包含 " // "）
                                 val exactMatch = results.find { card ->
                                     val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
                                     val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
                                     val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
-                                    nameMatch || zhNameMatch || translatedNameMatch
+
+                                    // 双面牌特殊处理：检查 name 是否以卡名开头
+                                    val dualFaceMatch = card.name?.contains("//") == true &&
+                                        (card.name.startsWith("$cardName //", ignoreCase = true) ||
+                                         card.name.endsWith("// $cardName", ignoreCase = true) ||
+                                         card.name.contains(" // $cardName //", ignoreCase = true))
+
+                                    nameMatch || zhNameMatch || translatedNameMatch || dualFaceMatch
                                 }
 
                                 if (exactMatch != null) {
                                     val mtgchCard = exactMatch
 
                                     // 更新所有同名卡牌的法术力值和中文名
-                                    val displayName = mtgchCard.zhsName ?: mtgchCard.atomicTranslatedName
+                                    // v4.0.0: 基本地等没有中文名时使用英文名
+                                    val displayName = mtgchCard.zhsName
+                                        ?: mtgchCard.atomicTranslatedName
+                                        ?: mtgchCard.name  // fallback to 英文名
+
                                     AppLogger.d("DecklistRepository", "  Found: $cardName -> $displayName (mana: ${mtgchCard.manaCost})")
 
                                     cards.filter { it.cardName == cardName }.forEach { card ->
@@ -427,12 +439,19 @@ class DecklistRepository @Inject constructor(
                 val results = searchResponse.data
 
                 if (results != null && results.isNotEmpty()) {
-                    // 严格精确匹配（忽略大小写）
+                    // v4.0.0: 严格精确匹配（忽略大小写），支持双面牌
                     val exactMatch = results.find { card ->
                         val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
                         val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
                         val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
-                        nameMatch || zhNameMatch || translatedNameMatch
+
+                        // 双面牌特殊处理：检查 name 是否包含卡名
+                        val dualFaceMatch = card.name?.contains("//") == true &&
+                            (card.name.startsWith("$cardName //", ignoreCase = true) ||
+                             card.name.endsWith("// $cardName", ignoreCase = true) ||
+                             card.name.contains(" // $cardName //", ignoreCase = true))
+
+                        nameMatch || zhNameMatch || translatedNameMatch || dualFaceMatch
                     }
 
                     if (exactMatch != null) {
