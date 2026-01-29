@@ -1,0 +1,62 @@
+package com.mtgo.decklistmanager.ui.decklist
+
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.textview.MaterialTextView
+import com.mtgo.decklistmanager.databinding.ItemDecklistBinding
+import com.mtgo.decklistmanager.domain.model.Decklist
+
+/**
+ * Decklist Adapter - 牌组列表适配器
+ */
+class DecklistAdapter(
+    private val onItemClick: (Decklist) -> Unit
+) : ListAdapter<Decklist, DecklistAdapter.DecklistViewHolder>(DecklistDiffCallback()) {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DecklistViewHolder {
+        val binding = ItemDecklistBinding.inflate(
+            LayoutInflater.from(parent.context),
+            parent,
+            false
+        )
+        return DecklistViewHolder(binding, onItemClick)
+    }
+
+    override fun onBindViewHolder(holder: DecklistViewHolder, position: Int) {
+        holder.bind(getItem(position))
+    }
+
+    class DecklistViewHolder(
+        private val binding: ItemDecklistBinding,
+        private val onItemClick: (Decklist) -> Unit
+    ) : RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(decklist: Decklist) {
+            binding.apply {
+                // 优先显示套牌名称，如果没有则显示赛事名称
+                tvEventName.text = decklist.deckName ?: decklist.eventName
+                tvFormat.text = "Format: ${decklist.format}"
+                tvDate.text = decklist.date
+                tvPlayer.text = decklist.playerName?.let { "Player: $it" } ?: "Player: N/A"
+                tvRecord.text = decklist.record ?: "N/A"
+
+                root.setOnClickListener {
+                    onItemClick(decklist)
+                }
+            }
+        }
+    }
+
+    class DecklistDiffCallback : DiffUtil.ItemCallback<Decklist>() {
+        override fun areItemsTheSame(oldItem: Decklist, newItem: Decklist): Boolean {
+            return oldItem.id == newItem.id
+        }
+
+        override fun areContentsTheSame(oldItem: Decklist, newItem: Decklist): Boolean {
+            return oldItem == newItem
+        }
+    }
+}

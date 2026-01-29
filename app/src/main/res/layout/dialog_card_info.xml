@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/padding_medium">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Card Image -->
+        <ImageView
+            android:id="@+id/ivCardImage"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/card_details"
+            tools:src="@tools:sample/backgrounds/scenic" />
+
+        <!-- Flip Button for Dual-Faced Cards -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnFlipCard"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="查看反面"
+            android:layout_marginTop="@dimen/margin_small"
+            android:layout_marginBottom="@dimen/margin_small"
+            android:visibility="gone" />
+
+        <!-- Card Info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="@dimen/padding_medium">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvCardName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_size_large"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="@dimen/margin_small"
+                tools:text="Lightning Bolt" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvManaCost"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_size_medium"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="@dimen/margin_small"
+                tools:text="{R}" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvTypeLine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_size_normal"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="@dimen/margin_small"
+                tools:text="Instant — Common" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvOracleText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_size_normal"
+                android:textColor="@color/text_primary"
+                android:lineSpacingExtra="4dp"
+                android:layout_marginBottom="@dimen/margin_small"
+                tools:text="Deal 3 damage to any target." />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvPowerToughness"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_size_normal"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="@dimen/margin_small"
+                android:visibility="gone"
+                tools:text="3/3" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvSetInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_size_normal"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="@dimen/margin_small"
+                tools:text="LEA (Limited Edition Alpha)" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvArtist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_size_small"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="@dimen/margin_small"
+                tools:text="Artist: Christopher Rush" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>
