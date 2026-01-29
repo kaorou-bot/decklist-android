@@ -38,8 +38,8 @@ class MainActivity : BaseActivity() {
     private lateinit var eventAdapter: EventAdapter
     private lateinit var eventSectionAdapter: EventSectionAdapter
     private lateinit var filterBar: View
-    private lateinit var btnFormatFilter: MaterialButton
-    private lateinit var btnDateFilter: MaterialButton
+    private lateinit var formatSelector: View
+    private lateinit var dateSelector: View
     private lateinit var btnDownloadEvent: MaterialButton
     private lateinit var bottomNavigation: com.google.android.material.bottomnavigation.BottomNavigationView
     private lateinit var tvCurrentFormat: android.widget.TextView
@@ -84,8 +84,8 @@ class MainActivity : BaseActivity() {
         rvDecklists = findViewById(R.id.rvDecklists)
         progressOverlay = findViewById(R.id.progressOverlay)
         filterBar = findViewById(R.id.filterBar)
-        btnFormatFilter = findViewById(R.id.btnFilterFormat)
-        btnDateFilter = findViewById(R.id.btnFilterDate)
+        formatSelector = findViewById(R.id.formatSelector)
+        dateSelector = findViewById(R.id.dateSelector)
         btnDownloadEvent = findViewById(R.id.btnDownloadEvent)
         bottomNavigation = findViewById(R.id.bottomNavigation)
         tvCurrentFormat = findViewById(R.id.tvCurrentFormat)
@@ -154,13 +154,13 @@ class MainActivity : BaseActivity() {
     }
 
     private fun setupClickListeners() {
-        // Filter format button
-        btnFormatFilter.setOnClickListener {
+        // Format selector in status bar
+        formatSelector.setOnClickListener {
             showFormatFilterDialog()
         }
 
-        // Filter date button
-        btnDateFilter.setOnClickListener {
+        // Date selector in status bar
+        dateSelector.setOnClickListener {
             showDateFilterDialog()
         }
 
@@ -395,7 +395,7 @@ class MainActivity : BaseActivity() {
             // btnFavorites.text = "我的收藏"  // Removed: BottomNavigationView doesn't support dynamic text
         }
 
-        // Update format filter button text and status bar text with current selection
+        // Update format filter status bar text with current selection
         collectFlow(viewModel.selectedFormatName) { formatName ->
             val displayText = if (formatName == null || formatName == "All Formats") {
                 "全部"
@@ -403,24 +403,12 @@ class MainActivity : BaseActivity() {
                 formatName
             }
 
-            btnFormatFilter.text = if (formatName == null || formatName == "All Formats") {
-                "赛制"
-            } else {
-                "赛制: $formatName"
-            }
-
             tvCurrentFormat.text = "赛制: $displayText"
         }
 
-        // Update date filter button text and status bar text with current selection
+        // Update date filter status bar text with current selection
         collectFlow(viewModel.selectedDate) { date ->
             val displayText = date ?: "全部"
-
-            btnDateFilter.text = if (date == null) {
-                "日期"
-            } else {
-                "日期: $date"
-            }
 
             tvCurrentDate.text = "日期: $displayText"
         }

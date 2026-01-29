@@ -19,7 +19,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:title="MTG 套牌管理"
+        app:title="MTG 套牌"
         app:titleTextColor="@color/text_primary" />
 
     <!-- Filter Status Bar -->
@@ -42,30 +42,60 @@
             android:padding="8dp"
             android:gravity="center_vertical">
 
-            <TextView
-                android:id="@+id/tvCurrentFormat"
+            <!-- Format Selector -->
+            <LinearLayout
+                android:id="@+id/formatSelector"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="赛制: 全部"
-                android:textSize="14sp"
-                android:textColor="@color/text_primary"
-                android:gravity="center" />
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="?attr/selectableItemBackground"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:id="@+id/tvCurrentFormat"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="赛制: 全部"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:drawableEnd="@android:drawable/arrow_down_float"
+                    android:drawablePadding="4dp" />
+
+            </LinearLayout>
 
             <View
                 android:layout_width="1dp"
                 android:layout_height="16dp"
                 android:background="@color/outline" />
 
-            <TextView
-                android:id="@+id/tvCurrentDate"
+            <!-- Date Selector -->
+            <LinearLayout
+                android:id="@+id/dateSelector"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="日期: 全部"
-                android:textSize="14sp"
-                android:textColor="@color/text_primary"
-                android:gravity="center" />
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="?attr/selectableItemBackground"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:id="@+id/tvCurrentDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="日期: 全部"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:drawableEnd="@android:drawable/arrow_down_float"
+                    android:drawablePadding="4dp" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -88,7 +118,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Filter and Action Buttons (only for Events tab) -->
+            <!-- Download Button (only for Events tab) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/filterBar"
                 android:layout_width="match_parent"
@@ -103,47 +133,20 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center"
                     android:padding="8dp">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnFilterFormat"
-                        android:layout_width="0dp"
-                        android:layout_height="48dp"
-                        android:layout_weight="1"
-                        android:text="赛制"
-                        android:layout_marginEnd="4dp"
-                        android:textSize="13sp"
-                        android:padding="8dp"
-                        app:icon="@android:drawable/ic_menu_sort_by_size"
-                        app:iconGravity="textStart"
-                        app:iconPadding="6dp"
-                        style="@style/Widget.Material3.Button.OutlinedButton" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnFilterDate"
-                        android:layout_width="0dp"
-                        android:layout_height="48dp"
-                        android:layout_weight="1"
-                        android:text="日期"
-                        android:layout_marginEnd="4dp"
-                        android:textSize="13sp"
-                        android:padding="8dp"
-                        app:icon="@android:drawable/ic_menu_my_calendar"
-                        app:iconGravity="textStart"
-                        app:iconPadding="6dp"
-                        style="@style/Widget.Material3.Button.OutlinedButton" />
-
-                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnDownloadEvent"
-                        android:layout_width="0dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="48dp"
-                        android:layout_weight="1"
-                        android:text="下载"
-                        android:textSize="13sp"
+                        android:minWidth="200dp"
+                        android:text="下载赛事"
+                        android:textSize="14sp"
                         android:padding="8dp"
                         app:icon="@android:drawable/ic_input_add"
                         app:iconGravity="textStart"
-                        app:iconPadding="6dp"
+                        app:iconPadding="8dp"
                         style="@style/Widget.Material3.Button.TonalButton" />
 
                 </LinearLayout>
