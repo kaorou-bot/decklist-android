@@ -229,7 +229,10 @@ class DecklistRepository @Inject constructor(
                 cards.forEach { card ->
                     val cardInfo = cardInfoDao.getCardInfoByName(card.cardName)
                     if (cardInfo != null) {
-                        val displayName = cardInfo.name.takeIf { it.isNotEmpty() && it != cardInfo.enName }
+                        var displayName = cardInfo.name.takeIf { it.isNotEmpty() && it != cardInfo.enName }
+                        // v4.0.0: 应用基本地中文名映射
+                        displayName = getBasicLandChineseName(displayName ?: cardInfo.name) ?: displayName
+
                         AppLogger.d("DecklistRepository", "  Updating from cache: ${card.cardName} -> $displayName")
                         cardDao.updateDetails(
                             cardId = card.id,
@@ -286,10 +289,13 @@ class DecklistRepository @Inject constructor(
                                     val mtgchCard = exactMatch
 
                                     // 更新所有同名卡牌的法术力值和中文名
-                                    // v4.0.0: 基本地等没有中文名时使用英文名
-                                    val displayName = mtgchCard.zhsName
+                                    // v4.0.0: 基本地等没有中文名时使用英文名或映射
+                                    var displayName = mtgchCard.zhsName
                                         ?: mtgchCard.atomicTranslatedName
                                         ?: mtgchCard.name  // fallback to 英文名
+
+                                    // v4.0.0: 应用基本地中文名映射
+                                    displayName = getBasicLandChineseName(displayName) ?: displayName
 
                                     AppLogger.d("DecklistRepository", "  Found: $cardName -> $displayName (mana: ${mtgchCard.manaCost})")
 
@@ -307,7 +313,13 @@ class DecklistRepository @Inject constructor(
 
                                     // 缓存到 CardInfo 表（包含完整翻译）
                                     val cardInfoEntity = mtgchCard.toEntity()
-                                    cardInfoDao.insertOrUpdate(cardInfoEntity)
+                                    // 应用基本地中文名映射
+                                    val finalName = getBasicLandChineseName(cardInfoEntity.name)
+                                    if (finalName != null) {
+                                        cardInfoEntity.copy(name = finalName)
+                                    } else {
+                                        cardInfoEntity
+                                    }.let { cardInfoDao.insertOrUpdate(it) }
                                 } else {
                                     AppLogger.w("DecklistRepository", "  No exact match found for: $cardName")
                                     AppLogger.w("DecklistRepository", "    Candidates: ${results.take(3).map { it.name }.joinToString(", ")}")
@@ -329,7 +341,10 @@ class DecklistRepository @Inject constructor(
                 cachedCardNames.forEach { cardName ->
                     val cardInfo = cardInfoDao.getCardInfoByName(cardName)
                     if (cardInfo != null) {
-                        val displayName = cardInfo.name.takeIf { it.isNotEmpty() && it != cardInfo.enName }
+                        var displayName = cardInfo.name.takeIf { it.isNotEmpty() && it != cardInfo.enName }
+                        // v4.0.0: 应用基本地中文名映射
+                        displayName = getBasicLandChineseName(displayName ?: cardInfo.name) ?: displayName
+
                         cards.filter { it.cardName == cardName }.forEach { card ->
                             cardDao.updateDetails(
                                 cardId = card.id,
@@ -456,6 +471,14 @@ class DecklistRepository @Inject constructor(
 
                     if (exactMatch != null) {
                         val cardInfoEntity = exactMatch.toEntity()
+
+                        // v4.0.0: 基本地中文名映射
+                        val finalDisplayName = getBasicLandChineseName(cardInfoEntity.name) ?: cardInfoEntity.name
+                        if (finalDisplayName != cardInfoEntity.name) {
+                            // 更新卡牌名称为中文基本地名称
+                            return@withContext cardInfoEntity.copy(name = finalDisplayName).toDomainModel()
+                        }
+
                         AppLogger.d("DecklistRepository", "✓ Found exact match: $cardName -> ${cardInfoEntity.name}")
                         return@withContext cardInfoEntity.toDomainModel()
                     } else {
@@ -473,6 +496,27 @@ class DecklistRepository @Inject constructor(
         } catch (e: Exception) {
             AppLogger.e("DecklistRepository", "Error fetching card info from API: ${e.message}", e)
             null
+        }
+    }
+
+    /**
+     * v4.0.0: 获取基本地的中文名称
+     */
+    private fun getBasicLandChineseName(englishName: String?): String? {
+        if (englishName == null) return null
+
+        return when (englishName) {
+            "Plains" -> "平原"
+            "Island" -> "海岛"
+            "Swamp" -> "沼泽"
+            "Mountain" -> "山脉"
+            "Forest" -> "树林"
+            "Snow-Covered Plains" -> "积雪平原"
+            "Snow-Covered Island" -> "积雪海岛"
+            "Snow-Covered Swamp" -> "积雪沼泽"
+            "Snow-Covered Mountain" -> "积雪山脉"
+            "Snow-Covered Forest" -> "积雪树林"
+            else -> null
         }
     }
 
