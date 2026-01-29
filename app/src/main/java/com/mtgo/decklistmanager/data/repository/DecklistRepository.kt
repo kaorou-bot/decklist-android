@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Semaphore
@@ -200,6 +201,14 @@ class DecklistRepository @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /**
+     * 确保卡牌详情已获取（供UI调用）
+     * v4.0.0: 在加载套牌详情时调用，确保显示中文和法术力值
+     */
+    suspend fun ensureCardDetails(decklistId: Long) {
+        fetchScryfallDetails(decklistId)
     }
 
     /**
@@ -438,65 +447,89 @@ class DecklistRepository @Inject constructor(
     suspend fun getCardInfo(cardName: String): CardInfo? = withContext(Dispatchers.IO) {
         AppLogger.d("DecklistRepository", "getCardInfo (online mode) called for: $cardName")
 
-        try {
-            // v4.0.0 在线模式：直接调用 MTGCH API
-            // 注意：不使用 ! 前缀，因为 API 的精确搜索不可靠
-            // 改为客户端精确匹配验证
+        // v4.0.0: 添加重试机制（最多3次，延迟递增）
+        val maxRetries = 3
+        val retryDelays = listOf(0L, 500L, 1000L)  // 首次立即重试，然后延迟递增
 
-            val response = mtgchApi.searchCard(
-                query = cardName,
-                pageSize = 20,  // 获取更多结果以便精确匹配
-                priorityChinese = true
-            )
-
-            if (response.isSuccessful && response.body() != null) {
-                val searchResponse = response.body()!!
-                val results = searchResponse.data
-
-                if (results != null && results.isNotEmpty()) {
-                    // v4.0.0: 严格精确匹配（忽略大小写），支持双面牌
-                    val exactMatch = results.find { card ->
-                        val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
-                        val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
-                        val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
-
-                        // 双面牌特殊处理：检查 name 是否包含卡名
-                        val dualFaceMatch = card.name?.contains("//") == true &&
-                            (card.name.startsWith("$cardName //", ignoreCase = true) ||
-                             card.name.endsWith("// $cardName", ignoreCase = true) ||
-                             card.name.contains(" // $cardName //", ignoreCase = true))
-
-                        nameMatch || zhNameMatch || translatedNameMatch || dualFaceMatch
-                    }
-
-                    if (exactMatch != null) {
-                        val cardInfoEntity = exactMatch.toEntity()
-
-                        // v4.0.0: 基本地中文名映射
-                        val finalDisplayName = getBasicLandChineseName(cardInfoEntity.name) ?: cardInfoEntity.name
-                        if (finalDisplayName != cardInfoEntity.name) {
-                            // 更新卡牌名称为中文基本地名称
-                            return@withContext cardInfoEntity.copy(name = finalDisplayName).toDomainModel()
-                        }
-
-                        AppLogger.d("DecklistRepository", "✓ Found exact match: $cardName -> ${cardInfoEntity.name}")
-                        return@withContext cardInfoEntity.toDomainModel()
-                    } else {
-                        // 没有找到精确匹配，记录警告并返回 null
-                        AppLogger.w("DecklistRepository", "✗ No exact match found for: $cardName")
-                        AppLogger.w("DecklistRepository", "  Candidates: ${results.take(3).map { it.name }.joinToString(", ")}")
-                        return@withContext null
-                    }
-                }
+        for (attempt in 0 until maxRetries) {
+            if (attempt > 0) {
+                delay(retryDelays[attempt])
+                AppLogger.d("DecklistRepository", "Retry $attempt/$maxRetries for: $cardName")
             }
 
-            // API 调用失败或没有结果
-            AppLogger.w("DecklistRepository", "✗ Card not found online: $cardName")
-            null
-        } catch (e: Exception) {
-            AppLogger.e("DecklistRepository", "Error fetching card info from API: ${e.message}", e)
-            null
+            try {
+                val result = fetchCardInfoFromApi(cardName)
+                if (result != null) {
+                    if (attempt > 0) {
+                        AppLogger.d("DecklistRepository", "✓ Success on retry $attempt for: $cardName")
+                    }
+                    return@withContext result
+                }
+            } catch (e: Exception) {
+                AppLogger.e("DecklistRepository", "Error on attempt $attempt for '$cardName': ${e.message}")
+            }
         }
+
+        // 所有重试都失败
+        AppLogger.w("DecklistRepository", "✗ Card not found online after $maxRetries attempts: $cardName")
+        null
+    }
+
+    private suspend fun fetchCardInfoFromApi(cardName: String): CardInfo? {
+        // v4.0.0 在线模式：直接调用 MTGCH API
+        // 注意：不使用 ! 前缀，因为 API 的精确搜索不可靠
+        // 改为客户端精确匹配验证
+
+        val response = mtgchApi.searchCard(
+            query = cardName,
+            pageSize = 20,  // 获取更多结果以便精确匹配
+            priorityChinese = true
+        )
+
+        if (response.isSuccessful && response.body() != null) {
+            val searchResponse = response.body()!!
+            val results = searchResponse.data
+
+            if (results != null && results.isNotEmpty()) {
+                // v4.0.0: 严格精确匹配（忽略大小写），支持双面牌
+                val exactMatch = results.find { card ->
+                    val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
+                    val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
+                    val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
+
+                    // 双面牌特殊处理：检查 name 是否包含卡名
+                    val dualFaceMatch = card.name?.contains("//") == true &&
+                        (card.name.startsWith("$cardName //", ignoreCase = true) ||
+                         card.name.endsWith("// $cardName", ignoreCase = true) ||
+                         card.name.contains(" // $cardName //", ignoreCase = true))
+
+                    nameMatch || zhNameMatch || translatedNameMatch || dualFaceMatch
+                }
+
+                if (exactMatch != null) {
+                    val cardInfoEntity = exactMatch.toEntity()
+
+                    // v4.0.0: 基本地中文名映射
+                    val finalDisplayName = getBasicLandChineseName(cardInfoEntity.name) ?: cardInfoEntity.name
+                    if (finalDisplayName != cardInfoEntity.name) {
+                        // 更新卡牌名称为中文基本地名称
+                        return cardInfoEntity.copy(name = finalDisplayName).toDomainModel()
+                    }
+
+                    AppLogger.d("DecklistRepository", "✓ Found exact match: $cardName -> ${cardInfoEntity.name}")
+                    return cardInfoEntity.toDomainModel()
+                } else {
+                    // 没有找到精确匹配，记录警告并返回 null
+                    AppLogger.w("DecklistRepository", "✗ No exact match found for: $cardName")
+                    AppLogger.w("DecklistRepository", "  Candidates: ${results.take(3).map { it.name }.joinToString(", ")}")
+                    return null
+                }
+            }
+        }
+
+        // API 调用失败或没有结果
+        AppLogger.w("DecklistRepository", "✗ API returned no results for: $cardName")
+        return null
     }
 
     /**

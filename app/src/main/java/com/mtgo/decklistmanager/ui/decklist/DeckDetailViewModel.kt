@@ -101,6 +101,13 @@ class DeckDetailViewModel @Inject constructor(
                 if (decklistEntity != null) {
                     _decklist.value = decklistEntity.toDecklist()
 
+                    // v4.0.0: 确保卡牌详情已获取后再加载
+                    // 先触发 fetchScryfallDetails，它会异步更新数据库
+                    repository.ensureCardDetails(decklistId)
+
+                    // 等待一小段时间让数据更新
+                    kotlinx.coroutines.delay(500)
+
                     // 加载所有卡牌
                     val allCards = repository.getCardsByDecklistId(decklistId)
 
@@ -125,7 +132,7 @@ class DeckDetailViewModel @Inject constructor(
     }
 
     /**
-     * 查询单卡信息
+     * 查询单卡信息（带重试和错误提示）
      */
     fun loadCardInfo(cardName: String) {
         viewModelScope.launch {
@@ -138,11 +145,15 @@ class DeckDetailViewModel @Inject constructor(
                 if (cardInfo != null) {
                     _cardInfo.value = cardInfo
                 } else {
-                    _cardInfoError.value = "Card '$cardName' not found"
+                    // v4.0.0: 提供更友好的错误提示
+                    _cardInfoError.value = "未找到卡牌: $cardName\n\n提示：\n" +
+                        "• 请检查卡牌名称拼写\n" +
+                        "• 某些特殊卡牌可能需要完整名称\n" +
+                        "• 系统已自动重试3次，请稍后再试"
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _cardInfoError.value = "Failed to load card info: ${e.message}"
+                _cardInfoError.value = "加载失败: ${e.message}\n\n请检查网络连接后重试"
             } finally {
                 _isCardInfoLoading.value = false
             }
