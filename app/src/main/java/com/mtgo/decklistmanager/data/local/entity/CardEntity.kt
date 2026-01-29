@@ -37,6 +37,10 @@ data class CardEntity(
     @SerializedName("card_name")
     val cardName: String,
 
+    @ColumnInfo(name = "display_name")
+    @SerializedName("display_name")
+    val displayName: String? = null,
+
     val quantity: Int,
 
     val location: String, // "main" or "sideboard"

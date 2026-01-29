@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
         EventEntity::class,
         FavoriteDecklistEntity::class  // 收藏表
     ],
-    version = 7,  // 版本升级：6 -> 7 (添加双面牌反面详细信息字段)
+    version = 8,  // 版本升级：7 -> 8 (添加 display_name 字段到 cards 表)
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -61,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addCallback(DatabaseCallback())
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .build()
                 INSTANCE = instance
                 instance
@@ -217,6 +217,17 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE card_info ADD COLUMN back_face_mana_cost TEXT")
                 db.execSQL("ALTER TABLE card_info ADD COLUMN back_face_type_line TEXT")
                 db.execSQL("ALTER TABLE card_info ADD COLUMN back_face_oracle_text TEXT")
+            }
+        }
+
+        /**
+         * 数据库版本 7 -> 8 迁移
+         * 添加 display_name 字段到 cards 表
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 为 cards 表添加 display_name 列
+                db.execSQL("ALTER TABLE cards ADD COLUMN display_name TEXT")
             }
         }
     }

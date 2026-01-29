@@ -37,10 +37,12 @@ class CardAdapter(
         fun bind(card: Card) {
             binding.apply {
                 tvQuantity.text = card.quantity.toString()
-                btnCardName.text = card.cardName
+                // v4.0.0: 优先显示中文名，回退到英文名
+                btnCardName.text = card.cardNameZh ?: card.cardName
                 tvManaCost.text = ManaSymbolRenderer.renderManaCost(card.manaCost, btnCardName.context)
 
                 btnCardName.setOnClickListener {
+                    // 点击时使用原始卡名（英文）进行查询
                     onCardClick(card.cardName)
                 }
             }

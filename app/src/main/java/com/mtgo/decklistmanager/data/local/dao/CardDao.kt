@@ -82,7 +82,8 @@ interface CardDao {
             color = :color,
             rarity = :rarity,
             card_type = :cardType,
-            card_set = :cardSet
+            card_set = :cardSet,
+            display_name = :displayName
         WHERE id = :cardId
     """)
     suspend fun updateDetails(
@@ -91,7 +92,8 @@ interface CardDao {
         color: String?,
         rarity: String?,
         cardType: String?,
-        cardSet: String?
+        cardSet: String?,
+        displayName: String? = null
     )
 
     /**

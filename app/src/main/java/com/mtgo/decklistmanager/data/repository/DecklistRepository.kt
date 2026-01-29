@@ -232,7 +232,8 @@ class DecklistRepository @Inject constructor(
                             color = cardInfo.colors,
                             rarity = cardInfo.rarity,
                             cardType = cardInfo.typeLine,
-                            cardSet = cardInfo.setName
+                            cardSet = cardInfo.setName,
+                            displayName = cardInfo.name  // 使用中文名
                         )
                     }
                 }
@@ -249,37 +250,35 @@ class DecklistRepository @Inject constructor(
                 async {
                     semaphore.acquire()
                     try {
-                        // 直接使用卡牌名称搜索，获取多个结果以便精确匹配
+                        // v4.0.0: 使用精确搜索（! 前缀）
+                        val exactQuery = if (!cardName.startsWith("!")) "!$cardName" else cardName
+
                         val response = mtgchApi.searchCard(
-                            query = cardName,
-                            pageSize = 10,  // 获取多个结果以便精确匹配
+                            query = exactQuery,
+                            pageSize = 1,  // 精确搜索只需要1个结果
                             priorityChinese = true
                         )
                         if (response.isSuccessful && response.body() != null) {
                             val searchResponse = response.body()!!
-                            val results = searchResponse.data  // 使用 data 属性
+                            val results = searchResponse.data
                             if (results != null && results.isNotEmpty()) {
-                                // 尝试找到精确匹配（忽略大小写和空格）
-                                val exactMatch = results.find { card ->
-                                    card.name?.equals(cardName, ignoreCase = true) == true ||
-                                    card.zhsName?.equals(cardName, ignoreCase = true) == true
-                                }
+                                val mtgchCard = results[0]
 
-                                val mtgchCard = exactMatch ?: results[0]  // 优先使用精确匹配
-
-                                // 更新所有同名卡牌的法术力值
+                                // 更新所有同名卡牌的法术力值（使用中文翻译）
+                                val displayName = mtgchCard.zhsName ?: mtgchCard.atomicTranslatedName
                                 cards.filter { it.cardName == cardName }.forEach { card ->
                                     cardDao.updateDetails(
                                         cardId = card.id,
                                         manaCost = mtgchCard.manaCost,
                                         color = mtgchCard.colors?.joinToString(","),
                                         rarity = mtgchCard.rarity,
-                                        cardType = mtgchCard.zhsTypeLine ?: mtgchCard.typeLine,
-                                        cardSet = mtgchCard.setName
+                                        cardType = mtgchCard.zhsTypeLine ?: mtgchCard.atomicTranslatedType ?: mtgchCard.typeLine,
+                                        cardSet = mtgchCard.setName,
+                                        displayName = displayName
                                     )
                                 }
 
-                                // 缓存到 CardInfo 表
+                                // 缓存到 CardInfo 表（包含完整翻译）
                                 val cardInfoEntity = mtgchCard.toEntity()
                                 cardInfoDao.insertOrUpdate(cardInfoEntity)
                             }
@@ -304,7 +303,8 @@ class DecklistRepository @Inject constructor(
                             color = cardInfo.colors,
                             rarity = cardInfo.rarity,
                             cardType = cardInfo.typeLine,
-                            cardSet = cardInfo.setName
+                            cardSet = cardInfo.setName,
+                            displayName = cardInfo.name  // 使用中文名
                         )
                     }
                 }
@@ -835,7 +835,8 @@ class DecklistRepository @Inject constructor(
         rarity = rarity,
         color = color,
         cardType = cardType,
-        cardSet = cardSet
+        cardSet = cardSet,
+        cardNameZh = displayName  // v4.0.0: 使用中文名显示
     )
 
     private fun com.mtgo.decklistmanager.data.remote.api.dto.MtgoCardDto.toEntity(
