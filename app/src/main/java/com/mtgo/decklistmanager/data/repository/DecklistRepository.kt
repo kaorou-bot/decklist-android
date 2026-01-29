@@ -250,19 +250,17 @@ class DecklistRepository @Inject constructor(
                 async {
                     semaphore.acquire()
                     try {
-                        // v4.0.0: 使用精确搜索（! 前缀）
-                        val exactQuery = if (!cardName.startsWith("!")) "!$cardName" else cardName
-
+                        // 不使用 ! 前缀，因为 API 的精确搜索不可靠
                         val response = mtgchApi.searchCard(
-                            query = exactQuery,
-                            pageSize = 1,  // 精确搜索只需要1个结果
+                            query = cardName,
+                            pageSize = 10,  // 获取多个结果以便精确匹配
                             priorityChinese = true
                         )
                         if (response.isSuccessful && response.body() != null) {
                             val searchResponse = response.body()!!
                             val results = searchResponse.data
                             if (results != null && results.isNotEmpty()) {
-                                // 尝试找到精确匹配（忽略大小写）
+                                // 严格精确匹配（忽略大小写）
                                 val exactMatch = results.find { card ->
                                     val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
                                     val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
@@ -398,12 +396,12 @@ class DecklistRepository @Inject constructor(
 
         try {
             // v4.0.0 在线模式：直接调用 MTGCH API
-            // 使用 ! 前缀进行精确搜索
-            val exactQuery = if (!cardName.startsWith("!")) "!$cardName" else cardName
+            // 注意：不使用 ! 前缀，因为 API 的精确搜索不可靠
+            // 改为客户端精确匹配验证
 
             val response = mtgchApi.searchCard(
-                query = exactQuery,
-                pageSize = 10,  // 获取多个结果以便精确匹配
+                query = cardName,
+                pageSize = 20,  // 获取更多结果以便精确匹配
                 priorityChinese = true
             )
 
@@ -412,7 +410,7 @@ class DecklistRepository @Inject constructor(
                 val results = searchResponse.data
 
                 if (results != null && results.isNotEmpty()) {
-                    // 尝试找到精确匹配（忽略大小写）
+                    // 严格精确匹配（忽略大小写）
                     val exactMatch = results.find { card ->
                         val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
                         val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
@@ -420,13 +418,16 @@ class DecklistRepository @Inject constructor(
                         nameMatch || zhNameMatch || translatedNameMatch
                     }
 
-                    val mtgchCard = exactMatch ?: results[0]  // 优先使用精确匹配
-                    val cardInfoEntity = mtgchCard.toEntity()
-
-                    AppLogger.d("DecklistRepository", "✓ Found online: $cardName -> ${cardInfoEntity.name}")
-                    AppLogger.d("DecklistRepository", "  Exact match: ${exactMatch != null}")
-
-                    return@withContext cardInfoEntity.toDomainModel()
+                    if (exactMatch != null) {
+                        val cardInfoEntity = exactMatch.toEntity()
+                        AppLogger.d("DecklistRepository", "✓ Found exact match: $cardName -> ${cardInfoEntity.name}")
+                        return@withContext cardInfoEntity.toDomainModel()
+                    } else {
+                        // 没有找到精确匹配，记录警告并返回 null
+                        AppLogger.w("DecklistRepository", "✗ No exact match found for: $cardName")
+                        AppLogger.w("DecklistRepository", "  Candidates: ${results.take(3).map { it.name }.joinToString(", ")}")
+                        return@withContext null
+                    }
                 }
             }
 
@@ -459,12 +460,10 @@ class DecklistRepository @Inject constructor(
             AppLogger.d("DecklistRepository", "Searching online for: $query (limit: $limit)")
 
             try {
-                // 使用精确搜索（! 前缀）
-                val exactQuery = if (!query.startsWith("!")) "!$query" else query
-
+                // 不使用 ! 前缀，因为 API 的精确搜索不可靠
                 val response = mtgchApi.searchCard(
-                    query = exactQuery,
-                    pageSize = limit * 2,  // 获取更多结果以便精确匹配
+                    query = query,
+                    pageSize = limit * 2,  // 获取更多结果以便过滤
                     priorityChinese = true
                 )
 
@@ -481,14 +480,14 @@ class DecklistRepository @Inject constructor(
                             nameMatch || zhNameMatch || translatedNameMatch
                         }
 
-                        // 如果有精确匹配，优先返回；否则返回所有结果
+                        // 如果有精确匹配，优先返回；否则返回所有结果（前缀匹配）
                         val finalResults = if (exactMatches.isNotEmpty()) {
                             exactMatches
                         } else {
                             results
                         }
 
-                        AppLogger.d("DecklistRepository", "✓ Found ${finalResults.size} results online (exact matches: ${exactMatches.size})")
+                        AppLogger.d("DecklistRepository", "✓ Found ${finalResults.size} results (exact: ${exactMatches.size})")
                         return@withContext finalResults.take(limit).map { it.toEntity().toDomainModel() }
                     }
                 }
