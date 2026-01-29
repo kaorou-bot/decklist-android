@@ -73,8 +73,8 @@ class MainActivity : BaseActivity() {
         setupObservers()
         setupClickListeners()
 
-        // 检查是否需要下载离线数据库
-        checkOfflineDatabase()
+        // v4.0.0 在线模式：无需检查本地数据库，直接使用 MTGCH API
+        // checkOfflineDatabase()
 
         // Initial tab selection - don't trigger listener
         isProgrammaticNav = true
