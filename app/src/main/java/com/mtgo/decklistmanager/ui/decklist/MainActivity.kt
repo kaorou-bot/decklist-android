@@ -80,6 +80,14 @@ class MainActivity : BaseActivity() {
         isProgrammaticNav = false
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 刷新赛事列表（当从赛事详情页返回时，可能需要更新赛事的卡组数量）
+        if (currentTab == TAB_EVENT_LIST) {
+            viewModel.loadEvents()
+        }
+    }
+
     private fun initViews() {
         rvDecklists = findViewById(R.id.rvDecklists)
         progressOverlay = findViewById(R.id.progressOverlay)
@@ -225,29 +233,39 @@ class MainActivity : BaseActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 // 只在赛事列表标签页允许删除
-                if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventAdapter) {
+                if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
                     val position = viewHolder.adapterPosition
                     if (position != RecyclerView.NO_POSITION) {
-                        val event = eventAdapter.getItemAtPosition(position)
+                        // v4.0.0: 使用 eventSectionAdapter 获取 item
+                        val item = eventSectionAdapter.getItemAtPosition(position)
 
-                        // 立即恢复视图
-                        viewHolder.itemView.alpha = 1f
-                        viewHolder.itemView.translationX = 0f
+                        // 只能删除 EventItem，不能删除 DateHeader
+                        if (item is com.mtgo.decklistmanager.ui.decklist.EventListItem.EventItem) {
+                            val event = item.event
 
-                        // 转换为EventItem
-                        val eventItem = MainViewModel.EventItem(
-                            id = event.id,
-                            eventName = event.eventName,
-                            eventType = event.eventType,
-                            format = event.format,
-                            date = event.date,
-                            sourceUrl = event.sourceUrl,
-                            source = event.source,
-                            deckCount = event.deckCount
-                        )
+                            // 立即恢复视图
+                            viewHolder.itemView.alpha = 1f
+                            viewHolder.itemView.translationX = 0f
 
-                        // 显示确认对话框
-                        showDeleteEventDialog(eventItem, position, viewHolder)
+                            // 转换为EventItem
+                            val eventItem = MainViewModel.EventItem(
+                                id = event.id,
+                                eventName = event.eventName,
+                                eventType = event.eventType,
+                                format = event.format,
+                                date = event.date,
+                                sourceUrl = event.sourceUrl,
+                                source = event.source,
+                                deckCount = event.deckCount
+                            )
+
+                            // 显示确认对话框
+                            showDeleteEventDialog(eventItem, position, viewHolder)
+                        } else {
+                            // 如果是 DateHeader，恢复视图
+                            viewHolder.itemView.alpha = 1f
+                            viewHolder.itemView.translationX = 0f
+                        }
                     }
                 } else {
                     // 如果不是赛事列表，恢复视图
@@ -266,7 +284,7 @@ class MainActivity : BaseActivity() {
                 isCurrentlyActive: Boolean
             ) {
                 // 只在赛事列表标签页绘制删除背景
-                if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventAdapter) {
+                if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
                     val itemView = viewHolder.itemView
                     val paint = Paint()
                     val textPaint = Paint()

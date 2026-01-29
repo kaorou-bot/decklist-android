@@ -20,6 +20,13 @@ class EventSectionAdapter(
     private val onItemClick: (Event) -> Unit
 ) : ListAdapter<EventListItem, RecyclerView.ViewHolder>(EventDiffCallback()) {
 
+    /**
+     * 获取指定位置的 EventListItem（用于滑动删除）
+     */
+    fun getItemAtPosition(position: Int): EventListItem {
+        return getItem(position)
+    }
+
     companion object {
         private const val TYPE_DATE_HEADER = 0
         private const val TYPE_EVENT = 1

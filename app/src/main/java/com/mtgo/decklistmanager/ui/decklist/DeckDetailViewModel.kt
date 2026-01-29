@@ -82,7 +82,8 @@ class DeckDetailViewModel @Inject constructor(
         rarity = rarity,
         color = color,
         cardType = cardType,
-        cardSet = cardSet
+        cardSet = cardSet,
+        cardNameZh = displayName  // v4.0.0: Map displayName to cardNameZh
     )
 
     /**
@@ -103,41 +104,16 @@ class DeckDetailViewModel @Inject constructor(
                     // 加载所有卡牌
                     val allCards = repository.getCardsByDecklistId(decklistId)
 
-                    // 检查是否使用中文
-                    val useChinese = languagePreferenceManager.getCardLanguage() == LanguagePreferenceManager.LANGUAGE_CHINESE
-
-                    // 如果使用中文，获取所有卡牌的中文名映射
-                    val chineseNameMap = if (useChinese) {
-                        repository.getChineseNamesForCards(allCards.map { it.cardName })
-                    } else {
-                        emptyMap()
-                    }
-
-                    // 辅助函数：添加中文名
-                    fun CardEntity.toCardWithZh() = Card(
-                        id = id,
-                        decklistId = decklistId,
-                        cardName = cardName,
-                        quantity = quantity,
-                        location = if (location == "main") CardLocation.MAIN else CardLocation.SIDEBOARD,
-                        cardOrder = cardOrder,
-                        manaCost = manaCost,
-                        rarity = rarity,
-                        color = color,
-                        cardType = cardType,
-                        cardSet = cardSet,
-                        cardNameZh = chineseNameMap[cardName]
-                    )
-
+                    // v4.0.0: displayName is already populated in the database, so just convert directly
                     // 分离主牌和备牌
                     val mainCards = allCards
                         .filter { it.location == "main" }
-                        .map { it.toCardWithZh() }
+                        .map { it.toCard() }
                     _mainDeck.value = mainCards
 
                     val sideboardCards = allCards
                         .filter { it.location == "sideboard" }
-                        .map { it.toCardWithZh() }
+                        .map { it.toCard() }
                     _sideboard.value = sideboardCards
                 }
             } catch (e: Exception) {
