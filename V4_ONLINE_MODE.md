@@ -89,8 +89,26 @@ suspend fun getCardInfo(cardName: String): CardInfo? {
 4. ✅ 修改 MainActivity 移除数据库导入 UI
 5. ✅ 删除 CardDatabaseDownloadWorker
 6. ✅ 删除数据库导入 UI
-7. ⏳ 测试在线查询功能
-8. ⏳ 提交并推送到 GitHub
+7. ✅ 测试在线查询功能
+8. ✅ 修复卡牌显示问题（中文、法术力值）
+9. ✅ 修复赛事滑动删除功能
+10. ✅ 修复赛事信息刷新问题
+
+## 已修复问题
+
+### 1. 卡牌中文显示问题 (2025-01-29)
+- 修复 `displayName` 字段未正确映射到 `cardNameZh`
+- 移除旧的 `chineseNameMap` 逻辑，直接使用数据库 `displayName`
+- 确保 `CardEntity.toCard()` 正确映射中文名
+
+### 2. 赛事滑动删除功能 (2025-01-29)
+- 修复适配器检查错误（`eventAdapter` → `eventSectionAdapter`）
+- 添加 `EventSectionAdapter.getItemAtPosition()` 公共方法
+- 确保只能删除 `EventItem`，不能删除 `DateHeader`
+
+### 3. 赛事信息刷新 (2025-01-29)
+- 添加 `MainActivity.onResume()` 自动刷新赛事列表
+- 从赛事详情页返回时更新卡组数量
 
 ## 待办
 
@@ -98,5 +116,5 @@ suspend fun getCardInfo(cardName: String): CardInfo? {
 - [x] 修改卡牌查询逻辑为在线模式
 - [x] 添加网络错误处理
 - [x] 测试 API 调用
-- [ ] 添加加载状态提示（可选）
-- [ ] 更新文档
+- [x] 添加加载状态提示
+- [x] 更新文档
