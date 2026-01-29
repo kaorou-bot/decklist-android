@@ -85,18 +85,18 @@ suspend fun getCardInfo(cardName: String): CardInfo? {
 
 1. ✅ 创建新分支 `v4.0.0-online`
 2. ✅ 更新版本号到 4.0.0
-3. ⏳ 修改 MainActivity 移除数据库导入逻辑
-4. ⏳ 修改 DecklistRepository 直接调用 MTGCH API
-5. ⏳ 删除 CardDatabaseDownloadWorker
-6. ⏳ 删除数据库导入 UI
+3. ✅ 修改 DecklistRepository 移除数据库导入逻辑
+4. ✅ 修改 MainActivity 移除数据库导入 UI
+5. ✅ 删除 CardDatabaseDownloadWorker
+6. ✅ 删除数据库导入 UI
 7. ⏳ 测试在线查询功能
 8. ⏳ 提交并推送到 GitHub
 
 ## 待办
 
-- [ ] 移除数据库导入 UI
-- [ ] 修改卡牌查询逻辑为在线模式
-- [ ] 添加网络错误处理
-- [ ] 添加加载状态提示
-- [ ] 测试 API 调用
+- [x] 移除数据库导入 UI
+- [x] 修改卡牌查询逻辑为在线模式
+- [x] 添加网络错误处理
+- [x] 测试 API 调用
+- [ ] 添加加载状态提示（可选）
 - [ ] 更新文档
