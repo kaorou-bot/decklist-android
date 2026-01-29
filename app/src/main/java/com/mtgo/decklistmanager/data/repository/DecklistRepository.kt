@@ -262,7 +262,15 @@ class DecklistRepository @Inject constructor(
                             val searchResponse = response.body()!!
                             val results = searchResponse.data
                             if (results != null && results.isNotEmpty()) {
-                                val mtgchCard = results[0]
+                                // 尝试找到精确匹配（忽略大小写）
+                                val exactMatch = results.find { card ->
+                                    val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
+                                    val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
+                                    val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
+                                    nameMatch || zhNameMatch || translatedNameMatch
+                                }
+
+                                val mtgchCard = exactMatch ?: results[0]
 
                                 // 更新所有同名卡牌的法术力值（使用中文翻译）
                                 val displayName = mtgchCard.zhsName ?: mtgchCard.atomicTranslatedName
@@ -395,7 +403,7 @@ class DecklistRepository @Inject constructor(
 
             val response = mtgchApi.searchCard(
                 query = exactQuery,
-                pageSize = 1,
+                pageSize = 10,  // 获取多个结果以便精确匹配
                 priorityChinese = true
             )
 
@@ -404,10 +412,20 @@ class DecklistRepository @Inject constructor(
                 val results = searchResponse.data
 
                 if (results != null && results.isNotEmpty()) {
-                    val mtgchCard = results[0]
+                    // 尝试找到精确匹配（忽略大小写）
+                    val exactMatch = results.find { card ->
+                        val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
+                        val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
+                        val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
+                        nameMatch || zhNameMatch || translatedNameMatch
+                    }
+
+                    val mtgchCard = exactMatch ?: results[0]  // 优先使用精确匹配
                     val cardInfoEntity = mtgchCard.toEntity()
 
                     AppLogger.d("DecklistRepository", "✓ Found online: $cardName -> ${cardInfoEntity.name}")
+                    AppLogger.d("DecklistRepository", "  Exact match: ${exactMatch != null}")
+
                     return@withContext cardInfoEntity.toDomainModel()
                 }
             }
@@ -446,7 +464,7 @@ class DecklistRepository @Inject constructor(
 
                 val response = mtgchApi.searchCard(
                     query = exactQuery,
-                    pageSize = limit,
+                    pageSize = limit * 2,  // 获取更多结果以便精确匹配
                     priorityChinese = true
                 )
 
@@ -455,8 +473,23 @@ class DecklistRepository @Inject constructor(
                     val results = searchResponse.data
 
                     if (results != null && results.isNotEmpty()) {
-                        AppLogger.d("DecklistRepository", "✓ Found ${results.size} results online")
-                        return@withContext results.map { it.toEntity().toDomainModel() }
+                        // 优先精确匹配的结果
+                        val exactMatches = results.filter { card ->
+                            val nameMatch = card.name?.equals(query, ignoreCase = true) == true
+                            val zhNameMatch = card.zhsName?.equals(query, ignoreCase = true) == true
+                            val translatedNameMatch = card.atomicTranslatedName?.equals(query, ignoreCase = true) == true
+                            nameMatch || zhNameMatch || translatedNameMatch
+                        }
+
+                        // 如果有精确匹配，优先返回；否则返回所有结果
+                        val finalResults = if (exactMatches.isNotEmpty()) {
+                            exactMatches
+                        } else {
+                            results
+                        }
+
+                        AppLogger.d("DecklistRepository", "✓ Found ${finalResults.size} results online (exact matches: ${exactMatches.size})")
+                        return@withContext finalResults.take(limit).map { it.toEntity().toDomainModel() }
                     }
                 }
 
