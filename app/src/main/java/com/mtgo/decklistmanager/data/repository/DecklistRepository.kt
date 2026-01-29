@@ -382,26 +382,46 @@ class DecklistRepository @Inject constructor(
      * 查询单卡信息（先查缓存，再查API）
      */
     /**
-     * 获取卡牌信息 - 仅从本地数据库加载（v3.11.0）
-     * 仅使用精确匹配（中文名或英文名）
+     * 获取卡牌信息 - v4.0.0 在线模式
+     * 直接调用 MTGCH API，不使用本地数据库
      */
     suspend fun getCardInfo(cardName: String): CardInfo? = withContext(Dispatchers.IO) {
-        AppLogger.d("DecklistRepository", "getCardInfo (local only) called for: $cardName")
+        AppLogger.d("DecklistRepository", "getCardInfo (online mode) called for: $cardName")
 
-        // 仅从本地数据库精确查询（中文名或英文名）
-        val cached = cardInfoDao.getCardInfoByNameOrEnName(cardName)
-        if (cached != null) {
-            AppLogger.d("DecklistRepository", "✓ Found in local database: $cardName -> ${cached.name}")
-            AppLogger.d("DecklistRepository", "  中文: ${cached.name}, 英文: ${cached.enName}")
-            AppLogger.d("DecklistRepository", "  法术力: ${cached.manaCost}, 类型: ${cached.typeLine}")
-            AppLogger.d("DecklistRepository", "  双面牌: ${cached.isDualFaced}, 正面: ${cached.frontFaceName}, 背面: ${cached.backFaceName}")
-            return@withContext cached.toDomainModel()
+        try {
+            // v4.0.0 在线模式：直接调用 MTGCH API
+            val response = mtgchApi.searchCard(
+                query = cardName,
+                pageSize = 1,
+                priorityChinese = true
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                val searchResponse = response.body()!!
+                val results = searchResponse.data
+
+                if (results != null && results.isNotEmpty()) {
+                    // 找到精确匹配
+                    val exactMatch = results.find { card ->
+                        card.name?.equals(cardName, ignoreCase = true) == true ||
+                        card.zhsName?.equals(cardName, ignoreCase = true) == true
+                    }
+
+                    val mtgchCard = exactMatch ?: results[0]
+                    val cardInfoEntity = mtgchCard.toEntity()
+
+                    AppLogger.d("DecklistRepository", "✓ Found online: $cardName -> ${cardInfoEntity.name}")
+                    return@withContext cardInfoEntity.toDomainModel()
+                }
+            }
+
+            // API 调用失败或没有结果
+            AppLogger.w("DecklistRepository", "✗ Card not found online: $cardName")
+            null
+        } catch (e: Exception) {
+            AppLogger.e("DecklistRepository", "Error fetching card info from API: ${e.message}", e)
+            null
         }
-
-        // 如果本地数据库中没有，记录警告但不联网
-        AppLogger.w("DecklistRepository", "✗ Card not found in local database: $cardName")
-        AppLogger.w("DecklistRepository", "  请确保已导入完整的卡牌数据库")
-        null
     }
 
     /**
@@ -416,15 +436,36 @@ class DecklistRepository @Inject constructor(
      * 搜索卡牌（先查缓存，再查API）
      */
     /**
-     * 搜索卡牌 - 仅从本地数据库搜索（v3.11.0）
+     * 搜索卡牌 - v4.0.0 在线模式
+     * 直接调用 MTGCH API 进行搜索
      */
     suspend fun searchCardsByName(query: String, limit: Int = 20): List<CardInfo> =
         withContext(Dispatchers.IO) {
-            // 仅从本地数据库搜索，不再联网
-            AppLogger.d("DecklistRepository", "Searching local database for: $query")
-            val results = cardInfoDao.searchCardsByName(query, limit)
-            AppLogger.d("DecklistRepository", "Found ${results.size} results in local database")
-            results.map { it.toDomainModel() }
+            AppLogger.d("DecklistRepository", "Searching online for: $query (limit: $limit)")
+
+            try {
+                val response = mtgchApi.searchCard(
+                    query = query,
+                    pageSize = limit,
+                    priorityChinese = true
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    val searchResponse = response.body()!!
+                    val results = searchResponse.data
+
+                    if (results != null && results.isNotEmpty()) {
+                        AppLogger.d("DecklistRepository", "✓ Found ${results.size} results online")
+                        return@withContext results.map { it.toEntity().toDomainModel() }
+                    }
+                }
+
+                AppLogger.d("DecklistRepository", "No results found online for: $query")
+                emptyList()
+            } catch (e: Exception) {
+                AppLogger.e("DecklistRepository", "Error searching cards: ${e.message}", e)
+                emptyList()
+            }
         }
 
     /**

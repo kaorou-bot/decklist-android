@@ -10,19 +10,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.work.WorkManager
-import androidx.work.WorkInfo
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.mtgo.decklistmanager.R
-import com.mtgo.decklistmanager.data.offline.CardDatabaseDownloadWorker
 import com.mtgo.decklistmanager.domain.model.Decklist
 import com.mtgo.decklistmanager.domain.model.Event
 import com.mtgo.decklistmanager.ui.base.BaseActivity
 import com.mtgo.decklistmanager.ui.debug.LogViewerActivity
 import com.mtgo.decklistmanager.util.LanguagePreferenceManager
-import com.mtgo.decklistmanager.data.offline.CardDatabaseManager
-import com.mtgo.decklistmanager.ui.dialog.DatabaseDownloadDialog
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import android.graphics.Canvas
@@ -84,103 +78,6 @@ class MainActivity : BaseActivity() {
             else -> switchToTab(TAB_EVENT_LIST)
         }
         isProgrammaticNav = false
-    }
-
-    private fun checkOfflineDatabase() {
-        val dbManager = CardDatabaseManager(this)
-        val isDownloaded = dbManager.isDatabaseDownloaded()
-
-        android.util.Log.d("MainActivity", "检查离线数据库状态: isDownloaded=$isDownloaded")
-
-        // 如果数据库尚未导入，显示导入提示对话框
-        if (!isDownloaded) {
-            android.util.Log.d("MainActivity", "显示数据库导入对话框")
-            DatabaseDownloadDialog(
-                context = this,
-                onDownloadStart = {
-                    // 开始导入数据库
-                    android.util.Log.d("MainActivity", "用户选择导入数据库")
-                    startDatabaseImport()
-                },
-                onSkip = {
-                    // 跳过导入
-                    android.util.Log.d("MainActivity", "用户跳过导入")
-                    Toast.makeText(this, "已跳过导入，可以稍后在设置中重新导入", Toast.LENGTH_SHORT).show()
-                }
-            ).show()
-        } else {
-            android.util.Log.d("MainActivity", "数据库已导入，跳过提示")
-        }
-    }
-
-    private fun startDatabaseImport() {
-        val dbManager = CardDatabaseManager(this)
-        dbManager.startDownload()
-
-        // 显示进度条
-        showDatabaseImportProgress()
-
-        Toast.makeText(this, "正在后台导入卡牌数据库，请稍候...", Toast.LENGTH_LONG).show()
-    }
-
-    private fun showDatabaseImportProgress() {
-        // 创建进度对话框
-        val builder = android.app.AlertDialog.Builder(this)
-        val dialogLayout = layoutInflater.inflate(R.layout.dialog_database_import_progress, null)
-        val progressBar = dialogLayout.findViewById<LinearProgressIndicator>(R.id.importProgress)
-        val progressText = dialogLayout.findViewById<android.widget.TextView>(R.id.progressText)
-
-        val dialog = builder.setView(dialogLayout)
-            .setCancelable(false)
-            .create()
-
-        dialog.show()
-
-        // 监听WorkManager进度
-        WorkManager.getInstance(this).getWorkInfosByTagLiveData(CardDatabaseManager.WORK_TAG)
-            .observe(this) { workInfos ->
-                workInfos?.forEach { workInfo ->
-                    when (workInfo.state) {
-                        WorkInfo.State.RUNNING -> {
-                            val progress = workInfo.progress
-                            val currentProgress = progress.getInt(CardDatabaseDownloadWorker.KEY_PROGRESS, 0)
-                            val current = progress.getInt(CardDatabaseDownloadWorker.KEY_CURRENT, 0)
-                            val total = progress.getInt(CardDatabaseDownloadWorker.KEY_TOTAL, 0)
-
-                            progressBar?.progress = currentProgress
-                            progressText?.text = if (total > 0) {
-                                "导入中: $current / $total 张卡牌 ($currentProgress%)"
-                            } else {
-                                "导入中... ($currentProgress%)"
-                            }
-                        }
-                        WorkInfo.State.SUCCEEDED -> {
-                            dialog.dismiss()
-                            // 获取最终导入数量
-                            val outputData = workInfo.outputData
-                            val totalCount = outputData.getInt(CardDatabaseDownloadWorker.KEY_TOTAL, 0)
-                            val successCount = outputData.getInt(CardDatabaseDownloadWorker.KEY_CURRENT, 0)
-
-                            val message = if (totalCount > 0) {
-                                "✅ 卡牌数据库导入完成！\n成功导入 $successCount 张卡牌"
-                            } else {
-                                "✅ 卡牌数据库导入完成！"
-                            }
-
-                            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                        }
-                        WorkInfo.State.FAILED -> {
-                            dialog.dismiss()
-                            Toast.makeText(
-                                this,
-                                "❌ 卡牌数据库导入失败",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                        else -> {}
-                    }
-                }
-            }
     }
 
     private fun initViews() {
@@ -740,11 +637,6 @@ class MainActivity : BaseActivity() {
                 }
                 true
             }
-            R.id.menu_reimport_database -> {
-                // 重新导入数据库
-                showReimportDatabaseDialog()
-                true
-            }
             R.id.menu_view_logs -> {
                 // 查看日志
                 val intent = Intent(this, LogViewerActivity::class.java)
@@ -753,54 +645,6 @@ class MainActivity : BaseActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    private fun showReimportDatabaseDialog() {
-        val dbManager = CardDatabaseManager(this)
-
-        android.app.AlertDialog.Builder(this)
-            .setTitle("重新导入卡牌数据库")
-            .setMessage(
-                """
-                此操作将会：
-                • 清除现有的卡牌缓存数据
-                • 重新从 assets 导入 25,578 张卡牌
-                • 导入过程约需 2-3 分钟
-
-                是否继续？
-                """.trimIndent()
-            )
-            .setPositiveButton("重新导入") { _, _ ->
-                // 清除标记
-                dbManager.clearDatabase()
-                // 清空现有数据
-                lifecycleScope.launch {
-                    try {
-                        android.util.Log.d("MainActivity", "清空现有卡牌数据")
-                        com.mtgo.decklistmanager.data.local.database.AppDatabase.getInstance(
-                            this@MainActivity
-                        ).cardInfoDao().clearAll()
-
-                        // 开始导入
-                        android.util.Log.d("MainActivity", "启动重新导入")
-                        dbManager.startDownload()
-                        Toast.makeText(
-                            this@MainActivity,
-                            "正在后台重新导入卡牌数据库，请稍候...",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    } catch (e: Exception) {
-                        android.util.Log.e("MainActivity", "重新导入失败", e)
-                        Toast.makeText(
-                            this@MainActivity,
-                            "重新导入失败: ${e.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
-            .setNegativeButton("取消", null)
-            .show()
     }
 
     // Group events by date for sectioned adapter

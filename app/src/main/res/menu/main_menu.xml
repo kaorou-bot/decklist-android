@@ -15,12 +15,6 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/menu_reimport_database"
-        android:title="重新导入卡牌数据库"
-        android:icon="@android:drawable/ic_menu_upload"
-        app:showAsAction="never" />
-
-    <item
         android:id="@+id/menu_view_logs"
         android:title="查看日志"
         android:icon="@android:drawable/ic_menu_info_details"
