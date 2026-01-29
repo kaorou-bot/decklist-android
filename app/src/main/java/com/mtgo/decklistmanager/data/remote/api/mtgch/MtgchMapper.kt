@@ -56,7 +56,7 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
             when {
                 frontZhName != null && backZhName != null -> "$frontZhName // $backZhName"
                 frontZhName != null -> frontZhName
-                else -> zhsName ?: name ?: ""
+                else -> zhsName ?: atomicTranslatedName ?: name ?: ""
             }
         }
         // 其次从 otherFaces 获取（需要解析名称）
@@ -68,15 +68,16 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
             if (otherFaceName != null && otherFaceName.contains(" // ")) {
                 otherFaceName  // 已经是 "Front // Back" 格式
             } else {
-                zhsName ?: name ?: ""
+                zhsName ?: atomicTranslatedName ?: name ?: ""
             }
         }
         // 最后使用 zhsName 或 name
         else {
-            zhsName ?: name ?: ""
+            zhsName ?: atomicTranslatedName ?: name ?: ""
         }
     } else {
-        zhsName ?: name ?: ""
+        // v4.0.0: 优先官方中文，其次机器翻译，最后英文
+        zhsName ?: atomicTranslatedName ?: name ?: ""
     }
 
     // 提取双面牌信息
@@ -190,8 +191,9 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         enName = name,  // 保存原始英文名
         manaCost = manaCost,
         cmc = cmc?.toDouble(),
-        typeLine = zhsTypeLine ?: typeLine,
-        oracleText = zhsText ?: oracleText,
+        // v4.0.0: 优先使用官方中文，其次机器翻译，最后英文原文
+        typeLine = zhsTypeLine ?: atomicTranslatedType ?: typeLine,
+        oracleText = zhsText ?: atomicTranslatedText ?: oracleText,
         colors = colors?.joinToString(","),
         colorIdentity = colorIdentity?.joinToString(","),
         power = power,

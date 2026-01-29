@@ -390,8 +390,11 @@ class DecklistRepository @Inject constructor(
 
         try {
             // v4.0.0 在线模式：直接调用 MTGCH API
+            // 使用 ! 前缀进行精确搜索
+            val exactQuery = if (!cardName.startsWith("!")) "!$cardName" else cardName
+
             val response = mtgchApi.searchCard(
-                query = cardName,
+                query = exactQuery,
                 pageSize = 1,
                 priorityChinese = true
             )
@@ -401,13 +404,7 @@ class DecklistRepository @Inject constructor(
                 val results = searchResponse.data
 
                 if (results != null && results.isNotEmpty()) {
-                    // 找到精确匹配
-                    val exactMatch = results.find { card ->
-                        card.name?.equals(cardName, ignoreCase = true) == true ||
-                        card.zhsName?.equals(cardName, ignoreCase = true) == true
-                    }
-
-                    val mtgchCard = exactMatch ?: results[0]
+                    val mtgchCard = results[0]
                     val cardInfoEntity = mtgchCard.toEntity()
 
                     AppLogger.d("DecklistRepository", "✓ Found online: $cardName -> ${cardInfoEntity.name}")
@@ -444,8 +441,11 @@ class DecklistRepository @Inject constructor(
             AppLogger.d("DecklistRepository", "Searching online for: $query (limit: $limit)")
 
             try {
+                // 使用精确搜索（! 前缀）
+                val exactQuery = if (!query.startsWith("!")) "!$query" else query
+
                 val response = mtgchApi.searchCard(
-                    query = query,
+                    query = exactQuery,
                     pageSize = limit,
                     priorityChinese = true
                 )
