@@ -500,22 +500,57 @@ class DecklistRepository @Inject constructor(
     }
 
     /**
-     * v4.0.0: 获取基本地的中文名称
+     * v4.0.0: 获取常用卡牌的中文名称
+     * 包括基本地和热门非基本地
      */
     private fun getBasicLandChineseName(englishName: String?): String? {
         if (englishName == null) return null
 
         return when (englishName) {
+            // 基本地
             "Plains" -> "平原"
             "Island" -> "海岛"
             "Swamp" -> "沼泽"
             "Mountain" -> "山脉"
             "Forest" -> "树林"
+
+            // 积雪基本地
             "Snow-Covered Plains" -> "积雪平原"
             "Snow-Covered Island" -> "积雪海岛"
             "Snow-Covered Swamp" -> "积雪沼泽"
             "Snow-Covered Mountain" -> "积雪山脉"
             "Snow-Covered Forest" -> "积雪树林"
+
+            // 流行非基本地
+            "Wasteland" -> "荒原"
+            "Strip Mine" -> "矿脉"
+            "Ancient Tomb" -> "古墓"
+            "Dark Depths" -> "深渊"
+            "Tabernacle at Pendrell Vale" -> "彭德尔幽谷小教堂"
+            "Bazaar of Baghdad" -> "巴格达集市"
+            "Mishra's Workshop" -> "米斯拉的工坊"
+            "Karakas" -> "喀洛斯"
+            "Glacial Fortress" -> "冰川堡垒"
+            "Horizon Canopy" -> "天际冠冕"
+            "Flagstones of Trokair" -> "特罗凯尔的旗帜石"
+            "Gemstone Caverns" -> "宝石洞窟"
+            "Sejiri Steppe" -> "圣教区阶地"
+            "Vault of the Archangel" -> "天使金库"
+            "Hall of Storm Giants" -> "风暴巨人殿堂"
+            "Halls of Storm Giants" -> "风暴巨人殿堂"
+            "Noble Hierarch" -> "尊贵大主教"
+            "Dryad Arbor" -> "德鲁伊栖木"
+            "Inkmoth Nexus" -> "墨蛾连接点"
+            "Blinkmoth Nexus" -> "闪光蛾连接点"
+            "Gavony Township" -> "加沃尼镇"
+            "Kessig Wolf Run" -> "凯西格狼行地"
+            "Hissing Quagmire" -> "嘶响沼地"
+            "Westvale Abbey" -> "西vale修道院"
+            "Urborg, Tomb of Yawgmoth" -> "尤巴该、Yawgmoth 之墓"
+            "Bojuka Bog" -> "博久卡沼泽"
+            "Phyrexian Tower" -> "非瑞克西亚高塔"
+            "Command Tower" -> "指挥塔"
+
             else -> null
         }
     }
