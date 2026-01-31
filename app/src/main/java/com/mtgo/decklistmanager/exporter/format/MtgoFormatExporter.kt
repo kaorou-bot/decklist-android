@@ -1,7 +1,9 @@
 package com.mtgo.decklistmanager.exporter.format
 
-import com.mtgo.decklistmanager.exporter.DecklistExporter
+import com.mtgo.decklistmanager.domain.model.Card
+import com.mtgo.decklistmanager.domain.model.CardLocation
 import com.mtgo.decklistmanager.domain.model.Decklist
+import com.mtgo.decklistmanager.exporter.DecklistExporter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,17 +28,29 @@ class MtgoFormatExporter @Inject constructor() : DecklistExporter {
 
     override suspend fun export(
         decklist: Decklist,
+        cards: List<Card>,
         includeSideboard: Boolean
     ): String {
-        // TODO: 需要从 Repository 获取卡牌列表
-        // 目前先返回一个基本的格式示例
         return buildString {
-            line("// ${decklist.deckName ?: "Unknown Deck"}")
-            decklist.playerName?.let { line("// Player: $it") }
-            decklist.format?.let { line("// Format: $it") }
-            line()
-            line("// Main deck cards will be listed here")
-            line("// Sideboard cards will be listed here")
+            // 主牌
+            val mainDeck = cards.filter { it.location == CardLocation.MAIN }
+            mainDeck.forEach { card ->
+                val cardName = card.cardNameZh ?: card.cardName
+                line("${card.quantity} $cardName")
+            }
+
+            // 备牌
+            if (includeSideboard) {
+                val sideboard = cards.filter { it.location == CardLocation.SIDEBOARD }
+                if (sideboard.isNotEmpty()) {
+                    line()
+                    line("Sideboard")
+                    sideboard.forEach { card ->
+                        val cardName = card.cardNameZh ?: card.cardName
+                        line("${card.quantity} $cardName")
+                    }
+                }
+            }
         }.trimEnd()
     }
 

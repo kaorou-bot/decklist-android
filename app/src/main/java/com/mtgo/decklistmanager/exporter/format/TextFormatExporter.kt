@@ -1,6 +1,8 @@
 package com.mtgo.decklistmanager.exporter.format
 
 import com.mtgo.decklistmanager.exporter.DecklistExporter
+import com.mtgo.decklistmanager.domain.model.Card
+import com.mtgo.decklistmanager.domain.model.CardLocation
 import com.mtgo.decklistmanager.domain.model.Decklist
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,20 +32,33 @@ class TextFormatExporter @Inject constructor() : DecklistExporter {
 
     override suspend fun export(
         decklist: Decklist,
+        cards: List<Card>,
         includeSideboard: Boolean
     ): String {
-        // TODO: 需要从 Repository 获取卡牌列表
-        // 目前先返回一个基本的文本格式
+        val mainDeck = cards.filter { it.location == CardLocation.MAIN }
+        val sideboard = cards.filter { it.location == CardLocation.SIDEBOARD }
+
         return buildString {
-            line("套牌名称：${decklist.deckName ?: "Unknown"}")
+            line("套牌名称：${decklist.eventName ?: "Unknown"}")
             decklist.playerName?.let { line("玩家：$it") }
             decklist.format?.let { line("赛制：$it") }
             decklist.record?.let { line("战绩：$it") }
             line()
-            line("// Main deck cards will be listed here")
-            if (includeSideboard) {
+            line("主牌 (${mainDeck.sumOf { it.quantity }})")
+            line("================================")
+            mainDeck.forEach { card ->
+                val cardName = card.cardNameZh ?: card.cardName
+                line("${card.quantity}x $cardName")
+            }
+
+            if (includeSideboard && sideboard.isNotEmpty()) {
                 line()
-                line("// Sideboard cards will be listed here")
+                line("备牌 (${sideboard.sumOf { it.quantity }})")
+                line("================================")
+                sideboard.forEach { card ->
+                    val cardName = card.cardNameZh ?: card.cardName
+                    line("${card.quantity}x $cardName")
+                }
             }
         }.trimEnd()
     }

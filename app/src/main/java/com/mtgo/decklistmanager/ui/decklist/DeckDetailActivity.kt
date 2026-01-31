@@ -255,6 +255,26 @@ class DeckDetailActivity : AppCompatActivity() {
                 viewModel.clearCardInfo()
             }
         }
+
+        // Observe export result
+        viewModel.exportResult.observe(this) { result ->
+            result?.let {
+                handleExportResult(it)
+                viewModel.clearExportResult()
+            }
+        }
+
+        // Observe export error
+        viewModel.exportError.observe(this) { error ->
+            error?.let {
+                android.widget.Toast.makeText(
+                    this,
+                    it,
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                viewModel.clearExportError()
+            }
+        }
     }
 
     private fun loadData() {
@@ -460,15 +480,67 @@ class DeckDetailActivity : AppCompatActivity() {
     }
 
     /**
-     * 导出套牌（占位实现，后续将在 ViewModel 中实现）
+     * 导出套牌
      */
     private fun exportDecklist(decklist: Decklist, format: String) {
-        // TODO: 集成到 ViewModel，使用导出器
-        android.widget.Toast.makeText(
-            this,
-            "导出 $format 格式 - 功能开发中",
-            android.widget.Toast.LENGTH_SHORT
-        ).show()
+        viewModel.exportDecklist(format, includeSideboard = true)
+    }
+
+    /**
+     * 处理导出结果
+     */
+    private fun handleExportResult(result: com.mtgo.decklistmanager.exporter.ExportResult) {
+        // 使用 FileSaver 保存文件
+        lifecycleScope.launch {
+            try {
+                val fileSaver = com.mtgo.decklistmanager.exporter.FileSaver(this@DeckDetailActivity)
+                val savedUri = fileSaver.saveFile(result.fileName, result.content)
+
+                if (savedUri != null) {
+                    android.widget.Toast.makeText(
+                        this@DeckDetailActivity,
+                        "已导出: ${result.fileName}",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+
+                    // 询问是否分享
+                    androidx.appcompat.app.AlertDialog.Builder(this@DeckDetailActivity)
+                        .setTitle("导出成功")
+                        .setMessage("套牌已保存为 ${result.formatName} 格式\n\n是否分享文件？")
+                        .setPositiveButton("分享") { _, _ ->
+                            shareFile(savedUri, result.fileName)
+                        }
+                        .setNegativeButton("取消", null)
+                        .show()
+                } else {
+                    android.widget.Toast.makeText(
+                        this@DeckDetailActivity,
+                        "保存失败",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.widget.Toast.makeText(
+                    this@DeckDetailActivity,
+                    "导出出错: ${e.message}",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    /**
+     * 分享文件
+     */
+    private fun shareFile(uri: android.net.Uri, fileName: String) {
+        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        startActivity(android.content.Intent.createChooser(shareIntent, "分享套牌"))
     }
 
     /**
@@ -487,15 +559,30 @@ class DeckDetailActivity : AppCompatActivity() {
      * 复制到剪贴板
      */
     private fun copyToClipboard(decklist: Decklist) {
-        val textContent = buildTextContent(decklist, allCards)
-        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Decklist", textContent)
-        clipboard.setPrimaryClip(clip)
+        // 使用文本格式导出
+        lifecycleScope.launch {
+            try {
+                val allCards = viewModel.getAllCards()
+                val textExporter = com.mtgo.decklistmanager.exporter.format.TextFormatExporter()
+                val content = textExporter.export(decklist, allCards, true)
 
-        android.widget.Toast.makeText(
-            this,
-            "已复制到剪贴板",
-            android.widget.Toast.LENGTH_SHORT
-        ).show()
+                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Decklist", content)
+                clipboard.setPrimaryClip(clip)
+
+                android.widget.Toast.makeText(
+                    this@DeckDetailActivity,
+                    "已复制到剪贴板",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.widget.Toast.makeText(
+                    this@DeckDetailActivity,
+                    "复制失败: ${e.message}",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 }

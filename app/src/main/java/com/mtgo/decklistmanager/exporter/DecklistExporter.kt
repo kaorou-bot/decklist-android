@@ -1,5 +1,6 @@
 package com.mtgo.decklistmanager.exporter
 
+import com.mtgo.decklistmanager.domain.model.Card
 import com.mtgo.decklistmanager.domain.model.Decklist
 
 /**
@@ -11,11 +12,13 @@ interface DecklistExporter {
     /**
      * 导出套牌
      * @param decklist 套牌数据
+     * @param cards 卡牌列表
      * @param includeSideboard 是否包含备牌
      * @return 导出的字符串内容
      */
     suspend fun export(
         decklist: Decklist,
+        cards: List<Card>,
         includeSideboard: Boolean = true
     ): String
 

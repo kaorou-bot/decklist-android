@@ -12,6 +12,11 @@ import com.mtgo.decklistmanager.domain.model.CardInfo
 import com.mtgo.decklistmanager.data.repository.DecklistRepository
 import com.mtgo.decklistmanager.data.local.entity.DecklistEntity
 import com.mtgo.decklistmanager.data.local.entity.CardEntity
+import com.mtgo.decklistmanager.exporter.DecklistExporter
+import com.mtgo.decklistmanager.exporter.ExportResult
+import com.mtgo.decklistmanager.exporter.format.MtgoFormatExporter
+import com.mtgo.decklistmanager.exporter.format.ArenaFormatExporter
+import com.mtgo.decklistmanager.exporter.format.TextFormatExporter
 import com.mtgo.decklistmanager.util.LanguagePreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -24,6 +29,9 @@ import javax.inject.Inject
 class DeckDetailViewModel @Inject constructor(
     private val repository: DecklistRepository,
     private val languagePreferenceManager: LanguagePreferenceManager,
+    private val mtgoExporter: MtgoFormatExporter,
+    private val arenaExporter: ArenaFormatExporter,
+    private val textExporter: TextFormatExporter,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -55,6 +63,14 @@ class DeckDetailViewModel @Inject constructor(
     // Card info error message
     private val _cardInfoError = MutableLiveData<String?>()
     val cardInfoError: LiveData<String?> = _cardInfoError
+
+    // Export result
+    private val _exportResult = MutableLiveData<ExportResult?>()
+    val exportResult: LiveData<ExportResult?> = _exportResult
+
+    // Export error message
+    private val _exportError = MutableLiveData<String?>()
+    val exportError: LiveData<String?> = _exportError
 
     // Helper function to convert entities
     private fun DecklistEntity.toDecklist() = Decklist(
@@ -186,5 +202,74 @@ class DeckDetailViewModel @Inject constructor(
      */
     suspend fun isFavorite(decklistId: Long): Boolean {
         return repository.isFavorite(decklistId)
+    }
+
+    /**
+     * 导出套牌为指定格式
+     */
+    fun exportDecklist(format: String, includeSideboard: Boolean = true) {
+        viewModelScope.launch {
+            try {
+                val currentDecklist = _decklist.value
+                if (currentDecklist == null) {
+                    _exportError.value = "套牌数据未加载"
+                    return@launch
+                }
+
+                // 获取所有卡牌
+                val allCards = (_mainDeck.value ?: emptyList()) + (_sideboard.value ?: emptyList())
+
+                // 选择对应的导出器
+                val exporter: DecklistExporter = when (format) {
+                    "mtgo" -> mtgoExporter
+                    "arena" -> arenaExporter
+                    "text" -> textExporter
+                    else -> textExporter
+                }
+
+                // 执行导出
+                val content = exporter.export(currentDecklist, allCards, includeSideboard)
+
+                // 生成文件名
+                val sanitizedName = (currentDecklist.eventName ?: "decklist")
+                    .replace(Regex("[^a-zA-Z0-9\\s\\-_\\u4e00-\\u9fa5]"), "")
+                    .trim()
+                val fileName = "${sanitizedName}.${exporter.getFileExtension()}"
+
+                // 创建导出结果
+                val result = ExportResult(
+                    content = content,
+                    fileName = fileName,
+                    formatName = exporter.getFormatName(),
+                    fileSize = content.toByteArray().size
+                )
+
+                _exportResult.value = result
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _exportError.value = "导出失败: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * 清除导出结果
+     */
+    fun clearExportResult() {
+        _exportResult.value = null
+    }
+
+    /**
+     * 清除导出错误
+     */
+    fun clearExportError() {
+        _exportError.value = null
+    }
+
+    /**
+     * 获取所有卡牌（用于剪贴板复制）
+     */
+    fun getAllCards(): List<Card> {
+        return (_mainDeck.value ?: emptyList()) + (_sideboard.value ?: emptyList())
     }
 }

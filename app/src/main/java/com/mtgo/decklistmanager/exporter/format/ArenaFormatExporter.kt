@@ -40,16 +40,32 @@ class ArenaFormatExporter @Inject constructor(
 
     override suspend fun export(
         decklist: Decklist,
+        cards: List<Card>,
         includeSideboard: Boolean
     ): String {
         return withContext(Dispatchers.Default) {
-            // TODO: 需要从 Repository 获取卡牌列表
-            // 目前先返回一个基本的 JSON 结构
+            val mainDeck = cards.filter { it.location == com.mtgo.decklistmanager.domain.model.CardLocation.MAIN }
+            val sideboard = cards.filter { it.location == com.mtgo.decklistmanager.domain.model.CardLocation.SIDEBOARD }
+
             val arenaDeck = ArenaDeck(
-                name = decklist.deckName ?: "Unknown Deck",
+                name = decklist.eventName ?: "Unknown Deck",
                 format = decklist.format ?: "Standard",
-                mainDeck = emptyList(),
-                sideboard = emptyList()
+                mainDeck = mainDeck.map { card ->
+                    ArenaCardEntry(
+                        id = getScryfallId(card),
+                        quantity = card.quantity
+                    )
+                },
+                sideboard = if (includeSideboard) {
+                    sideboard.map { card ->
+                        ArenaCardEntry(
+                            id = getScryfallId(card),
+                            quantity = card.quantity
+                        )
+                    }
+                } else {
+                    emptyList()
+                }
             )
 
             gson.toJson(arenaDeck)
