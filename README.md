@@ -4,7 +4,7 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9.20-blue.svg)](https://kotlinlang.org)
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg)](https://android.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.12.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-4.1.0-brightgreen.svg)](CHANGELOG.md)
 
 一个用于浏览、搜索和分析 Magic: The Gathering 竞技牌组数据的 Android 应用程序。
 
@@ -145,6 +145,20 @@ cd decklist-android
 - 高清卡牌图片（包括双面牌）
 
 ## 主要功能
+
+### 在线卡牌搜索 (v4.0.0+)
+- 基于 MTGCH API 的实时在线搜索
+- 高级筛选功能（底部表单）：
+  - 颜色筛选：W, U, B, R, G, C（无色）
+  - 颜色标识筛选
+  - 法术力值筛选：任意、=、>、<
+  - 类型筛选：生物、瞬间、法术、神器、结界、鹏洛客、地
+  - 稀有度筛选：common, uncommon, rare, mythic
+  - 系列代码筛选
+  - 伙伴颜色筛选
+- 搜索历史记录（最近10条）
+- 支持空文本+筛选条件搜索
+- 卡牌详情弹窗（含高清卡图）
 
 ### 赛事浏览
 - 三级架构：赛事列表 → 赛事详情 → 套牌详情
@@ -309,7 +323,21 @@ Glide.with(context)
 
 ## 版本历史
 
-最新版本：**v3.10.2** (2026-01-27)
+最新版本：**v4.1.0** (开发中，分支: dev/v4.1.0)
+
+### v4.1.0 (开发中)
+- ✨ **高级搜索重做**：使用底部表单(BottomSheet)替代对话框，与MTGCH官网交互一致
+- 🔍 搜索优化：CMC操作符增加"任意"选项，所有筛选字段整合在表单中
+- ⚡ **性能优化**：套牌详情页预加载所有唯一卡牌信息到内存缓存
+- 🚀 卡牌详情加载速度显著提升：点击卡牌时优先使用缓存，几乎瞬间显示
+
+### v4.0.0 (2026-01-27)
+- 🔄 **在线模式升级**：完全使用 MTGCH API 进行卡牌搜索
+- 🇨🇳 完整中文支持：优先显示中文卡牌信息，支持中文版卡牌图片
+- 📦 搜索历史记录：保存最近搜索，支持快速重搜
+- 🎨 高级筛选：颜色、颜色标识、法术力值、类型、稀有度、系列代码、伙伴颜色
+- 🔍 搜索功能增强：支持空文本+筛选条件搜索
+- 🖼️ 卡牌详情对话框优化：显示卡牌图片，正确处理换行符
 
 ### v3.10.2 (2026-01-27)
 - 🐛 修复双面牌背面无法显示中文信息的问题
@@ -368,6 +396,47 @@ Glide.with(context)
 - ⚡ 性能大幅提升
 
 查看完整更新日志：[CHANGELOG.md](CHANGELOG.md)
+
+## 开发状态
+
+### 当前分支
+- **主开发分支**: `dev/v4.1.0`
+- **最新提交**: feat: 重做高级搜索并优化套牌详情卡牌加载
+
+### 最近完成的功能 (v4.1.0)
+1. ✅ 高级搜索底部表单实现 (`bottom_sheet_advanced_search.xml`)
+2. ✅ CMC操作符增加"任意"选项
+3. ✅ 套牌详情卡牌预加载缓存优化
+4. ✅ 卡牌详情加载性能显著提升
+
+### 关键文件位置
+- 搜索页面: `app/src/main/java/com/mtgo/decklistmanager/ui/search/`
+- 套牌详情: `app/src/main/java/com/mtgo/decklistmanager/ui/decklist/DeckDetailViewModel.kt`
+- 高级搜索布局: `app/src/main/res/layout/bottom_sheet_advanced_search.xml`
+- 搜索ViewModel: `app/src/main/java/com/mtgo/decklistmanager/ui/search/SearchViewModel.kt`
+- 数据仓库: `app/src/main/java/com/mtgo/decklistmanager/data/repository/DecklistRepository.kt`
+
+### 快速构建测试
+```bash
+# 构建并安装到模拟器
+./gradlew installDebug
+
+# 检查连接的设备
+adb devices
+
+# 查看日志
+adb logcat | grep "DecklistManager"
+```
+
+### 待办事项
+- [ ] 添加单元测试
+- [ ] 添加 UI 自动化测试
+- [ ] 实现深色模式
+- [ ] 数据导出功能优化
+- [ ] 搜索结果分页加载
+- [ ] 离线模式支持
+
+---
 
 ## 贡献指南
 
