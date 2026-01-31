@@ -3,12 +3,14 @@ package com.mtgo.decklistmanager.ui.search
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.LayoutInflater
+import android.widget.Button
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.mtgo.decklistmanager.R
 import com.mtgo.decklistmanager.databinding.ActivitySearchBinding
 import com.mtgo.decklistmanager.databinding.DialogSearchFiltersBinding
@@ -26,6 +28,10 @@ class SearchActivity : AppCompatActivity() {
 
     private lateinit var resultAdapter: SearchResultAdapter
     private lateinit var historyAdapter: SearchHistoryAdapter
+
+    // 当前应用的筛选条件
+    private var currentFilters: SearchFilters? = null
+    private var cmcOperator: String = "="
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -158,34 +164,210 @@ class SearchActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        // 回车键搜索
         binding.editTextQuery.setOnEditorActionListener { _, _, _ ->
-            val query = binding.editTextQuery.text?.toString() ?: ""
-            viewModel.search(query)
+            performSearch()
             true
         }
+
+        // 搜索按钮
+        binding.buttonSearch.setOnClickListener {
+            performSearch()
+        }
+
+        // 清空历史按钮
         binding.buttonClearHistory.setOnClickListener {
             viewModel.clearAllHistory()
         }
+
+        // 筛选按钮
         binding.buttonFilters.setOnClickListener {
             showFiltersDialog()
         }
     }
 
+    /**
+     * 执行搜索（允许空文本）
+     */
+    private fun performSearch() {
+        val query = binding.editTextQuery.text?.toString() ?: ""
+        viewModel.search(query, filters = currentFilters)
+    }
+
+    /**
+     * 显示筛选对话框
+     */
     private fun showFiltersDialog() {
         val dialogBinding = DialogSearchFiltersBinding.inflate(LayoutInflater.from(this))
+
+        // 设置 CMC 操作符按钮
+        val cmcButtons = listOf(
+            dialogBinding.buttonCmcEqual to "=",
+            dialogBinding.buttonCmcGreater to ">",
+            dialogBinding.buttonCmcLess to "<"
+        )
+
+        // 恢复当前选择的 CMC 操作符
+        cmcButtons.forEach { (button, op) ->
+            button.isChecked = (op == cmcOperator)
+            button.setOnClickListener {
+                cmcOperator = op
+                cmcButtons.forEach { (b, _) -> b.isChecked = (b == button) }
+            }
+        }
+
+        // 清空筛选按钮
+        dialogBinding.buttonClearFilters.setOnClickListener {
+            clearAllChips(dialogBinding.chipGroupColors)
+            clearAllChips(dialogBinding.chipGroupColorIdentity)
+            clearAllChips(dialogBinding.chipGroupTypes)
+            clearAllChips(dialogBinding.chipGroupRarity)
+            clearAllChips(dialogBinding.chipGroupPartner)
+            dialogBinding.editTextCmc.text?.clear()
+            dialogBinding.editTextSet.text?.clear()
+            cmcOperator = "="
+            cmcButtons.forEach { (b, _) -> b.isChecked = (b == dialogBinding.buttonCmcEqual) }
+        }
+
         val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
             .setView(dialogBinding.root)
             .setTitle("高级筛选")
             .setNegativeButton("取消", null)
             .setPositiveButton("应用") { _, _ ->
-                // TODO: 收集筛选条件并构建 SearchFilters 对象
-                val filters = SearchFilters()
-                // 重新搜索，使用当前查询文本
-                val query = binding.editTextQuery.text?.toString() ?: ""
-                viewModel.search(query, filters = filters)
+                // 收集筛选条件
+                currentFilters = collectFilters(dialogBinding)
+                updateFilterButton()
+                // 重新搜索
+                performSearch()
             }
             .create()
         dialog.show()
+    }
+
+    /**
+     * 收集对话框中的筛选条件
+     */
+    private fun collectFilters(dialogBinding: DialogSearchFiltersBinding): SearchFilters {
+        // 收集颜色筛选
+        val colors = getCheckedChipIds(dialogBinding.chipGroupColors).mapNotNull { chipId ->
+            when (chipId) {
+                R.id.chipWhite -> "w"
+                R.id.chipBlue -> "u"
+                R.id.chipBlack -> "b"
+                R.id.chipRed -> "r"
+                R.id.chipGreen -> "g"
+                R.id.chipColorless -> "c"
+                else -> null
+            }
+        }
+
+        // 收集颜色标识筛选
+        val colorIdentity = getCheckedChipIds(dialogBinding.chipGroupColorIdentity).mapNotNull { chipId ->
+            when (chipId) {
+                R.id.chipCiWhite -> "w"
+                R.id.chipCiBlue -> "u"
+                R.id.chipCiBlack -> "b"
+                R.id.chipCiRed -> "r"
+                R.id.chipCiGreen -> "g"
+                else -> null
+            }
+        }.takeIf { it.isNotEmpty() }
+
+        // 收集 CMC 筛选
+        val cmc = dialogBinding.editTextCmc.text?.toString()?.toIntOrNull()?.let { value ->
+            CmcFilter(operator = cmcOperator, value = value)
+        }
+
+        // 收集类型筛选
+        val types = getCheckedChipIds(dialogBinding.chipGroupTypes).mapNotNull { chipId ->
+            when (chipId) {
+                R.id.chipCreature -> "creature"
+                R.id.chipInstant -> "instant"
+                R.id.chipSorcery -> "sorcery"
+                R.id.chipArtifact -> "artifact"
+                R.id.chipEnchantment -> "enchantment"
+                R.id.chipPlaneswalker -> "planeswalker"
+                R.id.chipLand -> "land"
+                else -> null
+            }
+        }.takeIf { it.isNotEmpty() }
+
+        // 收集稀有度筛选
+        val rarity = getCheckedChipIds(dialogBinding.chipGroupRarity).firstNotNullOfOrNull { chipId ->
+            when (chipId) {
+                R.id.chipCommon -> "common"
+                R.id.chipUncommon -> "uncommon"
+                R.id.chipRare -> "rare"
+                R.id.chipMythic -> "mythic"
+                else -> null
+            }
+        }
+
+        // 收集系列代码
+        val setCode = dialogBinding.editTextSet.text?.toString()?.takeIf { it.isNotBlank() }
+
+        // 收集伙伴颜色
+        val partner = getCheckedChipIds(dialogBinding.chipGroupPartner).firstNotNullOfOrNull { chipId ->
+            when (chipId) {
+                R.id.chipPartnerWhite -> "white"
+                R.id.chipPartnerBlue -> "blue"
+                R.id.chipPartnerBlack -> "black"
+                R.id.chipPartnerRed -> "red"
+                R.id.chipPartnerGreen -> "green"
+                else -> null
+            }
+        }
+
+        return SearchFilters(
+            colors = colors,
+            colorIdentity = colorIdentity,
+            cmc = cmc,
+            types = types,
+            rarity = rarity,
+            set = setCode,
+            partner = partner
+        )
+    }
+
+    /**
+     * 获取 ChipGroup 中所有选中的 Chip ID
+     */
+    private fun getCheckedChipIds(chipGroup: ChipGroup): List<Int> {
+        val checkedIds = mutableListOf<Int>()
+        for (i in 0 until chipGroup.childCount) {
+            val chip = chipGroup.getChildAt(i) as? Chip
+            if (chip?.isChecked == true) {
+                checkedIds.add(chip.id)
+            }
+        }
+        return checkedIds
+    }
+
+    /**
+     * 清除 ChipGroup 中所有 Chip 的选中状态
+     */
+    private fun clearAllChips(chipGroup: ChipGroup) {
+        for (i in 0 until chipGroup.childCount) {
+            val chip = chipGroup.getChildAt(i) as? Chip
+            chip?.isChecked = false
+        }
+    }
+
+    /**
+     * 更新筛选按钮显示
+     */
+    private fun updateFilterButton() {
+        val hasFilters = currentFilters?.let {
+            it.colors.isNotEmpty() ||
+            it.colorIdentity != null ||
+            it.cmc != null ||
+            it.types != null ||
+            it.rarity != null ||
+            it.set != null ||
+            it.partner != null
+        } ?: false
+
+        binding.buttonFilters.text = if (hasFilters) "筛选*" else "筛选"
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

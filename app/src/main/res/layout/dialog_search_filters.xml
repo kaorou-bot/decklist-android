@@ -1,246 +1,403 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <!-- 标题 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="高级筛选"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="16dp" />
-
-    <!-- 颜色筛选 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="颜色"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
-
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/chipGroupColors"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:singleSelection="false">
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipWhite"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="W (白)" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipBlue"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="U (蓝)" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipBlack"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="B (黑)" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipRed"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="R (红)" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipGreen"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="G (绿)" />
-    </com.google.android.material.chip.ChipGroup>
-
-    <!-- 法术力值筛选 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="法术力值 (CMC)"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
+    android:layout_height="wrap_content">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- 标题 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="高级筛选"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 颜色筛选 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="颜色"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupColors"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:singleSelection="false">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipWhite"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="W (白)"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipBlue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="U (蓝)"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipBlack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="B (黑)"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipRed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="R (红)"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipGreen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="G (绿)"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipColorless"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="C (无色)"
+                style="@style/Widget.Material3.Chip.Filter" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- 颜色标识筛选 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="颜色标识 (Color Identity)"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupColorIdentity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:singleSelection="false">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCiWhite"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="W"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCiBlue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="U"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCiBlack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="B"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCiRed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="R"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCiGreen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="G"
+                style="@style/Widget.Material3.Chip.Filter" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- 法术力值筛选 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="法术力值 (CMC)"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutCmc"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="数值"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextCmc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonCmcEqual"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="="
+                style="@style/Widget.Material3.Button.OutlinedButton" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonCmcGreater"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text=">"
+                style="@style/Widget.Material3.Button.OutlinedButton" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonCmcLess"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="&lt;"
+                style="@style/Widget.Material3.Button.OutlinedButton" />
+        </LinearLayout>
+
+        <!-- 类型筛选 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="类型"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupTypes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:singleSelection="false">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCreature"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="生物"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipInstant"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="瞬间"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSorcery"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="法术"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipArtifact"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="神器"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipEnchantment"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="结界"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipPlaneswalker"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="鹏洛客"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipLand"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="地"
+                style="@style/Widget.Material3.Chip.Filter" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- 稀有度筛选 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="稀有度"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupRarity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCommon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="common (普通)"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipUncommon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="uncommon (非普通)"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipRare"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="rare (稀有)"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipMythic"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="mythic (秘稀)"
+                style="@style/Widget.Material3.Chip.Filter" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- 系列代码 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="系列代码 (如: MOM, ONE, MOM2)"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
 
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/textInputLayoutCmc"
-            android:layout_width="0dp"
+            android:id="@+id/textInputLayoutSet"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="数值"
+            android:layout_marginBottom="16dp"
+            android:hint="系列代码"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editTextCmc"
+                android:id="@+id/editTextSet"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number"
+                android:inputType="text"
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonCmcEqual"
+        <!-- 伙伴颜色 -->
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:text="="
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+            android:text="伙伴颜色"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonCmcGreater"
-            android:layout_width="wrap_content"
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupPartner"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:text=">"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+            android:layout_marginBottom="16dp"
+            app:singleSelection="true">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonCmcLess"
-            android:layout_width="wrap_content"
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipPartnerWhite"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="white"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipPartnerBlue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="blue"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipPartnerBlack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="black"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipPartnerRed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="red"
+                style="@style/Widget.Material3.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipPartnerGreen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="green"
+                style="@style/Widget.Material3.Chip.Filter" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- 按钮行 -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:text="&lt;"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonClearFilters"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="清空筛选"
+                style="@style/Widget.Material3.Button.OutlinedButton" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonApplyFilters"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="应用"
+                style="@style/Widget.Material3.Button.TonalButton" />
+        </LinearLayout>
+
     </LinearLayout>
-
-    <!-- 类型筛选 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="类型"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
-
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/chipGroupTypes"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:singleSelection="false">
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipCreature"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="生物" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipInstant"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="瞬间" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipSorcery"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="法术" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipArtifact"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="神器" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipEnchantment"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="结界" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipPlaneswalker"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="鹏洛客" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipLand"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="地" />
-    </com.google.android.material.chip.ChipGroup>
-
-    <!-- 稀有度筛选 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="稀有度"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
-
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/chipGroupRarity"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:singleSelection="true">
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipCommon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="common (普通)" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipUncommon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="uncommon (非普通)" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipRare"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="rare (稀有)" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipMythic"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="mythic (秘稀)" />
-    </com.google.android.material.chip.ChipGroup>
-
-    <!-- 按钮行 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonClearFilters"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="清空筛选"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonApplyFilters"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="应用"
-            style="@style/Widget.Material3.Button.TonalButton" />
-    </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

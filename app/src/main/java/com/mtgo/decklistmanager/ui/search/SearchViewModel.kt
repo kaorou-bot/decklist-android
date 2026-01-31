@@ -65,7 +65,9 @@ class SearchViewModel @Inject constructor(
         pageSize: Int = 50,
         filters: SearchFilters? = null
     ) {
-        if (query.isBlank()) {
+        // 允许空文本搜索（当有筛选条件时）
+        val hasFilters = hasActiveFilters(filters)
+        if (query.isBlank() && !hasFilters) {
             _searchResults.value = emptyList()
             _showHistory.value = true
             return
@@ -101,8 +103,8 @@ class SearchViewModel @Inject constructor(
                     val results = cards.map { it.toSearchResultItem() }
                     _searchResults.value = results
 
-                    // 保存搜索历史
-                    if (results.isNotEmpty()) {
+                    // 保存搜索历史（仅在非空搜索时）
+                    if (query.isNotBlank() && results.isNotEmpty()) {
                         saveSearchHistory(query, results.size)
                     }
                 } else {
@@ -119,6 +121,21 @@ class SearchViewModel @Inject constructor(
                 _isSearching.value = false
             }
         }
+    }
+
+    /**
+     * 检查是否有有效的筛选条件
+     */
+    private fun hasActiveFilters(filters: SearchFilters?): Boolean {
+        return filters?.let {
+            it.colors.isNotEmpty() ||
+            it.colorIdentity != null ||
+            it.cmc != null ||
+            it.types != null ||
+            it.rarity != null ||
+            it.set != null ||
+            it.partner != null
+        } ?: false
     }
 
     /**
