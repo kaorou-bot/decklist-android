@@ -22,6 +22,7 @@ import com.mtgo.decklistmanager.databinding.ActivityDeckDetailBinding
 import com.mtgo.decklistmanager.domain.model.Card
 import com.mtgo.decklistmanager.domain.model.CardLocation
 import com.mtgo.decklistmanager.domain.model.Decklist
+import com.mtgo.decklistmanager.ui.dialog.ExportFormatDialog
 import com.mtgo.decklistmanager.util.ManaSymbolRenderer
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -82,12 +83,12 @@ class DeckDetailActivity : AppCompatActivity() {
                 toggleFavorite()
                 true
             }
-            R.id.action_export_text -> {
-                showExportDialog("text")
+            R.id.action_export -> {
+                showExportFormatDialog()
                 true
             }
-            R.id.action_export_json -> {
-                showExportDialog("json")
+            R.id.action_share -> {
+                showExportFormatDialog()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -419,5 +420,82 @@ class DeckDetailActivity : AppCompatActivity() {
             "cardType" to card.cardType,
             "cardSet" to card.cardSet
         )
+    }
+
+    /**
+     * 显示导出格式选择对话框
+     */
+    private fun showExportFormatDialog() {
+        val dialog = ExportFormatDialog.newInstance()
+        dialog.setExportFormatListener(object : ExportFormatDialog.ExportFormatListener {
+            override fun onExportFormatSelected(format: ExportFormatDialog.ExportFormat) {
+                currentDecklist?.let { decklist ->
+                    when (format) {
+                        ExportFormatDialog.ExportFormat.MTGO -> {
+                            exportDecklist(decklist, "mtgo")
+                        }
+                        ExportFormatDialog.ExportFormat.ARENA -> {
+                            exportDecklist(decklist, "arena")
+                        }
+                        ExportFormatDialog.ExportFormat.TEXT -> {
+                            exportDecklist(decklist, "text")
+                        }
+                    }
+                }
+            }
+
+            override fun onShareMoxfield() {
+                currentDecklist?.let { decklist ->
+                    shareToMoxfield(decklist)
+                }
+            }
+
+            override fun onCopyToClipboard() {
+                currentDecklist?.let { decklist ->
+                    copyToClipboard(decklist)
+                }
+            }
+        })
+        dialog.show(supportFragmentManager, ExportFormatDialog.TAG)
+    }
+
+    /**
+     * 导出套牌（占位实现，后续将在 ViewModel 中实现）
+     */
+    private fun exportDecklist(decklist: Decklist, format: String) {
+        // TODO: 集成到 ViewModel，使用导出器
+        android.widget.Toast.makeText(
+            this,
+            "导出 $format 格式 - 功能开发中",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    /**
+     * 分享到 Moxfield
+     */
+    private fun shareToMoxfield(decklist: Decklist) {
+        // TODO: 集成到 ViewModel
+        android.widget.Toast.makeText(
+            this,
+            "Moxfield 分享 - 功能开发中",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    /**
+     * 复制到剪贴板
+     */
+    private fun copyToClipboard(decklist: Decklist) {
+        val textContent = buildTextContent(decklist, allCards)
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Decklist", textContent)
+        clipboard.setPrimaryClip(clip)
+
+        android.widget.Toast.makeText(
+            this,
+            "已复制到剪贴板",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
     }
 }

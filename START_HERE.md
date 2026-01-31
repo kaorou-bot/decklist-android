@@ -1,194 +1,126 @@
-# 🚀 MTGO Decklist Manager - 立即开始构建
+# 🎯 从这里开始
 
-## ⚡ 最简单的方法（推荐）
-
-### 使用 Android Studio（5分钟开始）
-
-#### 步骤 1：下载 Android Studio
-
-**Windows 用户**：
-```
-https://redirector.gvt1.com/edgedl/android/studio/install/2023.1.1.28/android-studio-2023.1.1.28-windows.exe
-```
-
-**Linux 用户**：
-```bash
-# 方法 1：使用 snap（最简单）
-sudo snap install android-studio --classic
-
-# 方法 2：下载 tar.gz
-wget https://redirector.gvt1.com/edgedl/android/studio/ide-zips/2023.1.1.28/android-studio-2023.1.1.28-linux.tar.gz
-tar -xzf android-studio-*.tar.gz
-sudo mv android-studio /opt/
-/opt/android-studio/bin/studio.sh
-```
-
-**Mac 用户**：
-```
-https://redirector.gvt1.com/edgedl/android/studio/install/2023.1.1.28/android-studio-2023.1.1.28-mac.dmg
-```
-
-#### 步骤 2：打开项目
-
-1. 启动 Android Studio
-2. 点击 **Open**
-3. 选择文件夹：`/home/dministrator/decklist-android`
-4. 点击 **OK**
-
-#### 步骤 3：等待自动配置（首次 5-15 分钟）
-
-Android Studio 会自动：
-- ✅ 下载 Gradle 8.1.1
-- ✅ 下载 Android SDK
-- ✅ 下载所有依赖库
-- ✅ 配置项目
-
-您会看到底部进度条：
-```
-Gradle Build Running...
-Indexing...
-```
-
-#### 步骤 4：运行应用
-
-1. 连接 Android 手机（开启 USB 调试）
-   - 或启动模拟器（Tools → AVD Manager → Create Device）
-
-2. 点击工具栏的 **绿色三角形 ▶️ Run 按钮**
-
-3. 等待 1-3 分钟
-
-4. 应用自动安装并启动！
+> **欢迎回来！** 这是你的持续开发快速入口
 
 ---
 
-## 🔧 命令行构建（需要配置环境）
+## 🚀 你只有30秒吗？
 
-### 当前环境状态
-
-✅ 已安装：
-- Java 17
-- Gradle Wrapper JAR
-- 项目代码（32 个 Kotlin 文件）
-- 所有配置文件
-
-⚠️ 需要：
-- Android SDK（约 1-2 GB）
-- Build Tools 34.0.0
-- Platform Tools
-
-### 自动构建脚本
-
-我已经为您创建了自动构建脚本：
+运行这个命令：
 
 ```bash
-cd /home/dministrator/decklist-android
-./build.sh
+./quick_resume.sh
 ```
 
-脚本会：
-1. 检查环境
-2. 配置 Android SDK
-3. 下载依赖
-4. 构建 APK
-5. 显示结果
+然后复制输出中的提示词给 Claude。
 
 ---
 
-## 📦 如果命令行构建失败
+## 📚 你有5分钟吗？
 
-不用担心！Android Studio 方法更可靠：
-
-### 为什么推荐 Android Studio？
-
-| 方面 | 命令行 | Android Studio |
-|------|--------|---------------|
-| 配置复杂度 | 高（需要手动配置） | 低（自动配置） |
-| 依赖管理 | 手动 | 自动 |
-| 错误处理 | 困难 | 简单 |
-| 调试功能 | 有限 | 完整 |
-| 首次构建 | 30-60 分钟 | 10-15 分钟 |
-| 推荐度 | ⭐⭐ | ⭐⭐⭐⭐⭐ |
-
----
-
-## 🎯 立即行动
-
-### 选项 1：Android Studio（推荐）
+### 步骤 1：了解项目状态
 
 ```bash
-# Linux - 快速安装
-sudo snap install android-studio --classic
-
-# 启动
-android-studio
-
-# 然后打开项目：
-# File -> Open -> /home/dministrator/decklist-android
+cat PROJECT_STATUS.md
 ```
 
-### 选项 2：命令行（需要耐心）
+### 步骤 2：了解上次做了什么
 
 ```bash
-cd /home/dministrator/decklist-android
-./build.sh
+cat SESSION_LOG.md
+```
+
+### 步骤 3：了解当前任务
+
+```bash
+cat CURRENT_TASK.md
+```
+
+### 步骤 4：让 Claude 继续
+
+**复制这个提示词给 Claude：**
+
+```
+请阅读 PROJECT_STATUS.md、SESSION_LOG.md 和 CURRENT_TASK.md，
+然后继续完成当前任务。
 ```
 
 ---
 
-## 📊 项目状态
+## 🎓 你是第一次回来吗？
 
-✅ **代码完成**：32 个 Kotlin 文件，2676 行代码
-✅ **配置完成**：所有 Gradle 配置文件
-✅ **资源完成**：8 个布局文件，所有资源
-✅ **文档完成**：6 个说明文档
+阅读完整的使用指南：
 
-**只需要 Android Studio 就能构建！**
+```bash
+cat CLAUDE_CONTINUATION_GUIDE.md
+```
+
+这会告诉你：
+- 如何使用这套追踪系统
+- 每次会话的标准流程
+- 常用提示词模板
+- 如何处理不同场景
 
 ---
 
-## 💡 常见问题
+## 📋 想要查看所有文档？
 
-### Q: 必须使用 Android Studio 吗？
-A: 不是必须，但强烈推荐。命令行构建需要手动配置很多环境变量和依赖。
-
-### Q: Android Studio 是免费的吗？
-A: 是的，完全免费。
-
-### Q: 需要多大磁盘空间？
-A: Android SDK 约 1-2 GB，项目约 50 MB。
-
-### Q: 构建需要多长时间？
-A: 首次 10-15 分钟（下载依赖），后续 1-3 分钟。
-
-### Q: 可以在没有 Android 设备的情况下测试吗？
-A: 可以！Android Studio 内置了模拟器（AVD）。
-
----
-
-## 🎉 成功标志
-
-当您看到以下内容时，说明构建成功：
-
-```
-BUILD SUCCESSFUL in 2m 15s
-56 actionable tasks: 56 executed
-```
-
-APK 文件位置：
-```
-app/build/outputs/apk/debug/app-debug.apk
+```bash
+cat DEV_INDEX.md
 ```
 
 ---
 
-## 📞 需要帮助？
+## 🎯 不同场景的快速入口
 
-查看详细文档：
-- `QUICK_START.md` - 快速开始
-- `BUILD_GUIDE.md` - 构建指南
-- `BUILD_SUMMARY.txt` - 项目摘要
+### 场景 1：只想快速恢复
+```bash
+./quick_resume.sh
+```
+
+### 场景 2：想了解整体规划
+```bash
+cat DEVELOPMENT_ROADMAP.md
+```
+
+### 场景 3：想开始编码
+```bash
+cat CURRENT_TASK.md
+cat docs/V4.1.0_DEVELOPMENT_SPEC.md
+```
+
+### 场景 4：遇到了问题
+```bash
+cat CURRENT_TASK.md  # 查看"遇到的问题"部分
+```
 
 ---
 
-**现在就开始吧！使用 Android Studio 是最简单的方法！** 🚀
+## ✅ 核心文件清单
+
+记住这4个核心文件：
+
+| 文件 | 作用 | 何时读 |
+|------|------|--------|
+| PROJECT_STATUS.md | 整体进度 | 每次会话 |
+| SESSION_LOG.md | 会话日志 | 每次会话 |
+| CURRENT_TASK.md | 当前任务 | 继续开发时 |
+| TASK_CHECKLIST.md | 任务清单 | 规划下一步 |
+
+---
+
+## 🎉 准备好了吗？
+
+**选择一个开始：**
+
+- ⚡ **30秒恢复**：`./quick_resume.sh`
+- 📖 **5分钟了解**：读3个核心文件
+- 🎓 **完整学习**：`cat CLAUDE_CONTINUATION_GUIDE.md`
+
+---
+
+**祝你开发顺利！** 🚀
+
+---
+
+**最后更新：** 2026-01-31
