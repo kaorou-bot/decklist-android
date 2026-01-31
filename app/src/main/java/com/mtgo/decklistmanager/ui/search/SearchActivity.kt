@@ -65,18 +65,43 @@ class SearchActivity : AppCompatActivity() {
     }
 
     /**
-     * 显示卡牌详情
+     * 显示卡牌详情（包含卡图）
      */
     private fun showCardDetail(result: SearchResultItem) {
-        // TODO: 创建卡牌详情对话框，显示所有 MTGCH 字段
-        val message = buildString {
+        val dialogBinding = com.mtgo.decklistmanager.databinding.DialogCardDetailBinding.inflate(
+            LayoutInflater.from(this)
+        )
+
+        // 加载卡牌图片
+        if (!result.imageUrl.isNullOrEmpty()) {
+            com.bumptech.glide.Glide.with(this)
+                .load(result.imageUrl)
+                .placeholder(com.google.android.material.R.drawable.mtrl_ic_cancel)
+                .error(com.google.android.material.R.drawable.mtrl_ic_error)
+                .into(dialogBinding.imageViewCard)
+        } else {
+            dialogBinding.imageViewCard.visibility = android.view.View.GONE
+        }
+
+        // 构建详细信息文本（处理 \n 换行符）
+        val details = buildString {
             appendLine("卡牌名称：${result.displayName ?: result.name}")
             appendLine("英文名称：${result.name}")
             appendLine()
             appendLine("类型：${result.typeLine ?: result.type ?: ""}")
             appendLine("法术力：${result.manaCost ?: "N/A"}")
-            result.oracleText?.let { appendLine("规则文本：$it") }
-            result.power?.let { result.toughness?.let { appendLine("攻防：$it/$it") } }
+
+            // 处理规则文本中的换行符
+            result.oracleText?.let {
+                val text = it.replace("\\n", "\n")
+                appendLine("规则文本：\n$text")
+            }
+
+            result.power?.let { power ->
+                result.toughness?.let { toughness ->
+                    appendLine("攻防：$power/$toughness")
+                }
+            }
             result.loyalty?.let { appendLine("忠诚：$it") }
             appendLine()
             appendLine("系列：${result.setName ?: "N/A"}")
@@ -87,9 +112,11 @@ class SearchActivity : AppCompatActivity() {
             result.colorIdentity?.let { appendLine("颜色标识：${it.joinToString()}") }
         }
 
+        dialogBinding.textViewCardDetails.text = details
+
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(result.displayName ?: result.name)
-            .setMessage(message)
+            .setView(dialogBinding.root)
             .setPositiveButton("关闭", null)
             .show()
     }

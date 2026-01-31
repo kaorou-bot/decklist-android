@@ -40,8 +40,9 @@
                 android:layout_gravity="center_vertical"
                 android:layout_marginStart="8dp"
                 android:contentDescription="筛选"
+                android:text="筛选"
                 app:icon="@android:drawable/ic_menu_sort_by_size"
-                style="@style/Widget.Material3.Button.IconButton" />
+                style="@style/Widget.Material3.Button.OutlinedButton" />
 
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
