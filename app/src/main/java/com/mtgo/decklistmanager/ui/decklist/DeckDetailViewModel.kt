@@ -18,7 +18,11 @@ import com.mtgo.decklistmanager.exporter.format.MtgoFormatExporter
 import com.mtgo.decklistmanager.exporter.format.ArenaFormatExporter
 import com.mtgo.decklistmanager.exporter.format.TextFormatExporter
 import com.mtgo.decklistmanager.util.LanguagePreferenceManager
+import com.mtgo.decklistmanager.util.AppLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -55,6 +59,9 @@ class DeckDetailViewModel @Inject constructor(
     // Card info for popup
     private val _cardInfo = MutableLiveData<CardInfo?>()
     val cardInfo: LiveData<CardInfo?> = _cardInfo
+
+    // 卡牌信息缓存 (卡牌名称 -> 卡牌信息)
+    private val cardInfoCache = mutableMapOf<String, CardInfo>()
 
     // Card info loading state
     private val _isCardInfoLoading = MutableLiveData<Boolean>(false)
@@ -128,6 +135,10 @@ class DeckDetailViewModel @Inject constructor(
                     // 加载所有卡牌
                     val allCards = repository.getCardsByDecklistId(decklistId)
 
+                    // v4.1.0: 预取所有唯一卡牌的详细信息到缓存
+                    val uniqueCardNames = allCards.map { it.cardName }.distinct()
+                    prefetchCardInfo(uniqueCardNames)
+
                     // v4.0.0: displayName is already populated in the database, so just convert directly
                     // 分离主牌和备牌
                     val mainCards = allCards
@@ -149,7 +160,37 @@ class DeckDetailViewModel @Inject constructor(
     }
 
     /**
-     * 查询单卡信息（带重试和错误提示）
+     * 预取卡牌信息到缓存（后台异步执行，不阻塞UI）
+     */
+    private fun prefetchCardInfo(cardNames: List<String>) {
+        viewModelScope.launch {
+            coroutineScope {
+                val semaphore = kotlinx.coroutines.sync.Semaphore(5) // 最多5个并发请求
+
+                cardNames.map { cardName ->
+                    async {
+                        semaphore.acquire()
+                        try {
+                            if (!cardInfoCache.containsKey(cardName)) {
+                                val cardInfo = repository.getCardInfo(cardName)
+                                if (cardInfo != null) {
+                                    cardInfoCache[cardName] = cardInfo
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // 静默失败，不影响缓存
+                        } finally {
+                            semaphore.release()
+                        }
+                    }
+                }.awaitAll()
+            }
+        }
+    }
+
+    /**
+     * 查询单卡信息（优先使用缓存，缓存未命中时才调用API）
+     * v4.1.0: 优化性能 - 使用缓存避免重复API调用
      */
     fun loadCardInfo(cardName: String) {
         viewModelScope.launch {
@@ -157,9 +198,22 @@ class DeckDetailViewModel @Inject constructor(
                 _isCardInfoLoading.value = true
                 _cardInfoError.value = null
 
+                // 首先检查缓存
+                val cachedInfo = cardInfoCache[cardName]
+                if (cachedInfo != null) {
+                    AppLogger.d("DeckDetailViewModel", "✓ Cache hit for: $cardName")
+                    _cardInfo.value = cachedInfo
+                    return@launch
+                }
+
+                AppLogger.d("DeckDetailViewModel", "✗ Cache miss for: $cardName, fetching from API")
+
+                // 缓存未命中，调用API获取
                 val cardInfo = repository.getCardInfo(cardName)
 
                 if (cardInfo != null) {
+                    // 存入缓存
+                    cardInfoCache[cardName] = cardInfo
                     _cardInfo.value = cardInfo
                 } else {
                     // v4.0.0: 提供更友好的错误提示

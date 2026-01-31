@@ -13,7 +13,6 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.mtgo.decklistmanager.R
 import com.mtgo.decklistmanager.databinding.ActivitySearchBinding
-import com.mtgo.decklistmanager.databinding.DialogSearchFiltersBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -31,7 +30,7 @@ class SearchActivity : AppCompatActivity() {
 
     // 当前应用的筛选条件
     private var currentFilters: SearchFilters? = null
-    private var cmcOperator: String = "="
+    private var cmcOperator: String = "any"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -195,13 +194,18 @@ class SearchActivity : AppCompatActivity() {
     }
 
     /**
-     * 显示筛选对话框
+     * 显示底部表单高级筛选
      */
     private fun showFiltersDialog() {
-        val dialogBinding = DialogSearchFiltersBinding.inflate(LayoutInflater.from(this))
+        // 使用 BottomSheetDialog
+        val bottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val dialogBinding = com.mtgo.decklistmanager.databinding.BottomSheetAdvancedSearchBinding.inflate(
+            LayoutInflater.from(this)
+        )
 
-        // 设置 CMC 操作符按钮
+        // 设置 CMC 操作符按钮（互斥选择）
         val cmcButtons = listOf(
+            dialogBinding.buttonCmcAny to "any",
             dialogBinding.buttonCmcEqual to "=",
             dialogBinding.buttonCmcGreater to ">",
             dialogBinding.buttonCmcLess to "<"
@@ -216,38 +220,122 @@ class SearchActivity : AppCompatActivity() {
             }
         }
 
-        // 清空筛选按钮
-        dialogBinding.buttonClearFilters.setOnClickListener {
+        // 恢复当前的筛选条件
+        currentFilters?.let { filters ->
+            // 恢复颜色筛选
+            filters.colors.forEach { color ->
+                when (color) {
+                    "w" -> dialogBinding.chipWhite.isChecked = true
+                    "u" -> dialogBinding.chipBlue.isChecked = true
+                    "b" -> dialogBinding.chipBlack.isChecked = true
+                    "r" -> dialogBinding.chipRed.isChecked = true
+                    "g" -> dialogBinding.chipGreen.isChecked = true
+                    "c" -> dialogBinding.chipColorless.isChecked = true
+                }
+            }
+
+            // 恢复颜色标识筛选
+            filters.colorIdentity?.forEach { color ->
+                when (color) {
+                    "w" -> dialogBinding.chipCiWhite.isChecked = true
+                    "u" -> dialogBinding.chipCiBlue.isChecked = true
+                    "b" -> dialogBinding.chipCiBlack.isChecked = true
+                    "r" -> dialogBinding.chipCiRed.isChecked = true
+                    "g" -> dialogBinding.chipCiGreen.isChecked = true
+                }
+            }
+
+            // 恢复 CMC 值
+            filters.cmc?.let { cmc ->
+                dialogBinding.editTextCmc.setText(cmc.value.toString())
+            }
+
+            // 恢复类型筛选
+            filters.types?.forEach { type ->
+                when (type) {
+                    "creature" -> dialogBinding.chipCreature.isChecked = true
+                    "instant" -> dialogBinding.chipInstant.isChecked = true
+                    "sorcery" -> dialogBinding.chipSorcery.isChecked = true
+                    "artifact" -> dialogBinding.chipArtifact.isChecked = true
+                    "enchantment" -> dialogBinding.chipEnchantment.isChecked = true
+                    "planeswalker" -> dialogBinding.chipPlaneswalker.isChecked = true
+                    "land" -> dialogBinding.chipLand.isChecked = true
+                }
+            }
+
+            // 恢复稀有度筛选
+            filters.rarity?.let { rarity ->
+                when (rarity) {
+                    "common" -> dialogBinding.chipCommon.isChecked = true
+                    "uncommon" -> dialogBinding.chipUncommon.isChecked = true
+                    "rare" -> dialogBinding.chipRare.isChecked = true
+                    "mythic" -> dialogBinding.chipMythic.isChecked = true
+                }
+            }
+
+            // 恢复系列代码
+            filters.set?.let { setCode ->
+                dialogBinding.editTextSet.setText(setCode)
+            }
+
+            // 恢复伙伴颜色
+            filters.partner?.let { partner ->
+                when (partner) {
+                    "white" -> dialogBinding.chipPartnerWhite.isChecked = true
+                    "blue" -> dialogBinding.chipPartnerBlue.isChecked = true
+                    "black" -> dialogBinding.chipPartnerBlack.isChecked = true
+                    "red" -> dialogBinding.chipPartnerRed.isChecked = true
+                    "green" -> dialogBinding.chipPartnerGreen.isChecked = true
+                }
+            }
+        }
+
+        // 关闭按钮
+        dialogBinding.buttonClose.setOnClickListener {
+            bottomSheetDialog.dismiss()
+        }
+
+        // 重置按钮
+        dialogBinding.buttonReset.setOnClickListener {
             clearAllChips(dialogBinding.chipGroupColors)
             clearAllChips(dialogBinding.chipGroupColorIdentity)
             clearAllChips(dialogBinding.chipGroupTypes)
             clearAllChips(dialogBinding.chipGroupRarity)
             clearAllChips(dialogBinding.chipGroupPartner)
+            dialogBinding.editTextQuery.text?.clear()
             dialogBinding.editTextCmc.text?.clear()
             dialogBinding.editTextSet.text?.clear()
             cmcOperator = "="
             cmcButtons.forEach { (b, _) -> b.isChecked = (b == dialogBinding.buttonCmcEqual) }
         }
 
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
-            .setView(dialogBinding.root)
-            .setTitle("高级筛选")
-            .setNegativeButton("取消", null)
-            .setPositiveButton("应用") { _, _ ->
-                // 收集筛选条件
-                currentFilters = collectFilters(dialogBinding)
-                updateFilterButton()
-                // 重新搜索
-                performSearch()
+        // 搜索按钮
+        dialogBinding.buttonSearch.setOnClickListener {
+            // 更新搜索关键词（如果用户在底部表单中输入了）
+            val bottomQuery = dialogBinding.editTextQuery.text?.toString() ?: ""
+            if (bottomQuery.isNotBlank()) {
+                binding.editTextQuery.setText(bottomQuery)
             }
-            .create()
-        dialog.show()
+
+            // 收集筛选条件
+            currentFilters = collectFiltersFromBottomSheet(dialogBinding)
+            updateFilterButton()
+
+            // 执行搜索并关闭底部表单
+            performSearch()
+            bottomSheetDialog.dismiss()
+        }
+
+        bottomSheetDialog.setContentView(dialogBinding.root)
+        bottomSheetDialog.show()
     }
 
     /**
-     * 收集对话框中的筛选条件
+     * 从底部表单收集筛选条件
      */
-    private fun collectFilters(dialogBinding: DialogSearchFiltersBinding): SearchFilters {
+    private fun collectFiltersFromBottomSheet(
+        dialogBinding: com.mtgo.decklistmanager.databinding.BottomSheetAdvancedSearchBinding
+    ): SearchFilters {
         // 收集颜色筛选
         val colors = getCheckedChipIds(dialogBinding.chipGroupColors).mapNotNull { chipId ->
             when (chipId) {
@@ -273,10 +361,12 @@ class SearchActivity : AppCompatActivity() {
             }
         }.takeIf { it.isNotEmpty() }
 
-        // 收集 CMC 筛选
-        val cmc = dialogBinding.editTextCmc.text?.toString()?.toIntOrNull()?.let { value ->
-            CmcFilter(operator = cmcOperator, value = value)
-        }
+        // 收集 CMC 筛选（仅当操作符不是 "any" 时）
+        val cmc = if (cmcOperator != "any") {
+            dialogBinding.editTextCmc.text?.toString()?.toIntOrNull()?.let { value ->
+                CmcFilter(operator = cmcOperator, value = value)
+            }
+        } else null
 
         // 收集类型筛选
         val types = getCheckedChipIds(dialogBinding.chipGroupTypes).mapNotNull { chipId ->
