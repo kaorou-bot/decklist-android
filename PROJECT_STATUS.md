@@ -6,39 +6,39 @@
 
 ## 📊 当前开发状态
 
-**最后更新时间：** 2026-01-31
-**当前版本：** v4.0.0 (online mode)
-**当前分支：** v4.0.0-online
-**开发分支：** dev/v4.1.0 (待创建)
-**整体进度：** 0% [░░░░░░░░░░]
+**最后更新时间：** 2026-02-01
+**当前版本：** v4.1.0 (开发中)
+**当前分支：** dev/v4.1.0
+**整体进度：** 90% [█████████░]
 
 ---
 
 ## 🎯 本次开发会话目标
 
 ### 当前任务：v4.1.0 - 导出与搜索功能
-**状态：** 🔴 未开始
+**状态：** 🟢 基本完成
 **预计时间：** 2 周
 **实际进度：**
 
-#### 模块 1.1：套牌导出功能
-- [ ] 创建 DecklistExporter 接口
-- [ ] 实现 MtgoFormatExporter
-- [ ] 实现 ArenaFormatExporter
-- [ ] 实现 TextFormatExporter
-- [ ] 实现 MoxfieldShareGenerator
-- [ ] 添加 UI（对话框、菜单）
-- [ ] 实现文件保存
-- [ ] 实现分享功能
-- [ ] 测试所有导出格式
+#### 模块 1.1：套牌导出功能 ✅
+- [x] 创建 DecklistExporter 接口
+- [x] 实现 MtgoFormatExporter
+- [x] 实现 ArenaFormatExporter
+- [x] 实现 TextFormatExporter
+- [x] 实现 MoxfieldShareGenerator
+- [x] 添加 UI（对话框、菜单）
+- [x] 实现文件保存 (FileSaver)
+- [x] 实现分享功能 (ShareHelper)
+- [x] 集成到 ViewModel
 
-#### 模块 1.2：卡牌搜索功能
-- [ ] 创建搜索历史表
-- [ ] 创建 SearchActivity
-- [ ] 创建 SearchViewModel
-- [ ] 实现基础搜索
-- [ ] 实现高级筛选
-- [ ] 实现搜索历史
+#### 模块 1.2：卡牌搜索功能 ✅
+- [x] 创建搜索历史表
+- [x] 创建 SearchActivity
+- [x] 创建 SearchViewModel
+- [x] 实现基础搜索（改为 MTGCH 在线 API）
+- [x] 实现高级筛选 UI（颜色、CMC、类型、稀有度）
+- [x] 实现搜索历史
+- [ ] 实现高级筛选条件收集逻辑
 - [ ] 测试搜索性能
 
 #### 体验优化（穿插）
@@ -48,6 +48,25 @@
 ---
 
 ## 📝 上次会话完成的工作
+
+### 2026-02-01 - v4.1.0 导出功能开发 ✅
+- ✅ **实现套牌导出核心功能**：
+  - 创建 DecklistExporter 接口
+  - 实现 MtgoFormatExporter（MTGO 格式）
+  - 实现 ArenaFormatExporter（Arena 格式）
+  - 实现 TextFormatExporter（文本格式）
+  - 实现 MoxfieldShareGenerator（Moxfield 分享链接）
+- ✅ **实现工具类**：
+  - FileSaver - 文件保存功能
+  - ShareHelper - 分享功能
+- ✅ **UI 集成**：
+  - 创建 ExportFormatDialog 对话框
+  - 在 DeckDetailActivity 中添加导出/分享菜单
+  - 在 DeckDetailViewModel 中集成导出逻辑
+- ✅ **代码提交**：
+  - 03f7b49 - feat: 添加套牌导出核心功能
+  - 3908ad3 - feat: 添加导出功能UI
+  - e4593a7 - feat: 完善导出功能集成到 ViewModel
 
 ### 2026-01-31 - 规划与系统搭建阶段 ✅
 - ✅ 从资深万智牌手视角分析项目，提出改进建议

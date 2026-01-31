@@ -99,7 +99,8 @@ class DeckDetailViewModel @Inject constructor(
         color = color,
         cardType = cardType,
         cardSet = cardSet,
-        cardNameZh = displayName  // v4.0.0: Map displayName to cardNameZh
+        // 若 displayName 为 null，则回退使用英文名，确保中文名始终有值
+        cardNameZh = displayName ?: cardName
     )
 
     /**

@@ -1,6 +1,7 @@
 package com.mtgo.decklistmanager.exporter.share
 
 import com.mtgo.decklistmanager.domain.model.Card
+import com.mtgo.decklistmanager.domain.model.CardLocation
 import com.mtgo.decklistmanager.domain.model.Decklist
 import com.mtgo.decklistmanager.util.AppLogger
 import java.net.URLEncoder
@@ -26,11 +27,12 @@ class MoxfieldShareGenerator @Inject constructor() {
      * 生成 Moxfield 分享链接
      *
      * @param decklist 套牌数据
+     * @param cards 卡牌列表
      * @return Moxfield 导入链接
      */
-    suspend fun generateShareLink(decklist: Decklist): String {
+    suspend fun generateShareLink(decklist: Decklist, cards: List<Card> = emptyList()): String {
         try {
-            val decklistText = convertToMoxfieldFormat(decklist)
+            val decklistText = convertToMoxfieldFormat(decklist, cards)
             val encoded = URLEncoder.encode(decklistText, "UTF-8")
             return "$MOXFIELD_IMPORT_URL?deck=$encoded"
         } catch (e: Exception) {
@@ -54,13 +56,27 @@ class MoxfieldShareGenerator @Inject constructor() {
      *
      * 主牌和备牌之间用空行分隔
      */
-    private fun convertToMoxfieldFormat(decklist: Decklist): String {
-        // TODO: 需要从 Repository 获取卡牌列表
-        // 目前先返回一个基本的格式
+    private fun convertToMoxfieldFormat(decklist: Decklist, cards: List<Card>): String {
+        val mainDeck = cards.filter { it.location == CardLocation.MAIN }
+        val sideboard = cards.filter { it.location == CardLocation.SIDEBOARD }
+
         return buildString {
-            line("// ${decklist.deckName ?: "Unknown Deck"}")
-            line("// Main deck cards will be listed here")
-            line("// Sideboard cards will be listed here")
+            // 主牌
+            mainDeck
+                .groupBy { it.cardName }
+                .forEach { (name, cards) ->
+                    line("${cards.first().quantity} $name")
+                }
+
+            // 备牌
+            if (sideboard.isNotEmpty()) {
+                line()
+                sideboard
+                    .groupBy { it.cardName }
+                    .forEach { (name, cards) ->
+                        line("${cards.first().quantity} $name")
+                    }
+            }
         }.trimEnd()
     }
 
@@ -69,16 +85,22 @@ class MoxfieldShareGenerator @Inject constructor() {
      *
      * 适用于分享到社交媒体或聊天应用
      */
-    suspend fun generateShareText(decklist: Decklist): String {
-        // TODO: 需要从 Repository 获取卡牌列表来计算数量
+    suspend fun generateShareText(decklist: Decklist, cards: List<Card> = emptyList()): String {
+        val mainDeckCount = cards.filter { it.location == CardLocation.MAIN }.sumOf { it.quantity }
+        val sideboardCount = cards.filter { it.location == CardLocation.SIDEBOARD }.sumOf { it.quantity }
+
         return buildString {
-            line("📜 ${decklist.deckName ?: "Unknown Deck"}")
+            line("📜 ${decklist.eventName ?: decklist.deckName ?: "Unknown Deck"}")
             decklist.playerName?.let { line("👤 玩家：$it") }
             decklist.format?.let { line("🏆 赛制：$it") }
             decklist.record?.let { line("📊 战绩：$it") }
+            line("🃏 主牌：$mainDeckCount 张")
+            if (sideboardCount > 0) {
+                line("📦 备牌：$sideboardCount 张")
+            }
             line()
-            line("🔗 点击链接查看完整卡表：")
-            line(generateShareLink(decklist))
+            line("🔗 点击链接在 Moxfield 查看完整卡表：")
+            line(generateShareLink(decklist, cards))
         }
     }
 

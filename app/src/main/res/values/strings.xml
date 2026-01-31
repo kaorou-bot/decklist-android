@@ -10,6 +10,7 @@
     <string name="web_scraping">Web Scraping</string>
     <string name="stats">Statistics</string>
     <string name="clear_data">Clear Data</string>
+    <string name="search">Search</string>
 
     <!-- Filters -->
     <string name="all_formats">All Formats</string>

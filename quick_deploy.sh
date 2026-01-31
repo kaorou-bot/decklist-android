@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 PACKAGE_NAME="com.mtgo.decklistmanager"
-APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
 
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║                                                                ║"

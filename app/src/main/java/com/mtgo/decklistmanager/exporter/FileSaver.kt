@@ -29,19 +29,20 @@ class FileSaver(private val context: Context) {
      */
     fun saveFile(fileName: String, content: String): Uri? {
         return try {
+            // 使用应用外部文件目录（不需要权限）
             val downloadsDir = getDownloadsDirectory()
             val file = File(downloadsDir, fileName)
 
             file.writeText(content)
+
+            AppLogger.d(TAG, "File saved to: ${file.absolutePath}")
 
             // 返回 FileProvider Uri
             FileProvider.getUriForFile(
                 context,
                 AUTHORITY,
                 file
-            ).also {
-                AppLogger.d(TAG, "File saved to: ${file.absolutePath}")
-            }
+            )
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to save file: $fileName", e)
             null
@@ -50,18 +51,21 @@ class FileSaver(private val context: Context) {
 
     /**
      * 获取下载目录
+     * 使用应用外部文件目录，不需要存储权限
      */
     private fun getDownloadsDirectory(): File {
-        val downloadsDir = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+        // 使用应用外部文件目录下的 exports 文件夹
+        val exportsDir = File(
+            context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
             "DecklistManager"
         )
 
-        if (!downloadsDir.exists()) {
-            downloadsDir.mkdirs()
+        if (!exportsDir.exists()) {
+            val created = exportsDir.mkdirs()
+            AppLogger.d(TAG, "Directory created: $created, path: ${exportsDir.absolutePath}")
         }
 
-        return downloadsDir
+        return exportsDir
     }
 
     /**

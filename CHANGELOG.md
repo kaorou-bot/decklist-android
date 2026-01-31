@@ -2,6 +2,42 @@
 
 所有值得注意的项目更改都将记录在此文件中。
 
+## [4.1.0] - 2026-02-01 (开发中)
+
+### 重大变更 (Major Change)
+- **在线搜索功能**: 搜索功能完全改用 MTGCH 在线 API
+  - 不再搜索本地数据库，改为直接调用 mtgch.com API
+  - 支持实时搜索最新卡牌数据
+  - 自动优先显示中文名称和规则文本
+  - 优先使用中文卡图（带中文水印）
+
+### 新增功能 (Added)
+- **高级搜索筛选**: 创建类似 mtgch.com/search 的筛选界面
+  - 颜色筛选：支持 W/U/B/R/G 多选
+  - 法术力值筛选：支持 =/>/< 操作符
+  - 类型筛选：生物/瞬间/法术/神器/结界/鹏洛客/地
+  - 稀有度筛选：common/uncommon/rare/mythic
+  - 筛选对话框 UI（dialog_search_filters.xml）
+
+- **卡牌图片显示**: 搜索结果中显示卡牌图片
+  - 使用 Glide 加载在线图片
+  - 优先显示中文卡图
+  - 支持双面牌图片
+
+### 技术改进 (Technical)
+- SearchViewModel 完全重写：
+  - 使用 MtgchApi 替代 CardInfoDao
+  - 实现 buildSearchQuery() 构建高级搜索查询
+  - 添加 SearchFilters, CmcFilter, SearchResultItem 数据类
+- SearchResultAdapter 更新为使用 SearchResultItem
+- SearchActivity 添加筛选按钮和对话框
+
+### 已知问题 (Known Issues)
+- 筛选条件收集逻辑待实现（UI 已完成）
+- 卡牌详情对话框可以进一步优化显示更多 MTGCH 字段
+
+---
+
 ## [3.12.0] - 2026-01-29
 
 ### 新功能 (New Features)

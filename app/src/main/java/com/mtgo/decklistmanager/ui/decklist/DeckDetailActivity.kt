@@ -547,12 +547,35 @@ class DeckDetailActivity : AppCompatActivity() {
      * 分享到 Moxfield
      */
     private fun shareToMoxfield(decklist: Decklist) {
-        // TODO: 集成到 ViewModel
-        android.widget.Toast.makeText(
-            this,
-            "Moxfield 分享 - 功能开发中",
-            android.widget.Toast.LENGTH_SHORT
-        ).show()
+        lifecycleScope.launch {
+            try {
+                val allCards = viewModel.getAllCards()
+
+                // 生成 Moxfield 链接
+                val moxfieldGenerator = com.mtgo.decklistmanager.exporter.share.MoxfieldShareGenerator()
+                val shareLink = moxfieldGenerator.generateShareLink(decklist, allCards)
+
+                // 打开浏览器
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                    data = android.net.Uri.parse(shareLink)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+
+                android.widget.Toast.makeText(
+                    this@DeckDetailActivity,
+                    "正在打开 Moxfield...",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.widget.Toast.makeText(
+                    this@DeckDetailActivity,
+                    "分享失败: ${e.message}",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 
     /**

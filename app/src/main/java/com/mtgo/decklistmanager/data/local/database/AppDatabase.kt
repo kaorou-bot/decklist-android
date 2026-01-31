@@ -12,11 +12,13 @@ import com.mtgo.decklistmanager.data.local.dao.CardInfoDao
 import com.mtgo.decklistmanager.data.local.dao.DecklistDao
 import com.mtgo.decklistmanager.data.local.dao.EventDao
 import com.mtgo.decklistmanager.data.local.dao.FavoriteDecklistDao
+import com.mtgo.decklistmanager.data.local.dao.SearchHistoryDao
 import com.mtgo.decklistmanager.data.local.entity.CardEntity
 import com.mtgo.decklistmanager.data.local.entity.CardInfoEntity
 import com.mtgo.decklistmanager.data.local.entity.DecklistEntity
 import com.mtgo.decklistmanager.data.local.entity.EventEntity
 import com.mtgo.decklistmanager.data.local.entity.FavoriteDecklistEntity
+import com.mtgo.decklistmanager.data.local.entity.SearchHistoryEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,9 +32,10 @@ import kotlinx.coroutines.launch
         CardEntity::class,
         CardInfoEntity::class,
         EventEntity::class,
-        FavoriteDecklistEntity::class  // 收藏表
+        FavoriteDecklistEntity::class,
+        SearchHistoryEntity::class  // 搜索历史表
     ],
-    version = 8,  // 版本升级：7 -> 8 (添加 display_name 字段到 cards 表)
+    version = 9,  // 版本升级：8 -> 9 (添加搜索历史表)
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -42,7 +45,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cardDao(): CardDao
     abstract fun cardInfoDao(): CardInfoDao
     abstract fun eventDao(): EventDao
-    abstract fun favoriteDecklistDao(): FavoriteDecklistDao  // 收藏 DAO
+    abstract fun favoriteDecklistDao(): FavoriteDecklistDao
+    abstract fun searchHistoryDao(): SearchHistoryDao  // 搜索历史 DAO
 
     companion object {
         private const val DATABASE_NAME = "decklists.db"
@@ -61,7 +65,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addCallback(DatabaseCallback())
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .build()
                 INSTANCE = instance
                 instance
@@ -228,6 +232,28 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // 为 cards 表添加 display_name 列
                 db.execSQL("ALTER TABLE cards ADD COLUMN display_name TEXT")
+            }
+        }
+
+        /**
+         * 数据库版本 8 -> 9 迁移
+         * 添加搜索历史表
+         */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 创建搜索历史表
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS search_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        query TEXT NOT NULL,
+                        searchTime INTEGER NOT NULL,
+                        resultCount INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
+
+                // 创建索引
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_search_time ON search_history(searchTime)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_query ON search_history(query)")
             }
         }
     }

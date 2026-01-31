@@ -649,6 +649,12 @@ class MainActivity : BaseActivity() {
                 startActivity(intent)
                 true
             }
+            R.id.menu_search -> {
+                // 打开搜索
+                val intent = Intent(this, com.mtgo.decklistmanager.ui.search.SearchActivity::class.java)
+                startActivity(intent)
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }

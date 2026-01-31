@@ -116,4 +116,25 @@ interface CardDao {
         cardType: String?,
         cardSet: String?
     )
+
+    /**
+     * 搜索卡牌（按名称）
+     */
+    @Query("""
+        SELECT DISTINCT card_name, display_name, mana_cost, color
+        FROM cards
+        WHERE card_name LIKE '%' || :query || '%' OR display_name LIKE '%' || :query || '%'
+        LIMIT :limit
+    """)
+    suspend fun searchCardsByName(query: String, limit: Int = 50): List<CardSearchResult>
+
+    /**
+     * 卡牌搜索结果
+     */
+    data class CardSearchResult(
+        val card_name: String,
+        val display_name: String?,
+        val mana_cost: String?,
+        val color: String?
+    )
 }
