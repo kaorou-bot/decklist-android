@@ -15,6 +15,28 @@
         android:scaleType="fitCenter"
         android:contentDescription="卡牌图片" />
 
+    <!-- 双面牌切换按钮 -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnFlipCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:text="查看反面"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:visibility="gone" />
+
+    <!-- 版本切换按钮 -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnChangeVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="4dp"
+        android:text="切换版本"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:visibility="gone" />
+
     <!-- 滚动文本区域 -->
     <ScrollView
         android:layout_width="match_parent"

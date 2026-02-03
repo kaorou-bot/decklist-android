@@ -6,14 +6,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mtgo.decklistmanager.databinding.DialogCardDetailBinding
 import com.mtgo.decklistmanager.domain.model.CardInfo
+import com.mtgo.decklistmanager.ui.decklist.DeckDetailViewModel
+import com.mtgo.decklistmanager.util.AppLogger
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Card Info Dialog - 卡牌信息弹窗
- * 使用搜索风格的详情显示（文本形式）
+ * 支持双面牌切换和版本切换
  */
 class CardInfoFragment : DialogFragment() {
 
@@ -21,6 +26,11 @@ class CardInfoFragment : DialogFragment() {
     private val binding get() = _binding!!
 
     private var currentCardInfo: CardInfo? = null
+    private var isShowingFront = true
+
+    // 卡牌的所有版本（用于版本切换）
+    private var allVersions: List<CardInfo> = emptyList()
+    private var currentVersionIndex = 0
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         _binding = DialogCardDetailBinding.inflate(layoutInflater)
@@ -28,6 +38,7 @@ class CardInfoFragment : DialogFragment() {
         val cardInfo = arguments?.getParcelable(ARG_CARD_INFO, CardInfo::class.java)
         cardInfo?.let {
             currentCardInfo = it
+            isShowingFront = true
             displayCardInfo(it)
         }
 
@@ -45,23 +56,53 @@ class CardInfoFragment : DialogFragment() {
 
     /**
      * 将文本中的换行符转换为实际的换行
-     * 处理多种可能的换行符格式
      */
     private fun formatText(text: String?): String {
         if (text == null) return ""
-
-        // 处理多种换行符格式
         return text
-            .replace("\\n", "\n")      // 字面量 \n 转换为换行符
-            .replace("\\r\\n", "\n")   // Windows 风格
-            .replace("\\r", "\n")      // 旧 Mac 风格
-            .replace("\n", "\n")       // 确保实际的换行符保留
+            .replace("\\n", "\n")
+            .replace("\\r\\n", "\n")
+            .replace("\\r", "\n")
+            .replace("\n", "\n")
     }
 
     private fun displayCardInfo(cardInfo: CardInfo) {
         binding.apply {
+            // 设置双面牌切换按钮
+            if (cardInfo.isDualFaced) {
+                btnFlipCard.visibility = View.VISIBLE
+                btnFlipCard.text = if (isShowingFront) "查看反面" else "查看正面"
+                btnFlipCard.setOnClickListener {
+                    isShowingFront = !isShowingFront
+                    updateCardDisplay()
+                }
+            } else {
+                btnFlipCard.visibility = View.GONE
+            }
+
+            // TODO: 版本切换功能需要从API获取同一卡牌的所有版本
+            // 暂时隐藏
+            btnChangeVersion.visibility = View.GONE
+
+            updateCardDisplay()
+        }
+    }
+
+    private fun updateCardDisplay() {
+        val cardInfo = currentCardInfo ?: return
+
+        binding.apply {
             // 加载卡牌图片
-            val imageUrl = cardInfo.imageUriNormal
+            val imageUrl = if (cardInfo.isDualFaced) {
+                if (isShowingFront) {
+                    cardInfo.frontImageUri ?: cardInfo.imageUriNormal
+                } else {
+                    cardInfo.backImageUri
+                }
+            } else {
+                cardInfo.imageUriNormal
+            }
+
             if (!imageUrl.isNullOrEmpty()) {
                 Glide.with(this@CardInfoFragment)
                     .load(imageUrl)
@@ -72,19 +113,36 @@ class CardInfoFragment : DialogFragment() {
                 imageViewCard.visibility = View.GONE
             }
 
-            // 构建详细信息文本（搜索风格）
-            val details = buildString {
-                // 卡牌名称
-                appendLine("卡牌名称：${cardInfo.name}")
-                appendLine()
-                appendLine("类型：${cardInfo.typeLine ?: ""}")
-                appendLine("法术力：${cardInfo.manaCost ?: "N/A"}")
+            // 更新切换按钮文本
+            if (cardInfo.isDualFaced) {
+                btnFlipCard.text = if (isShowingFront) "查看反面" else "查看正面"
+            }
 
-                // 规则文本
-                cardInfo.oracleText?.let {
-                    val text = formatText(it)
-                    if (text.isNotEmpty()) {
-                        appendLine("规则文本：\n$text")
+            // 构建详细信息文本
+            val details = buildString {
+                if (cardInfo.isDualFaced && !isShowingFront) {
+                    // 显示反面信息
+                    appendLine("卡牌名称：${cardInfo.backFaceName ?: cardInfo.name}")
+                    appendLine()
+                    appendLine("类型：${cardInfo.backFaceTypeLine ?: ""}")
+                    appendLine("法术力：${cardInfo.backFaceManaCost ?: "N/A"}")
+                    cardInfo.backFaceOracleText?.let {
+                        val text = formatText(it)
+                        if (text.isNotEmpty()) {
+                            appendLine("规则文本：\n$text")
+                        }
+                    }
+                } else {
+                    // 显示正面信息
+                    appendLine("卡牌名称：${cardInfo.name}")
+                    appendLine()
+                    appendLine("类型：${cardInfo.typeLine ?: ""}")
+                    appendLine("法术力：${cardInfo.manaCost ?: "N/A"}")
+                    cardInfo.oracleText?.let {
+                        val text = formatText(it)
+                        if (text.isNotEmpty()) {
+                            appendLine("规则文本：\n$text")
+                        }
                     }
                 }
 
@@ -95,7 +153,7 @@ class CardInfoFragment : DialogFragment() {
                     }
                 }
 
-                // 忠诚度（鹏洛客）
+                // 忠诚度
                 cardInfo.loyalty?.let { appendLine("忠诚：$it") }
 
                 appendLine()
@@ -106,15 +164,6 @@ class CardInfoFragment : DialogFragment() {
                 cardInfo.colorIdentity?.let { colors ->
                     if (colors.isNotEmpty()) {
                         appendLine("颜色标识：${colors.joinToString()}")
-                    }
-                }
-
-                // 双面卡信息
-                if (cardInfo.isDualFaced) {
-                    appendLine()
-                    appendLine("注：此卡为双面卡")
-                    cardInfo.backFaceName?.let {
-                        appendLine("反面名称：$it")
                     }
                 }
             }

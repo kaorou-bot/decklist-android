@@ -212,59 +212,27 @@ class DecklistRepository @Inject constructor(
     }
 
     /**
-     * 自动从 Scryfall 获取卡牌详情（并发优化版本 + 智能缓存）
-     * v4.0.0: 确保所有卡牌都有中文名和法术力值
+     * 自动从 MTGCH 获取卡牌详情（并发优化版本 + 智能缓存）
+     * v4.1.0: 确保所有卡牌都有中文名和法术力值
      */
     private suspend fun fetchScryfallDetails(decklistId: Long) = coroutineScope {
         try {
             // 获取该牌组的所有卡牌
             val cards = cardDao.getCardsByDecklistId(decklistId)
 
-            // 对每张唯一的卡牌，从 Scryfall 获取详情
+            // 对每张唯一的卡牌，从 MTGCH 获取详情
             val uniqueCardNames = cards.map { it.cardName }.distinct()
 
             AppLogger.d("DecklistRepository", "fetchScryfallDetails: Processing ${uniqueCardNames.size} unique cards")
 
-            // v4.0.0: 无论是否有缓存，都获取最新信息以确保有中文名
-            // 但如果已有缓存且有中文名，则跳过以提高性能
-            val cardsToFetch = uniqueCardNames.filter { cardName ->
-                val existing = cardInfoDao.getCardInfoByName(cardName)
-                existing == null || existing.name.isEmpty() || existing.name == existing.enName
-            }
-
-            if (cardsToFetch.isEmpty()) {
-                AppLogger.d("DecklistRepository", "All cards already have Chinese names, updating from cache")
-                // 即使有缓存，也要更新卡牌的详细信息（确保 displayName 有值）
-                cards.forEach { card ->
-                    val cardInfo = cardInfoDao.getCardInfoByName(card.cardName)
-                    if (cardInfo != null) {
-                        var displayName = cardInfo.name.takeIf { it.isNotEmpty() && it != cardInfo.enName }
-                        // v4.0.0: 应用基本地中文名映射
-                        displayName = getBasicLandChineseName(displayName ?: cardInfo.name) ?: displayName
-
-                        AppLogger.d("DecklistRepository", "  Updating from cache: ${card.cardName} -> $displayName")
-                        cardDao.updateDetails(
-                            cardId = card.id,
-                            manaCost = cardInfo.manaCost,
-                            color = cardInfo.colors,
-                            rarity = cardInfo.rarity,
-                            cardType = cardInfo.typeLine,
-                            cardSet = cardInfo.setName,
-                            displayName = displayName
-                        )
-                    }
-                }
-                return@coroutineScope
-            }
-
-            AppLogger.d("DecklistRepository", "Fetching ${cardsToFetch.size} unique cards from mtgch.com")
-            AppLogger.d("DecklistRepository", "Cards to fetch: ${cardsToFetch.joinToString(", ")}")
+            // v4.1.0: 总是获取最新信息以确保有中文名和法术力值
+            AppLogger.d("DecklistRepository", "Fetching all ${uniqueCardNames.size} unique cards from mtgch.com")
 
             // 使用 Semaphore 控制并发数量，避免过多请求
             val semaphore = Semaphore(5) // 最多5个并发请求
 
             // 并发获取所有卡牌详情
-            cardsToFetch.map { cardName ->
+            uniqueCardNames.map { cardName ->
                 async {
                     semaphore.acquire()
                     try {
@@ -279,13 +247,12 @@ class DecklistRepository @Inject constructor(
                             val results = searchResponse.data
                             if (results != null && results.isNotEmpty()) {
                                 // 严格精确匹配（忽略大小写）
-                                // v4.0.0: 支持双面牌匹配（name 可能包含 " // "）
                                 val exactMatch = results.find { card ->
                                     val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
                                     val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
                                     val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
 
-                                    // 双面牌特殊处理：检查 name 是否以卡名开头
+                                    // 双面牌特殊处理
                                     val dualFaceMatch = card.name?.contains("//") == true &&
                                         (card.name.startsWith("$cardName //", ignoreCase = true) ||
                                          card.name.endsWith("// $cardName", ignoreCase = true) ||
@@ -298,12 +265,11 @@ class DecklistRepository @Inject constructor(
                                     val mtgchCard = exactMatch
 
                                     // 更新所有同名卡牌的法术力值和中文名
-                                    // v4.0.0: 基本地等没有中文名时使用英文名或映射
                                     var displayName = mtgchCard.zhsName
                                         ?: mtgchCard.atomicTranslatedName
-                                        ?: mtgchCard.name  // fallback to 英文名
+                                        ?: mtgchCard.name
 
-                                    // v4.0.0: 应用基本地中文名映射
+                                    // 应用基本地中文名映射
                                     displayName = getBasicLandChineseName(displayName) ?: displayName
 
                                     AppLogger.d("DecklistRepository", "  Found: $cardName -> $displayName (mana: ${mtgchCard.manaCost})")
@@ -320,9 +286,8 @@ class DecklistRepository @Inject constructor(
                                         )
                                     }
 
-                                    // 缓存到 CardInfo 表（包含完整翻译）
+                                    // 缓存到 CardInfo 表
                                     val cardInfoEntity = mtgchCard.toEntity()
-                                    // 应用基本地中文名映射
                                     val finalName = getBasicLandChineseName(cardInfoEntity.name)
                                     if (finalName != null) {
                                         cardInfoEntity.copy(name = finalName)
@@ -331,7 +296,6 @@ class DecklistRepository @Inject constructor(
                                     }.let { cardInfoDao.insertOrUpdate(it) }
                                 } else {
                                     AppLogger.w("DecklistRepository", "  No exact match found for: $cardName")
-                                    AppLogger.w("DecklistRepository", "    Candidates: ${results.take(3).map { it.name }.joinToString(", ")}")
                                 }
                             }
                         }
@@ -343,31 +307,6 @@ class DecklistRepository @Inject constructor(
                 }
             }.awaitAll() // 等待所有请求完成
 
-            // 更新已有缓存的卡牌信息（确保 displayName 有值）
-            val cachedCardNames = uniqueCardNames - cardsToFetch.toSet()
-            if (cachedCardNames.isNotEmpty()) {
-                AppLogger.d("DecklistRepository", "Updating ${cachedCardNames.size} cards from cache")
-                cachedCardNames.forEach { cardName ->
-                    val cardInfo = cardInfoDao.getCardInfoByName(cardName)
-                    if (cardInfo != null) {
-                        var displayName = cardInfo.name.takeIf { it.isNotEmpty() && it != cardInfo.enName }
-                        // v4.0.0: 应用基本地中文名映射
-                        displayName = getBasicLandChineseName(displayName ?: cardInfo.name) ?: displayName
-
-                        cards.filter { it.cardName == cardName }.forEach { card ->
-                            cardDao.updateDetails(
-                                cardId = card.id,
-                                manaCost = cardInfo.manaCost,
-                                color = cardInfo.colors,
-                                rarity = cardInfo.rarity,
-                                cardType = cardInfo.typeLine,
-                                cardSet = cardInfo.setName,
-                                displayName = displayName
-                            )
-                        }
-                    }
-                }
-            }
         } catch (e: Exception) {
             AppLogger.e("DecklistRepository", "Error in fetchScryfallDetails: ${e.message}")
             e.printStackTrace()
