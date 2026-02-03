@@ -438,41 +438,36 @@ class DecklistRepository @Inject constructor(
     }
 
     /**
-     * 查询单卡信息（先查缓存，再查API）
-     */
-    /**
-     * 获取卡牌信息 - v4.0.0 在线模式
-     * 直接调用 MTGCH API，不使用本地数据库
+     * 获取卡牌信息 - 优先使用本地缓存，缓存未命中时调用 API
+     * v4.1.0: 优化性能，减少 API 调用
      */
     suspend fun getCardInfo(cardName: String): CardInfo? = withContext(Dispatchers.IO) {
-        AppLogger.d("DecklistRepository", "getCardInfo (online mode) called for: $cardName")
+        AppLogger.d("DecklistRepository", "getCardInfo called for: $cardName")
 
-        // v4.0.0: 添加重试机制（最多3次，延迟递增）
-        val maxRetries = 3
-        val retryDelays = listOf(0L, 500L, 1000L)  // 首次立即重试，然后延迟递增
+        // 1. 首先查询本地缓存（按名称或英文名称）
+        val cachedInfo = cardInfoDao.getCardInfoByNameOrEnName(cardName)
+        if (cachedInfo != null) {
+            AppLogger.d("DecklistRepository", "✓ Cache hit for: $cardName")
+            return@withContext cachedInfo.toDomainModel()
+        }
 
-        for (attempt in 0 until maxRetries) {
-            if (attempt > 0) {
-                delay(retryDelays[attempt])
-                AppLogger.d("DecklistRepository", "Retry $attempt/$maxRetries for: $cardName")
-            }
+        AppLogger.d("DecklistRepository", "✗ Cache miss for: $cardName, fetching from API")
 
+        // 2. 缓存未命中，调用 API 获取
+        val apiResult = fetchCardInfoFromApi(cardName)
+
+        // 3. 如果 API 成功返回，存入本地缓存
+        if (apiResult != null) {
             try {
-                val result = fetchCardInfoFromApi(cardName)
-                if (result != null) {
-                    if (attempt > 0) {
-                        AppLogger.d("DecklistRepository", "✓ Success on retry $attempt for: $cardName")
-                    }
-                    return@withContext result
-                }
+                val entity = apiResult.toEntity()
+                cardInfoDao.insertOrUpdate(entity)
+                AppLogger.d("DecklistRepository", "✓ Cached card info for: $cardName")
             } catch (e: Exception) {
-                AppLogger.e("DecklistRepository", "Error on attempt $attempt for '$cardName': ${e.message}")
+                AppLogger.e("DecklistRepository", "Failed to cache card info: ${e.message}")
             }
         }
 
-        // 所有重试都失败
-        AppLogger.w("DecklistRepository", "✗ Card not found online after $maxRetries attempts: $cardName")
-        null
+        return@withContext apiResult
     }
 
     private suspend fun fetchCardInfoFromApi(cardName: String): CardInfo? {

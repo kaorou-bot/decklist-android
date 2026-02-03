@@ -158,3 +158,47 @@ data class CardInfoEntity(
     @SerializedName("last_updated")
     val lastUpdated: Long = System.currentTimeMillis()
 )
+
+/**
+ * 将 CardInfoEntity 转换为领域模型 CardInfo
+ */
+fun CardInfoEntity.toDomainModel() = com.mtgo.decklistmanager.domain.model.CardInfo(
+    id = id,
+    name = name,
+    manaCost = manaCost,
+    cmc = cmc,
+    typeLine = typeLine,
+    oracleText = oracleText,
+    colors = colors?.split(",")?.filter { it.isNotEmpty() },
+    colorIdentity = colorIdentity?.split(",")?.filter { it.isNotEmpty() },
+    power = power,
+    toughness = toughness,
+    loyalty = loyalty,
+    rarity = rarity,
+    setCode = setCode,
+    setName = setName,
+    artist = artist,
+    cardNumber = cardNumber,
+    legalStandard = legalStandard,
+    legalModern = legalModern,
+    legalPioneer = legalPioneer,
+    legalLegacy = legalLegacy,
+    legalVintage = legalVintage,
+    legalCommander = legalCommander,
+    legalPauper = legalPauper,
+    priceUsd = priceUsd,
+    scryfallUri = scryfallUri,
+    imagePath = imagePath,
+    imageUriSmall = imageUriSmall,
+    imageUriNormal = imageUriNormal,
+    imageUriLarge = imageUriLarge,
+    lastUpdated = lastUpdated,
+    isDualFaced = isDualFaced,
+    frontFaceName = frontFaceName,
+    backFaceName = backFaceName,
+    frontImageUri = frontImageUri,
+    backImageUri = backImageUri,
+    backFaceManaCost = backFaceManaCost,
+    backFaceTypeLine = backFaceTypeLine,
+    backFaceOracleText = backFaceOracleText
+)

@@ -252,10 +252,11 @@ class SearchActivity : AppCompatActivity() {
             // 可以在这里添加清理逻辑
         }
 
-        // 设置对话框行为，禁用下滑关闭
+        // 设置对话框行为，禁用拖拽（但允许滑动查看内容）
         val bottomSheetBehavior = bottomSheetDialog.behavior
         bottomSheetBehavior.isDraggable = false
-        bottomSheetBehavior.peekHeight = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+        // 设置一个合理的 peekHeight，确保底部按钮可见
+        bottomSheetBehavior.peekHeight = resources.displayMetrics.heightPixels * 3 / 4
 
         bottomSheetDialog.show()
     }

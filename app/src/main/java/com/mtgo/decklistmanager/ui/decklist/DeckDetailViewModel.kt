@@ -125,11 +125,17 @@ class DeckDetailViewModel @Inject constructor(
                 if (decklistEntity != null) {
                     _decklist.value = decklistEntity.toDecklist()
 
-                    // v4.0.0: 确保卡牌详情已获取后再加载
+                    // v4.1.0: 确保卡牌详情已获取后再加载
                     // 先触发 fetchScryfallDetails，它会异步更新数据库
                     repository.ensureCardDetails(decklistId)
 
-                    // 等待一小段时间让数据更新
+                    // 等待足够长的时间让数据更新完成（从 500ms 增加到 1500ms）
+                    kotlinx.coroutines.delay(1500)
+
+                    // 再次调用 ensureCardDetails 以确保所有卡牌都有详细信息
+                    repository.ensureCardDetails(decklistId)
+
+                    // 再等待一段时间让第二次更新完成
                     kotlinx.coroutines.delay(500)
 
                     // 加载所有卡牌

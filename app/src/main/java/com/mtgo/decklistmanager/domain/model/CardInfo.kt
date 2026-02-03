@@ -1,6 +1,7 @@
 package com.mtgo.decklistmanager.domain.model
 
 import android.os.Parcelable
+import com.mtgo.decklistmanager.data.local.entity.CardInfoEntity
 import kotlinx.parcelize.Parcelize
 
 /**
@@ -48,4 +49,51 @@ data class CardInfo(
     val backFaceManaCost: String? = null, // 反面法术力值
     val backFaceTypeLine: String? = null, // 反面类型
     val backFaceOracleText: String? = null // 反面规则文本
-) : Parcelable
+) : Parcelable {
+
+    /**
+     * 转换为 Entity 用于数据库存储
+     */
+    fun toEntity() = CardInfoEntity(
+        id = id,
+        name = name,
+        enName = null, // CardInfo 没有区分中英文名，使用 name
+        manaCost = manaCost,
+        cmc = cmc,
+        typeLine = typeLine,
+        oracleText = oracleText,
+        colors = colors?.joinToString(","),
+        colorIdentity = colorIdentity?.joinToString(","),
+        power = power,
+        toughness = toughness,
+        loyalty = loyalty,
+        rarity = rarity,
+        setCode = setCode,
+        setName = setName,
+        artist = artist,
+        cardNumber = cardNumber,
+        legalStandard = legalStandard,
+        legalModern = legalModern,
+        legalPioneer = legalPioneer,
+        legalLegacy = legalLegacy,
+        legalVintage = legalVintage,
+        legalCommander = legalCommander,
+        legalPauper = legalPauper,
+        priceUsd = priceUsd,
+        scryfallUri = scryfallUri,
+        imagePath = imagePath,
+        imageUriSmall = imageUriSmall,
+        imageUriNormal = imageUriNormal,
+        imageUriLarge = imageUriLarge,
+        isDualFaced = isDualFaced,
+        cardFacesJson = null, // 不保存 JSON
+        frontFaceName = frontFaceName,
+        backFaceName = backFaceName,
+        backFaceManaCost = backFaceManaCost,
+        backFaceTypeLine = backFaceTypeLine,
+        backFaceOracleText = backFaceOracleText,
+        frontImageUri = frontImageUri,
+        backImageUri = backImageUri,
+        lastUpdated = lastUpdated
+    )
+}
