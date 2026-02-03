@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- MTGCH 风格的高级搜索底部表单 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -43,39 +44,76 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- 搜索关键词 -->
+            <!-- ==================== 1. 名称 ==================== -->
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/textInputLayoutQuery"
+                android:id="@+id/textInputLayoutName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:hint="卡牌名称"
+                android:hint="名称"
                 app:boxBackgroundMode="outline"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/editTextQuery"
+                    android:id="@+id/editTextName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text"
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- 颜色筛选 -->
+            <!-- ==================== 2. 规则概述 ==================== -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutOracleText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="规则概述"
+                app:boxBackgroundMode="outline"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextOracleText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- ==================== 3. 类别 ==================== -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="类别"
+                app:boxBackgroundMode="outline"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- ==================== 4. 颜色/标识色 ==================== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="颜色"
+                android:text="颜色/标识色"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/black"
                 android:layout_marginBottom="8dp" />
 
+            <!-- 颜色复选框 -->
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chipGroupColors"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="8dp"
                 app:selectionRequired="false"
                 app:singleSelection="false">
 
@@ -128,66 +166,119 @@
                     style="@style/Widget.Material3.Chip.Filter" />
             </com.google.android.material.chip.ChipGroup>
 
-            <!-- 颜色标识 -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="颜色标识"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/black"
-                android:layout_marginBottom="8dp" />
-
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chipGroupColorIdentity"
+            <!-- 颜色逻辑选择 -->
+            <RadioGroup
+                android:id="@+id/radioGroupColorMode"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:selectionRequired="false"
-                app:singleSelection="false">
+                android:layout_marginBottom="8dp"
+                android:orientation="horizontal">
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipCiWhite"
+                <RadioButton
+                    android:id="@+id/radioColorExact"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="正好为所选颜色"
+                    android:textSize="12sp"
+                    android:checked="true" />
+
+                <RadioButton
+                    android:id="@+id/radioColorAtMost"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="至多为所选颜色"
+                    android:textSize="12sp" />
+
+                <RadioButton
+                    android:id="@+id/radioColorAtLeast"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="至少包括所选颜色"
+                    android:textSize="12sp" />
+            </RadioGroup>
+
+            <!-- 搜索标识色开关 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <Switch
+                    android:id="@+id/switchSearchColorIdentity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="W"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
+                    android:text="搜索标识色"
+                    android:textSize="13sp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginStart="8dp" />
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipCiBlue"
-                    android:layout_width="wrap_content"
+                <!-- 标识色Chip组（当开关打开时显示） -->
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupColorIdentity"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="U"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    app:selectionRequired="false"
+                    app:singleSelection="false">
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipCiBlack"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="B"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipCiWhite"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="W"
+                        android:checkable="true"
+                        android:enabled="false"
+                        style="@style/Widget.Material3.Chip.Filter" />
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipCiRed"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="R"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipCiBlue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="U"
+                        android:checkable="true"
+                        android:enabled="false"
+                        style="@style/Widget.Material3.Chip.Filter" />
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipCiGreen"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="G"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
-            </com.google.android.material.chip.ChipGroup>
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipCiBlack"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="B"
+                        android:checkable="true"
+                        android:enabled="false"
+                        style="@style/Widget.Material3.Chip.Filter" />
 
-            <!-- 法术力值 -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipCiRed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="R"
+                        android:checkable="true"
+                        android:enabled="false"
+                        style="@style/Widget.Material3.Chip.Filter" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipCiGreen"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="G"
+                        android:checkable="true"
+                        android:enabled="false"
+                        style="@style/Widget.Material3.Chip.Filter" />
+                </com.google.android.material.chip.ChipGroup>
+            </LinearLayout>
+
+            <!-- ==================== 5. 法术力值 ==================== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -203,138 +294,225 @@
                 android:orientation="horizontal"
                 android:layout_marginBottom="12dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonCmcAny"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/textInputLayoutMvOperator"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="任意"
-                    android:checkable="true"
-                    android:checked="true"
-                    style="@style/Widget.Material3.Button.OutlinedButton" />
+                    android:layout_marginEnd="8dp"
+                    app:boxBackgroundMode="outline"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonCmcEqual"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="="
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Button.OutlinedButton" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonCmcGreater"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text=">"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Button.OutlinedButton" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonCmcLess"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="&lt;"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Button.OutlinedButton" />
+                    <AutoCompleteTextView
+                        android:id="@+id/autoCompleteMvOperator"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:text="任意"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/textInputLayoutCmc"
-                    android:layout_width="60dp"
+                    android:id="@+id/textInputLayoutMvValue"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
                     app:boxBackgroundMode="outline"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                     <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editTextCmc"
+                        android:id="@+id/editTextMvValue"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="number"
-                        android:textSize="14sp"
-                        android:padding="8dp"
-                        android:gravity="center" />
+                        android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonClearMv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="清除"
+                    style="@style/Widget.Material3.Button.OutlinedButton" />
             </LinearLayout>
 
-            <!-- 类型筛选 -->
+            <!-- ==================== 6. 力量/防御力 ==================== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="类型"
+                android:text="力量/防御力"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/black"
                 android:layout_marginBottom="8dp" />
 
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chipGroupTypes"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <!-- 力量 -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/textInputLayoutPowerOperator"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    app:boxBackgroundMode="outline"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/autoCompletePowerOperator"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:text="任意"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/textInputLayoutPowerValue"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    app:boxBackgroundMode="outline"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editTextPowerValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="/"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="4dp" />
+
+                <!-- 防御力 -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/textInputLayoutToughnessOperator"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    app:boxBackgroundMode="outline"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/autoCompleteToughnessOperator"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:text="任意"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/textInputLayoutToughnessValue"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    app:boxBackgroundMode="outline"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editTextToughnessValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonClearPowerToughness"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="清除"
+                    style="@style/Widget.Material3.Button.OutlinedButton" />
+            </LinearLayout>
+
+            <!-- ==================== 7. 限制 ==================== -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="限制"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/textInputLayoutFormat"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:hint="选择赛制"
+                    app:boxBackgroundMode="outline"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/autoCompleteFormat"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/textInputLayoutLegality"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="可用性"
+                    app:boxBackgroundMode="outline"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/autoCompleteLegality"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <!-- ==================== 8. 系列 ==================== -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutSet"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:selectionRequired="false"
-                app:singleSelection="false">
+                android:hint="系列代码 (例如: MOM, ONE, MOM2)"
+                app:boxBackgroundMode="outline"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipCreature"
-                    android:layout_width="wrap_content"
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextSet"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="生物"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
+                    android:inputType="textCapCharacters"
+                    android:singleLine="true"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipInstant"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="瞬间"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipSorcery"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="法术"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipArtifact"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="神器"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipEnchantment"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="结界"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipPlaneswalker"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="鹏洛客"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipLand"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="地"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
-            </com.google.android.material.chip.ChipGroup>
-
-            <!-- 稀有度 -->
+            <!-- ==================== 9. 稀有度 ==================== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -383,98 +561,108 @@
                     android:text="mythic"
                     android:checkable="true"
                     style="@style/Widget.Material3.Chip.Filter" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipSpecial"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="special"
+                    android:checkable="true"
+                    style="@style/Widget.Material3.Chip.Filter" />
             </com.google.android.material.chip.ChipGroup>
 
-            <!-- 系列 -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="系列代码"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/black"
-                android:layout_marginBottom="8dp" />
-
+            <!-- ==================== 10. 背景叙述 ==================== -->
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/textInputLayoutSet"
+                android:id="@+id/textInputLayoutFlavorText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:hint="例如: MOM, ONE, MOM2"
+                android:hint="背景叙述"
                 app:boxBackgroundMode="outline"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/editTextSet"
+                    android:id="@+id/editTextFlavorText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text"
-                    android:textSize="14sp" />
+                    android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- 伙伴 -->
+            <!-- ==================== 11. 画师 ==================== -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutArtist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="画师"
+                app:boxBackgroundMode="outline"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editTextArtist"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- ==================== 12. 游戏平台 ==================== -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="伙伴"
+                android:text="游戏平台"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/black"
                 android:layout_marginBottom="8dp" />
 
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chipGroupPartner"
+            <RadioGroup
+                android:id="@+id/radioGroupGame"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:selectionRequired="false"
-                app:singleSelection="false">
+                android:orientation="horizontal">
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipPartnerWhite"
-                    android:layout_width="wrap_content"
+                <RadioButton
+                    android:id="@+id/radioGamePaper"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="white"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
+                    android:layout_weight="1"
+                    android:text="实体卡牌"
+                    android:textSize="12sp" />
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipPartnerBlue"
-                    android:layout_width="wrap_content"
+                <RadioButton
+                    android:id="@+id/radioGameMtgo"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="blue"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
+                    android:layout_weight="1"
+                    android:text="万智牌在线版"
+                    android:textSize="12sp" />
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipPartnerBlack"
-                    android:layout_width="wrap_content"
+                <RadioButton
+                    android:id="@+id/radioGameArena"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="black"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
+                    android:layout_weight="1"
+                    android:text="万智牌竞技场"
+                    android:textSize="12sp" />
+            </RadioGroup>
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipPartnerRed"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="red"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipPartnerGreen"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="green"
-                    android:checkable="true"
-                    style="@style/Widget.Material3.Chip.Filter" />
-            </com.google.android.material.chip.ChipGroup>
+            <!-- ==================== 13. 搜索额外卡牌 ==================== -->
+            <CheckBox
+                android:id="@+id/checkBoxIncludeExtras"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="搜索额外卡牌（命令者、Token等）"
+                android:textSize="13sp"
+                android:textColor="@android:color/black"
+                android:layout_marginBottom="12dp" />
 
         </LinearLayout>
     </ScrollView>
 
-    <!-- 底部按钮 -->
+    <!-- ==================== 底部按钮 ==================== -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -487,14 +675,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
-            android:text="重置"
+            android:text="清除已选"
             style="@style/Widget.Material3.Button.TextButton" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonSearch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="搜索"
+            android:text="以此条件搜索"
             style="@style/Widget.Material3.Button.TonalButton" />
     </LinearLayout>
 

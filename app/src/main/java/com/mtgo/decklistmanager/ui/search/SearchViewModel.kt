@@ -7,6 +7,7 @@ import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchCardDto
 import com.mtgo.decklistmanager.data.local.dao.SearchHistoryDao
 import com.mtgo.decklistmanager.data.local.entity.SearchHistoryEntity
 import com.mtgo.decklistmanager.domain.model.SearchHistory
+import com.mtgo.decklistmanager.ui.search.model.*
 import com.mtgo.decklistmanager.util.AppLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -14,7 +15,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * 搜索 ViewModel - 在线搜索版本
+ * 搜索 ViewModel - 完全复制 MTGCH 搜索功能
  */
 @HiltViewModel
 class SearchViewModel @Inject constructor(
@@ -127,72 +128,124 @@ class SearchViewModel @Inject constructor(
      * 检查是否有有效的筛选条件
      */
     private fun hasActiveFilters(filters: SearchFilters?): Boolean {
-        return filters?.let {
-            it.colors.isNotEmpty() ||
-            it.colorIdentity != null ||
-            it.cmc != null ||
-            it.types != null ||
-            it.rarity != null ||
-            it.set != null ||
-            it.partner != null
-        } ?: false
+        return filters?.hasActiveFilters ?: false
     }
 
     /**
      * 构建搜索查询字符串
-     * 参考: http://mtgch.com/search
+     * 完全复制 MTGCH 的搜索语法
+     * 参考: https://mtgch.com/search
      */
     private fun buildSearchQuery(
         query: String,
         filters: SearchFilters?
     ): String {
-        val parts = mutableListOf(query)
+        val parts = mutableListOf<String>()
 
-        filters?.let {
-            // 颜色筛选: c:w, c:u, c:b, c:r, c:g
-            it.colors.forEach { color ->
-                parts.add("c:$color")
+        filters?.let { f ->
+            // 1. 名称 (name)
+            f.name?.let {
+                if (it.isNotBlank()) parts.add("name:\"$it\"")
             }
 
-            // 颜色标识: ci:wubrg
-            it.colorIdentity?.forEach { color ->
-                parts.add("ci:$color")
+            // 2. 规则概述 (o, oracle, text)
+            f.oracleText?.let {
+                if (it.isNotBlank()) parts.add("o:\"$it\"")
             }
 
-            // 法术力值: cmc>2, cmc<5, cmc=3
-            it.cmc?.let { cmc ->
-                when (cmc.operator) {
-                    "=" -> parts.add("cmc=$cmc.value")
-                    ">" -> parts.add("cmc>$cmc.value")
-                    "<" -> parts.add("cmc<$cmc.value")
-                    ">=" -> parts.add("cmc>=$cmc.value")
-                    "<=" -> parts.add("cmc<=$cmc.value")
-                    else -> parts.add("cmc=${cmc.value}")
+            // 3. 类别 (t, type)
+            f.type?.let {
+                if (it.isNotBlank()) parts.add("t:\"$it\"")
+            }
+
+            // 4. 颜色筛选 (c) - 支持颜色模式
+            if (f.colors.isNotEmpty()) {
+                val colorStr = f.getColorString()
+                val operator = when (f.colorMode) {
+                    ColorMatchMode.EXACT -> "="
+                    ColorMatchMode.AT_MOST -> "<="
+                    ColorMatchMode.AT_LEAST -> ">="
+                }
+                parts.add("c$operator$colorStr")
+            }
+
+            // 5. 颜色标识 (ci)
+            if (f.searchColorIdentity && f.colorIdentity?.isNotEmpty() == true) {
+                parts.add("ci:${f.getColorIdentityString()}")
+            }
+
+            // 6. 法术力值 (mv, cmc, mana_value)
+            f.manaValue?.let { mv ->
+                if (mv.isActive) {
+                    parts.add(mv.toQueryPart("mv"))
                 }
             }
 
-            // 类型: t:creature, t:instant
-            it.types?.forEach { type ->
-                parts.add("t:$type")
+            // 7. 力量 (po, power)
+            f.power?.let { p ->
+                if (p.isActive) {
+                    parts.add(p.toQueryPart("po"))
+                }
             }
 
-            // 稀有度: r:common, r:uncommon, r:rare, r:mythic
-            it.rarity?.let { rarity ->
-                parts.add("r:$rarity")
+            // 8. 防御力 (to, toughness)
+            f.toughness?.let { t ->
+                if (t.isActive) {
+                    parts.add(t.toQueryPart("to"))
+                }
             }
 
-            // 系列: s:cmr, s:mom
-            it.set?.let { set ->
-                parts.add("s:$set")
+            // 9. 赛制与合法性 (f, l)
+            if (f.format != null) {
+                val formatPart = "f:${f.format.value}"
+                val legalityPart = f.legality?.let { " l:${it.value}" } ?: ""
+                parts.add(formatPart + legalityPart)
             }
 
-            // 伙伴: p:white, p:blue
-            it.partner?.let { partner ->
-                parts.add("p:$partner")
+            // 10. 系列 (s, set)
+            f.setCode?.let {
+                if (it.isNotBlank()) parts.add("s:$it")
+            }
+
+            // 11. 稀有度 (r, rarity) - 支持多选
+            f.rarities.forEach { rarity ->
+                if (rarity.isNotBlank()) parts.add("r:$rarity")
+            }
+
+            // 12. 背景叙述 (ft, flavor_text)
+            f.flavorText?.let {
+                if (it.isNotBlank()) parts.add("ft:\"$it\"")
+            }
+
+            // 13. 画师 (a, artist)
+            f.artist?.let {
+                if (it.isNotBlank()) parts.add("a:\"$it\"")
+            }
+
+            // 14. 游戏平台
+            f.game?.let {
+                parts.add("game:${it.value}")
+            }
+
+            // 15. 额外卡牌
+            if (f.includeExtras) {
+                parts.add("is:extra")
             }
         }
 
-        return parts.joinToString(" ")
+        // 如果没有任何筛选条件，直接返回query
+        if (parts.isEmpty() && query.isNotBlank()) {
+            return query
+        }
+
+        // 合并所有查询条件
+        val allParts = if (query.isNotBlank()) {
+            listOf(query) + parts
+        } else {
+            parts
+        }
+
+        return allParts.joinToString(" ")
     }
 
     /**
@@ -304,41 +357,6 @@ class SearchViewModel @Inject constructor(
         )
     }
 }
-
-/**
- * 搜索过滤器
- * 参考: http://mtgch.com/search 的高级筛选功能
- */
-data class SearchFilters(
-    // 颜色筛选: w, u, b, r, g
-    val colors: List<String> = emptyList(),
-
-    // 颜色标识: wubrg
-    val colorIdentity: List<String>? = null,
-
-    // 法术力值筛选
-    val cmc: CmcFilter? = null,
-
-    // 类型筛选: creature, instant, sorcery, etc.
-    val types: List<String>? = null,
-
-    // 稀有度: common, uncommon, rare, mythic
-    val rarity: String? = null,
-
-    // 系列代码: cmr, mom, one, etc.
-    val set: String? = null,
-
-    // 伙伴颜色
-    val partner: String? = null
-)
-
-/**
- * 法术力值筛选
- */
-data class CmcFilter(
-    val operator: String,  // =, >, <, >=, <=
-    val value: Int
-)
 
 /**
  * 搜索结果（增强版）
