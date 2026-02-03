@@ -35,6 +35,9 @@ class SearchActivity : AppCompatActivity() {
     // 当前应用的筛选条件
     private var currentFilters: SearchFilters = SearchFilters.empty()
 
+    // 当前显示的卡牌详情对话框（防止重复打开）
+    private var currentDetailDialog: androidx.appcompat.app.AlertDialog? = null
+
     // 下拉菜单选项
     private val operatorOptions = listOf("任意", "=", ">", "<", ">=", "<=")
     private val formatOptions = Format.values().map { it.displayName }
@@ -84,8 +87,13 @@ class SearchActivity : AppCompatActivity() {
 
     /**
      * 显示卡牌详情（包含卡图）
+     * 限制只能同时显示一个对话框
+     * 如果卡牌原本是英文名（没有中文名），则不显示中文字段
      */
     private fun showCardDetail(result: SearchResultItem) {
+        // 如果已有对话框打开，先关闭
+        currentDetailDialog?.dismiss()
+
         val dialogBinding = com.mtgo.decklistmanager.databinding.DialogCardDetailBinding.inflate(
             LayoutInflater.from(this)
         )
@@ -101,10 +109,18 @@ class SearchActivity : AppCompatActivity() {
             dialogBinding.imageViewCard.visibility = android.view.View.GONE
         }
 
+        // 判断是否是中文卡牌（有中文名显示）
+        val hasChineseName = !result.displayName.isNullOrEmpty() && result.displayName != result.name
+
         // 构建详细信息文本
         val details = buildString {
-            appendLine("卡牌名称：${result.displayName ?: result.name}")
-            appendLine("英文名称：${result.name}")
+            // 卡牌名称：如果有中文名则显示中文名，否则只显示英文名
+            if (hasChineseName) {
+                appendLine("卡牌名称：${result.displayName}")
+                appendLine("英文名称：${result.name}")
+            } else {
+                appendLine("卡牌名称：${result.name}")
+            }
             appendLine()
             appendLine("类型：${result.typeLine ?: result.type ?: ""}")
             appendLine("法术力：${result.manaCost ?: "N/A"}")
@@ -132,11 +148,20 @@ class SearchActivity : AppCompatActivity() {
 
         dialogBinding.textViewCardDetails.text = details
 
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(result.displayName ?: result.name)
+        // 对话框标题：优先显示中文名
+        val title = if (hasChineseName) result.displayName else result.name
+
+        // 创建并保存对话框引用
+        currentDetailDialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(title)
             .setView(dialogBinding.root)
             .setPositiveButton("关闭", null)
-            .show()
+            .setOnDismissListener {
+                currentDetailDialog = null
+            }
+            .create()
+
+        currentDetailDialog?.show()
     }
 
     private fun observeViewModel() {
@@ -208,6 +233,7 @@ class SearchActivity : AppCompatActivity() {
 
     /**
      * 显示底部表单高级筛选（完全复制 MTGCH）
+     * 防止下滑关闭，用户必须点击关闭按钮
      */
     private fun showFiltersDialog() {
         val bottomSheetDialog = BottomSheetDialog(this)
@@ -220,6 +246,17 @@ class SearchActivity : AppCompatActivity() {
         setupDialogListeners(dialogBinding, bottomSheetDialog)
 
         bottomSheetDialog.setContentView(dialogBinding.root)
+
+        // 防止下滑关闭，必须点击关闭按钮
+        bottomSheetDialog.setOnDismissListener {
+            // 可以在这里添加清理逻辑
+        }
+
+        // 设置对话框行为，禁用下滑关闭
+        val bottomSheetBehavior = bottomSheetDialog.behavior
+        bottomSheetBehavior.isDraggable = false
+        bottomSheetBehavior.peekHeight = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+
         bottomSheetDialog.show()
     }
 
