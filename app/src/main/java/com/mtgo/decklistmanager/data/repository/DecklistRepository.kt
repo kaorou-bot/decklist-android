@@ -229,36 +229,42 @@ class DecklistRepository @Inject constructor(
             AppLogger.d("DecklistRepository", "Fetching all ${uniqueCardNames.size} unique cards from mtgch.com")
 
             // 使用 Semaphore 控制并发数量，避免过多请求
-            val semaphore = Semaphore(5) // 最多5个并发请求
+            val semaphore = Semaphore(5)
 
             // 并发获取所有卡牌详情
             uniqueCardNames.map { cardName ->
                 async {
                     semaphore.acquire()
                     try {
-                        // 不使用 ! 前缀，因为 API 的精确搜索不可靠
+                        // 标准化卡名（处理连体牌格式）
+                        val formattedCardName = normalizeCardName(cardName)
+
                         val response = mtgchApi.searchCard(
-                            query = cardName,
-                            pageSize = 10,  // 获取多个结果以便精确匹配
+                            query = formattedCardName,
+                            pageSize = 10,
                             priorityChinese = true
                         )
                         if (response.isSuccessful && response.body() != null) {
                             val searchResponse = response.body()!!
                             val results = searchResponse.data
                             if (results != null && results.isNotEmpty()) {
-                                // 严格精确匹配（忽略大小写）
+                                // 精确匹配
                                 val exactMatch = results.find { card ->
-                                    val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
+                                    val nameMatch = card.name?.equals(formattedCardName, ignoreCase = true) == true
                                     val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
                                     val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
 
                                     // 双面牌特殊处理
                                     val dualFaceMatch = card.name?.contains("//") == true &&
-                                        (card.name.startsWith("$cardName //", ignoreCase = true) ||
-                                         card.name.endsWith("// $cardName", ignoreCase = true) ||
-                                         card.name.contains(" // $cardName //", ignoreCase = true))
+                                        (card.name.startsWith("$formattedCardName //", ignoreCase = true) ||
+                                         card.name.endsWith("// $formattedCardName", ignoreCase = true) ||
+                                         card.name.contains(" // $formattedCardName //", ignoreCase = true))
 
-                                    nameMatch || zhNameMatch || translatedNameMatch || dualFaceMatch
+                                    // 连体牌特殊处理：检查原始卡名
+                                    val splitMatch = !cardName.contains("/") && card.name?.contains("//") == true &&
+                                        card.name.equals(formattedCardName, ignoreCase = true)
+
+                                    nameMatch || zhNameMatch || translatedNameMatch || dualFaceMatch || splitMatch
                                 }
 
                                 if (exactMatch != null) {
@@ -269,7 +275,6 @@ class DecklistRepository @Inject constructor(
                                         ?: mtgchCard.atomicTranslatedName
                                         ?: mtgchCard.name
 
-                                    // 应用基本地中文名映射
                                     displayName = getBasicLandChineseName(displayName) ?: displayName
 
                                     AppLogger.d("DecklistRepository", "  Found: $cardName -> $displayName (mana: ${mtgchCard.manaCost})")
@@ -295,7 +300,7 @@ class DecklistRepository @Inject constructor(
                                         cardInfoEntity
                                     }.let { cardInfoDao.insertOrUpdate(it) }
                                 } else {
-                                    AppLogger.w("DecklistRepository", "  No exact match found for: $cardName")
+                                    AppLogger.w("DecklistRepository", "  No exact match found for: $cardName (formatted: $formattedCardName)")
                                 }
                             }
                         }
@@ -305,7 +310,7 @@ class DecklistRepository @Inject constructor(
                         semaphore.release()
                     }
                 }
-            }.awaitAll() // 等待所有请求完成
+            }.awaitAll()
 
         } catch (e: Exception) {
             AppLogger.e("DecklistRepository", "Error in fetchScryfallDetails: ${e.message}")
@@ -383,8 +388,11 @@ class DecklistRepository @Inject constructor(
     suspend fun getCardInfo(cardName: String): CardInfo? = withContext(Dispatchers.IO) {
         AppLogger.d("DecklistRepository", "getCardInfo called for: $cardName")
 
+        // 转换卡名格式（处理连体牌）
+        val formattedCardName = normalizeCardName(cardName)
+
         // 1. 首先查询本地缓存（按名称或英文名称）
-        val cachedInfo = cardInfoDao.getCardInfoByNameOrEnName(cardName)
+        val cachedInfo = cardInfoDao.getCardInfoByNameOrEnName(formattedCardName)
         if (cachedInfo != null) {
             AppLogger.d("DecklistRepository", "✓ Cache hit for: $cardName")
             return@withContext cachedInfo.toDomainModel()
@@ -393,7 +401,7 @@ class DecklistRepository @Inject constructor(
         AppLogger.d("DecklistRepository", "✗ Cache miss for: $cardName, fetching from API")
 
         // 2. 缓存未命中，调用 API 获取
-        val apiResult = fetchCardInfoFromApi(cardName)
+        val apiResult = fetchCardInfoFromApi(formattedCardName)
 
         // 3. 如果 API 成功返回，存入本地缓存
         if (apiResult != null) {
@@ -407,6 +415,21 @@ class DecklistRepository @Inject constructor(
         }
 
         return@withContext apiResult
+    }
+
+    /**
+     * 标准化卡牌名称
+     * v4.1.0: 处理连体牌格式转换
+     * - "Wear/Tear" -> "Wear // Tear"
+     * - "Fire/Ice" -> "Fire // Ice"
+     */
+    private fun normalizeCardName(cardName: String): String {
+        // 处理连体牌格式：将 "/" 转换为 " // "
+        // 例如：Wear/Tear -> Wear // Tear
+        if (cardName.contains("/") && !cardName.contains("//")) {
+            return cardName.replace("/", " // ")
+        }
+        return cardName
     }
 
     private suspend fun fetchCardInfoFromApi(cardName: String): CardInfo? {
@@ -590,6 +613,61 @@ class DecklistRepository @Inject constructor(
             cardInfoDao.searchCardsByName(query, limit)
                 .map { it.toDomainModel() }
         }
+
+    /**
+     * 获取卡牌的所有版本（不同系列）
+     * v4.1.0: 用于版本切换功能
+     */
+    suspend fun getCardAllVersions(cardName: String): List<CardInfo> = withContext(Dispatchers.IO) {
+        AppLogger.d("DecklistRepository", "Getting all versions for: $cardName")
+
+        // 标准化卡名（处理连体牌格式）
+        val formattedCardName = normalizeCardName(cardName)
+
+        try {
+            // 使用 unique=art 获取同一卡牌的不同艺术版本/系列版本
+            val response = mtgchApi.searchCard(
+                query = formattedCardName,
+                pageSize = 100,  // 获取更多版本
+                unique = "art",   // unique=art 返回不同艺术/系列的版本
+                priorityChinese = true
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                val searchResponse = response.body()!!
+                val results = searchResponse.data
+
+                if (results != null && results.isNotEmpty()) {
+                    // 过滤出精确匹配的卡牌（包括双面牌和连体牌）
+                    val matchingCards = results.filter { card ->
+                        val nameMatch = card.name?.equals(formattedCardName, ignoreCase = true) == true
+                        val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
+
+                        // 双面牌特殊处理
+                        val dualFaceMatch = card.name?.contains("//") == true &&
+                            (card.name.startsWith("$formattedCardName //", ignoreCase = true) ||
+                             card.name.endsWith("// $formattedCardName", ignoreCase = true) ||
+                             card.name.contains(" // $formattedCardName //", ignoreCase = true))
+
+                        nameMatch || zhNameMatch || dualFaceMatch
+                    }
+
+                    AppLogger.d("DecklistRepository", "✓ Found ${matchingCards.size} versions for: $cardName")
+
+                    // 转换为 CardInfo 并按系列排序
+                    return@withContext matchingCards
+                        .map { it.toEntity().toDomainModel() }
+                        .sortedByDescending { it.setName } // 按系列名称倒序排列（新系列在前）
+                }
+            }
+
+            AppLogger.d("DecklistRepository", "No versions found for: $cardName")
+            emptyList()
+        } catch (e: Exception) {
+            AppLogger.e("DecklistRepository", "Error getting card versions: ${e.message}", e)
+            emptyList()
+        }
+    }
 
     /**
      * 获取赛事列表（带筛选）

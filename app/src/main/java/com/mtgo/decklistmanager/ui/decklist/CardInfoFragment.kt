@@ -11,16 +11,20 @@ import com.bumptech.glide.Glide
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mtgo.decklistmanager.databinding.DialogCardDetailBinding
 import com.mtgo.decklistmanager.domain.model.CardInfo
-import com.mtgo.decklistmanager.ui.decklist.DeckDetailViewModel
 import com.mtgo.decklistmanager.util.AppLogger
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
  * Card Info Dialog - 卡牌信息弹窗
  * 支持双面牌切换和版本切换
  */
+@AndroidEntryPoint
 class CardInfoFragment : DialogFragment() {
+
+    @Inject
+    lateinit var repository: com.mtgo.decklistmanager.data.repository.DecklistRepository
 
     private var _binding: DialogCardDetailBinding? = null
     private val binding get() = _binding!!
@@ -80,11 +84,63 @@ class CardInfoFragment : DialogFragment() {
                 btnFlipCard.visibility = View.GONE
             }
 
-            // TODO: 版本切换功能需要从API获取同一卡牌的所有版本
-            // 暂时隐藏
-            btnChangeVersion.visibility = View.GONE
+            // 设置版本切换按钮
+            btnChangeVersion.visibility = View.VISIBLE
+            btnChangeVersion.setOnClickListener {
+                showVersionSelector()
+            }
 
             updateCardDisplay()
+        }
+    }
+
+    /**
+     * 显示版本选择对话框
+     */
+    private fun showVersionSelector() {
+        val currentInfo = currentCardInfo ?: return
+
+        lifecycleScope.launch {
+            try {
+                // 显示加载提示
+                android.widget.Toast.makeText(requireContext(), "正在加载版本列表...", android.widget.Toast.LENGTH_SHORT).show()
+
+                // 获取所有版本
+                allVersions = repository.getCardAllVersions(currentInfo.name)
+
+                if (allVersions.isEmpty()) {
+                    android.widget.Toast.makeText(requireContext(), "未找到其他版本", android.widget.Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                // 找到当前版本索引
+                currentVersionIndex = allVersions.indexOfFirst {
+                    it.id == currentInfo.id
+                }
+
+                // 构建版本列表显示
+                val versionNames = allVersions.mapIndexed { index, card ->
+                    val prefix = if (index == currentVersionIndex) "✓ " else ""
+                    "$prefix${card.setName ?: "未知系列"} (${card.setCode ?: "?"})"
+                }.toTypedArray()
+
+                // 显示选择对话框
+                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("选择版本")
+                    .setSingleChoiceItems(versionNames, currentVersionIndex) { dialog, which ->
+                        currentVersionIndex = which
+                        val selectedCard = allVersions[which]
+                        currentCardInfo = selectedCard
+                        updateCardDisplay()
+                        dialog.dismiss()
+                    }
+                    .setNegativeButton("取消", null)
+                    .show()
+
+            } catch (e: Exception) {
+                AppLogger.e("CardInfoFragment", "Error loading versions: ${e.message}")
+                android.widget.Toast.makeText(requireContext(), "加载版本失败", android.widget.Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -116,6 +172,11 @@ class CardInfoFragment : DialogFragment() {
             // 更新切换按钮文本
             if (cardInfo.isDualFaced) {
                 btnFlipCard.text = if (isShowingFront) "查看反面" else "查看正面"
+            }
+
+            // 更新版本按钮文本
+            if (allVersions.isNotEmpty()) {
+                btnChangeVersion.text = "${cardInfo.setName} (${cardInfo.setCode})"
             }
 
             // 构建详细信息文本
