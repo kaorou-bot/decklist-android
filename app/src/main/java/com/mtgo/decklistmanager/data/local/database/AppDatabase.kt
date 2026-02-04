@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
         FavoriteDecklistEntity::class,
         SearchHistoryEntity::class  // 搜索历史表
     ],
-    version = 9,  // 版本升级：8 -> 9 (添加搜索历史表)
+    version = 10,  // 版本升级：9 -> 10 (添加双面牌反面攻防字段)
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -65,7 +65,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addCallback(DatabaseCallback())
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                     .build()
                 INSTANCE = instance
                 instance
@@ -254,6 +254,19 @@ abstract class AppDatabase : RoomDatabase() {
                 // 创建索引
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_search_time ON search_history(searchTime)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_query ON search_history(query)")
+            }
+        }
+
+        /**
+         * 数据库版本 9 -> 10 迁移
+         * 添加双面牌反面攻防字段到 card_info 表
+         */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 为 card_info 表添加反面攻防列
+                db.execSQL("ALTER TABLE card_info ADD COLUMN back_face_power TEXT")
+                db.execSQL("ALTER TABLE card_info ADD COLUMN back_face_toughness TEXT")
+                db.execSQL("ALTER TABLE card_info ADD COLUMN back_face_loyalty TEXT")
             }
         }
     }

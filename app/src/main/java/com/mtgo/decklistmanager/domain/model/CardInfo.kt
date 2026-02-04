@@ -48,7 +48,10 @@ data class CardInfo(
     val backImageUri: String? = null, // 反面图片URI
     val backFaceManaCost: String? = null, // 反面法术力值
     val backFaceTypeLine: String? = null, // 反面类型
-    val backFaceOracleText: String? = null // 反面规则文本
+    val backFaceOracleText: String? = null, // 反面规则文本
+    val backFacePower: String? = null, // 反面力量
+    val backFaceToughness: String? = null, // 反面防御力
+    val backFaceLoyalty: String? = null // 反面忠诚度
 ) : Parcelable {
 
     /**
@@ -92,6 +95,9 @@ data class CardInfo(
         backFaceManaCost = backFaceManaCost,
         backFaceTypeLine = backFaceTypeLine,
         backFaceOracleText = backFaceOracleText,
+        backFacePower = backFacePower,
+        backFaceToughness = backFaceToughness,
+        backFaceLoyalty = backFaceLoyalty,
         frontImageUri = frontImageUri,
         backImageUri = backImageUri,
         lastUpdated = lastUpdated

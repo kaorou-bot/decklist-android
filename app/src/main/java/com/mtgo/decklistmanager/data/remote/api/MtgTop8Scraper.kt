@@ -485,7 +485,9 @@ class MtgTop8Scraper {
                 if (datePattern.containsMatchIn(text)) {
                     val dateMatch = datePattern.find(text)
                     if (dateMatch != null) {
-                        eventDate = dateMatch.value
+                        val rawDate = dateMatch.value
+                        // 转换日期格式：从 MM/DD/YY 转换为 YYYY-MM-DD
+                        eventDate = convertDateToStandard(rawDate)
                         break
                     }
                 }
@@ -1197,8 +1199,10 @@ class MtgTop8Scraper {
                 if (datePattern.containsMatchIn(text)) {
                     val dateMatch = datePattern.find(text)
                     if (dateMatch != null) {
-                        eventDate = dateMatch.value
-                        AppLogger.d(TAG, "Found date: $eventDate")
+                        val rawDate = dateMatch.value
+                        // 转换日期格式：从 MM/DD/YY 转换为 YYYY-MM-DD
+                        eventDate = convertDateToStandard(rawDate)
+                        AppLogger.d(TAG, "Found date: $rawDate -> $eventDate")
                         break
                     }
                 }

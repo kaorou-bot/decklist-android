@@ -1,8 +1,6 @@
 package com.mtgo.decklistmanager.data.remote.api.mtgch
 
-import android.util.Log
 import com.mtgo.decklistmanager.data.local.entity.CardInfoEntity
-import com.mtgo.decklistmanager.util.AppLogger
 import com.google.gson.Gson
 
 /**
@@ -32,19 +30,6 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
             || (imageUris == null && zhsImageUris == null) // 双面牌通常没有单一的 imageUris
             || (name?.contains(" // ") == true)  // 冒险牌特征：Name // Adventure Name
             || (zhsName?.contains("//") == true)  // 中文名称可能也包含
-
-    // 使用 Log.e 确保日志一定会显示
-    Log.e("MtgchMapper", "=== Card Mapping Debug ===")
-    Log.e("MtgchMapper", "Card: $name, layout: $layout, isDualFaced: $isDualFaced")
-    Log.e("MtgchMapper", "  zhsName: $zhsName")
-    Log.e("MtgchMapper", "  cardFaces: ${cardFaces?.size}, otherFaces: ${otherFaces?.size}")
-    Log.e("MtgchMapper", "  name contains // : ${name?.contains(" // ")}")
-    if (cardFaces != null && cardFaces.isNotEmpty()) {
-        Log.e("MtgchMapper", "  cardFaces[0]: name=${cardFaces[0].name}, zhName=${cardFaces[0].zhName}")
-        if (cardFaces.size > 1) {
-            Log.e("MtgchMapper", "  cardFaces[1]: name=${cardFaces[1].name}, zhName=${cardFaces[1].zhName}")
-        }
-    }
 
     // 对于双面牌，需要从 cardFaces 或 otherFaces 中提取中文名称
     val displayName = if (isDualFaced) {
@@ -82,19 +67,14 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
 
     // 提取双面牌信息
     val frontFaceName = if (isDualFaced) {
-        // 优先使用中文正面名称
+        // 正面名称：优先从顶层卡牌对象获取（faceName/zhsFaceName）
         when {
             cardFaces != null && cardFaces.isNotEmpty() -> {
                 cardFaces.getOrNull(0)?.zhName ?: cardFaces.getOrNull(0)?.name
             }
             otherFaces != null && otherFaces.isNotEmpty() -> {
-                // otherFaces 的 name 包含 "Front // Back"，需要解析
-                val fullName = otherFaces[0].zhsFaceName ?: otherFaces[0].faceName ?: otherFaces[0].name
-                if (fullName != null && fullName.contains(" // ")) {
-                    fullName.substringBefore(" // ").trim()
-                } else {
-                    fullName
-                }
+                // 顶层卡牌对象包含正面信息
+                faceName ?: zhsFaceName ?: name
             }
             else -> faceName ?: zhsFaceName ?: name
         }
@@ -102,19 +82,16 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
 
     // 尝试从 card_faces 或 other_faces 获取背面名称
     val backFaceName = if (isDualFaced) {
+        // 背面名称：从 otherFaces[0] 获取（反面数据）
         when {
             cardFaces != null && cardFaces.isNotEmpty() -> {
                 // 优先使用中文背面名称
                 cardFaces.getOrNull(1)?.zhName ?: cardFaces.getOrNull(1)?.name
             }
             otherFaces != null && otherFaces.isNotEmpty() -> {
-                // otherFaces 的 name 包含 "Front // Back"，需要解析
-                val fullName = otherFaces[0].zhsFaceName ?: otherFaces[0].faceName ?: otherFaces[0].name
-                if (fullName != null && fullName.contains(" // ")) {
-                    fullName.substringAfter(" // ").trim()
-                } else {
-                    null
-                }
+                // otherFaces[0] 包含反面数据
+                // 优先级：官方中文面名 > 机器翻译面名 > 英文面名
+                otherFaces[0].zhsFaceName ?: otherFaces[0].atomicTranslatedName ?: otherFaces[0].faceName ?: otherFaces[0].name
             }
             else -> null
         }
@@ -146,9 +123,10 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
     val backFaceManaCost = if (isDualFaced) {
         when {
             cardFaces != null && cardFaces.size > 1 -> {
-                val face = cardFaces.getOrNull(1)
-                Log.e("MtgchMapper", "  back face[1] manaCost: ${face?.manaCost}, typeLine: ${face?.typeLine}, oracleText: ${face?.oracleText}")
-                face?.manaCost
+                cardFaces.getOrNull(1)?.manaCost
+            }
+            otherFaces != null && otherFaces.isNotEmpty() -> {
+                otherFaces[0].manaCost
             }
             else -> null
         }
@@ -159,6 +137,10 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
             cardFaces != null && cardFaces.size > 1 -> {
                 cardFaces.getOrNull(1)?.zhTypeLine ?: cardFaces.getOrNull(1)?.typeLine
             }
+            otherFaces != null && otherFaces.isNotEmpty() -> {
+                // 优先使用官方中文，其次机器翻译，最后英文原文
+                otherFaces[0].zhsTypeLine ?: otherFaces[0].atomicTranslatedType ?: otherFaces[0].typeLine
+            }
             else -> null
         }
     } else null
@@ -167,6 +149,47 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         when {
             cardFaces != null && cardFaces.size > 1 -> {
                 cardFaces.getOrNull(1)?.zhText ?: cardFaces.getOrNull(1)?.oracleText
+            }
+            otherFaces != null && otherFaces.isNotEmpty() -> {
+                // 优先使用官方中文，其次机器翻译，最后英文原文
+                otherFaces[0].zhsText ?: otherFaces[0].atomicTranslatedText ?: otherFaces[0].oracleText
+            }
+            else -> null
+        }
+    } else null
+
+    // 提取反面攻防数据
+    val backFacePower = if (isDualFaced) {
+        when {
+            cardFaces != null && cardFaces.size > 1 -> {
+                cardFaces.getOrNull(1)?.power
+            }
+            otherFaces != null && otherFaces.isNotEmpty() -> {
+                otherFaces[0].power
+            }
+            else -> null
+        }
+    } else null
+
+    val backFaceToughness = if (isDualFaced) {
+        when {
+            cardFaces != null && cardFaces.size > 1 -> {
+                cardFaces.getOrNull(1)?.toughness
+            }
+            otherFaces != null && otherFaces.isNotEmpty() -> {
+                otherFaces[0].toughness
+            }
+            else -> null
+        }
+    } else null
+
+    val backFaceLoyalty = if (isDualFaced) {
+        when {
+            cardFaces != null && cardFaces.size > 1 -> {
+                cardFaces.getOrNull(1)?.loyalty
+            }
+            otherFaces != null && otherFaces.isNotEmpty() -> {
+                otherFaces[0].loyalty
             }
             else -> null
         }
@@ -180,10 +203,6 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
 
     // 使用 id 或生成一个唯一 ID
     val entityId = id ?: oracleId ?: "${name}_${setCode}_${collectorNumber}"
-
-    Log.e("MtgchMapper", "Final displayName: $displayName")
-    Log.e("MtgchMapper", "  frontFaceName: $frontFaceName, backFaceName: $backFaceName")
-    Log.e("MtgchMapper", "========================")
 
     return CardInfoEntity(
         id = entityId,
@@ -224,6 +243,9 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         backFaceManaCost = backFaceManaCost,
         backFaceTypeLine = backFaceTypeLine,
         backFaceOracleText = backFaceOracleText,
+        backFacePower = backFacePower,
+        backFaceToughness = backFaceToughness,
+        backFaceLoyalty = backFaceLoyalty,
         frontImageUri = frontImageUri,
         backImageUri = backImageUri,
         lastUpdated = System.currentTimeMillis()

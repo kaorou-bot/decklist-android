@@ -318,6 +318,12 @@ class SearchViewModel @Inject constructor(
      * MtgchCardDto 转 SearchResultItem
      */
     private fun MtgchCardDto.toSearchResultItem(): SearchResultItem {
+        // 更严格的双面牌判断：必须有两个以上的 cardFaces
+        val isDualFaced = (cardFaces != null && cardFaces.size >= 2) ||
+                         (name?.contains("//") == true) ||
+                         (layout == "transform" || layout == "modal_dfc" ||
+                          layout == "double_faced_token" || layout == "reversible_card")
+
         return SearchResultItem(
             cardInfoId = oracleId?.hashCode()?.toLong() ?: id.hashCode().toLong(),
             name = zhsName ?: atomicTranslatedName ?: name ?: "",
@@ -328,7 +334,7 @@ class SearchViewModel @Inject constructor(
             cmc = cmc?.toDouble(),
             rarity = rarity,
             imageUrl = zhsImageUris?.normal ?: imageUris?.normal,
-            isDualFaced = otherFaces != null || cardFaces != null,
+            isDualFaced = isDualFaced,
             // 额外信息（用于详情展示）
             oracleText = zhsText ?: atomicTranslatedText ?: oracleText,
             power = power,
@@ -355,6 +361,27 @@ class SearchViewModel @Inject constructor(
             searchTime = searchTime,
             resultCount = resultCount
         )
+    }
+
+    /**
+     * 获取完整的卡牌详情（用于双面牌背面图片等需要额外数据的情况）
+     * @param cardId 卡牌 ID
+     * @return 完整的 MTGCH 卡牌数据
+     */
+    suspend fun getFullCardDetails(cardId: String): MtgchCardDto? {
+        return try {
+            AppLogger.d("SearchViewModel", "获取完整卡牌详情: $cardId")
+            val response = mtgchApi.getCardById(cardId, view = 0)
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                AppLogger.e("SearchViewModel", "获取完整卡牌详情失败: ${response.code()}")
+                null
+            }
+        } catch (e: Exception) {
+            AppLogger.e("SearchViewModel", "获取完整卡牌详情异常", e)
+            null
+        }
     }
 }
 

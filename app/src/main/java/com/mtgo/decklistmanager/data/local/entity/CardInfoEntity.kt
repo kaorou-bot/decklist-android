@@ -146,6 +146,18 @@ data class CardInfoEntity(
     @SerializedName("back_face_oracle_text")
     val backFaceOracleText: String? = null, // 反面规则文本
 
+    @ColumnInfo(name = "back_face_power")
+    @SerializedName("back_face_power")
+    val backFacePower: String? = null, // 反面力量
+
+    @ColumnInfo(name = "back_face_toughness")
+    @SerializedName("back_face_toughness")
+    val backFaceToughness: String? = null, // 反面防御力
+
+    @ColumnInfo(name = "back_face_loyalty")
+    @SerializedName("back_face_loyalty")
+    val backFaceLoyalty: String? = null, // 反面忠诚度
+
     @ColumnInfo(name = "front_image_uri")
     @SerializedName("front_image_uri")
     val frontImageUri: String? = null, // 正面图片URI
@@ -162,7 +174,8 @@ data class CardInfoEntity(
 /**
  * 将 CardInfoEntity 转换为领域模型 CardInfo
  */
-fun CardInfoEntity.toDomainModel() = com.mtgo.decklistmanager.domain.model.CardInfo(
+fun CardInfoEntity.toDomainModel(): com.mtgo.decklistmanager.domain.model.CardInfo {
+    return com.mtgo.decklistmanager.domain.model.CardInfo(
     id = id,
     name = name,
     manaCost = manaCost,
@@ -200,5 +213,9 @@ fun CardInfoEntity.toDomainModel() = com.mtgo.decklistmanager.domain.model.CardI
     backImageUri = backImageUri,
     backFaceManaCost = backFaceManaCost,
     backFaceTypeLine = backFaceTypeLine,
-    backFaceOracleText = backFaceOracleText
+    backFaceOracleText = backFaceOracleText,
+    backFacePower = backFacePower,
+    backFaceToughness = backFaceToughness,
+    backFaceLoyalty = backFaceLoyalty
 )
+}

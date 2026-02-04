@@ -46,6 +46,12 @@ interface CardInfoDao {
     suspend fun getCardInfoByNameOrEnName(name: String): CardInfoEntity?
 
     /**
+     * 根据卡牌名称模糊查询（支持双面牌正面名称查询）
+     */
+    @Query("SELECT * FROM card_info WHERE en_name LIKE :name || ' %' LIMIT 1")
+    suspend fun getCardInfoByEnNamePrefix(name: String): CardInfoEntity?
+
+    /**
      * 模糊搜索卡牌
      */
     @Query("SELECT * FROM card_info WHERE name LIKE '%' || :query || '%' LIMIT :limit")

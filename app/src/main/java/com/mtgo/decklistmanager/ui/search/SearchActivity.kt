@@ -16,6 +16,7 @@ import com.mtgo.decklistmanager.R
 import com.mtgo.decklistmanager.databinding.ActivitySearchBinding
 import com.mtgo.decklistmanager.databinding.BottomSheetAdvancedSearchBinding
 import com.mtgo.decklistmanager.ui.search.model.*
+import com.mtgo.decklistmanager.ui.decklist.CardInfoFragment
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -86,82 +87,43 @@ class SearchActivity : AppCompatActivity() {
     }
 
     /**
-     * 显示卡牌详情（包含卡图）
+     * 显示卡牌详情（使用 CardInfoFragment，与套牌页面保持一致）
      * 限制只能同时显示一个对话框
-     * 如果卡牌原本是英文名（没有中文名），则不显示中文字段
+     *
+     * 注意：MTGCH API 搜索结果中，双面牌信息在 `other_faces` 字段中，而不是 `card_faces`
      */
     private fun showCardDetail(result: SearchResultItem) {
         // 如果已有对话框打开，先关闭
         currentDetailDialog?.dismiss()
 
-        val dialogBinding = com.mtgo.decklistmanager.databinding.DialogCardDetailBinding.inflate(
-            LayoutInflater.from(this)
+        val mtgchCard = result.mtgchCard ?: return
+
+        // 使用统一的工具类构建 CardInfo
+        val cardInfo = com.mtgo.decklistmanager.util.CardDetailHelper.buildCardInfo(
+            mtgchCard = mtgchCard,
+            cardInfoId = result.cardInfoId.toString(),
+            displayName = result.displayName,
+            manaCost = result.manaCost,
+            cmc = result.cmc,
+            typeLine = result.typeLine,
+            oracleText = result.oracleText,
+            colors = result.colors,
+            power = result.power,
+            toughness = result.toughness,
+            loyalty = result.loyalty,
+            rarity = result.rarity,
+            setCode = result.setCode,
+            setName = result.setName,
+            artist = result.artist,
+            collectorNumber = result.collectorNumber,
+            imageUrl = result.imageUrl
         )
 
-        // 加载卡牌图片
-        if (!result.imageUrl.isNullOrEmpty()) {
-            com.bumptech.glide.Glide.with(this)
-                .load(result.imageUrl)
-                .placeholder(com.google.android.material.R.drawable.mtrl_ic_cancel)
-                .error(com.google.android.material.R.drawable.mtrl_ic_error)
-                .into(dialogBinding.imageViewCard)
-        } else {
-            dialogBinding.imageViewCard.visibility = android.view.View.GONE
-        }
+        // 显示 CardInfoFragment
+        val fragment = CardInfoFragment.newInstance(cardInfo)
+        fragment.show(supportFragmentManager, "card_detail")
 
-        // 判断是否是中文卡牌（有中文名显示）
-        val hasChineseName = !result.displayName.isNullOrEmpty() && result.displayName != result.name
-
-        // 构建详细信息文本
-        val details = buildString {
-            // 卡牌名称：如果有中文名则显示中文名，否则只显示英文名
-            if (hasChineseName) {
-                appendLine("卡牌名称：${result.displayName}")
-                appendLine("英文名称：${result.name}")
-            } else {
-                appendLine("卡牌名称：${result.name}")
-            }
-            appendLine()
-            appendLine("类型：${result.typeLine ?: result.type ?: ""}")
-            appendLine("法术力：${result.manaCost ?: "N/A"}")
-
-            // 处理规则文本中的换行符
-            result.oracleText?.let {
-                val text = it.replace("\\n", "\n")
-                appendLine("规则文本：\n$text")
-            }
-
-            result.power?.let { power ->
-                result.toughness?.let { toughness ->
-                    appendLine("攻防：$power/$toughness")
-                }
-            }
-            result.loyalty?.let { appendLine("忠诚：$it") }
-            appendLine()
-            appendLine("系列：${result.setName ?: "N/A"}")
-            result.collectorNumber?.let { appendLine("编号：$it") }
-            result.artist?.let { appendLine("画家：$it") }
-            appendLine()
-            appendLine("稀有度：${result.rarity ?: "N/A"}")
-            result.colorIdentity?.let { appendLine("颜色标识：${it.joinToString()}") }
-        }
-
-        dialogBinding.textViewCardDetails.text = details
-
-        // 对话框标题：优先显示中文名
-        val title = if (hasChineseName) result.displayName else result.name
-
-        // 创建并保存对话框引用
-        currentDetailDialog = androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(title)
-            .setView(dialogBinding.root)
-            .setPositiveButton("关闭", null)
-            .setOnDismissListener {
-                currentDetailDialog = null
-            }
-            .create()
-
-        currentDetailDialog?.show()
+        currentDetailDialog = null
     }
 
     private fun observeViewModel() {
@@ -247,16 +209,13 @@ class SearchActivity : AppCompatActivity() {
 
         bottomSheetDialog.setContentView(dialogBinding.root)
 
-        // 防止下滑关闭，必须点击关闭按钮
-        bottomSheetDialog.setOnDismissListener {
-            // 可以在这里添加清理逻辑
-        }
-
-        // 设置对话框行为，禁用拖拽（但允许滑动查看内容）
+        // 设置对话框行为，占满全屏并禁用拖拽
         val bottomSheetBehavior = bottomSheetDialog.behavior
         bottomSheetBehavior.isDraggable = false
-        // 设置一个合理的 peekHeight，确保底部按钮可见
-        bottomSheetBehavior.peekHeight = resources.displayMetrics.heightPixels * 3 / 4
+        // 设置为全屏高度
+        bottomSheetBehavior.peekHeight = resources.displayMetrics.heightPixels
+        // 设置展开状态为完全展开
+        bottomSheetBehavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
 
         bottomSheetDialog.show()
     }
