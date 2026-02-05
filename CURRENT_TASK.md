@@ -1,159 +1,235 @@
 # 当前任务详情
 
-> 记录当前正在进行的任务，便于中断后快速恢复
+> 本文件记录当前正在进行的任务，便于快速恢复工作
 
 ---
 
-## 📍 当前任务状态
+## 📋 任务信息
+
+**任务名称：** v4.2.0 套牌分析功能
+**开始时间：** 2026-02-05
+**预计完成：** 2026-02-06
+**当前状态：** 🟡 开发中 (95%)
+**当前分支：** dev/v4.2.0
+
+---
+
+## 🎯 任务目标
+
+实现完整的套牌分析功能，包括：
+- 法术力曲线图表
+- 颜色分布饼图
+- 类型分布柱状图
+- 统计摘要显示
+
+---
+
+## ✅ 已完成的工作
+
+### 阶段 1：数据模型设计 ✅
+- [x] 创建 DeckAnalysis.kt 数据模型
+- [x] 定义 ManaCurve 数据类
+- [x] 定义 ColorDistribution 数据类
+- [x] 定义 TypeDistribution 数据类
+- [x] 定义 DeckStatistics 数据类
+- [x] 定义所有枚举类型（ManaColor, CardType, Rarity）
+
+**文件位置：** `app/src/main/java/com/mtgo/decklistmanager/domain/model/DeckAnalysis.kt`
+
+### 阶段 2：核心分析逻辑 ✅
+- [x] 创建 DeckAnalyzer 类
+- [x] 实现 analyze() 主方法
+- [x] 实现 calculateManaCurve() 法术力曲线计算
+- [x] 实现 calculateColorDistribution() 颜色分布计算
+- [x] 实现 calculateTypeDistribution() 类型分布计算
+- [x] 实现 calculateStatistics() 统计计算
+- [x] 实现 parseCMC() 法术力值解析
+
+**关键修复：**
+- 正确的 CMC 计算（5u=6, r=1, 1ur=3）
+- 多色卡牌单独统计（MULTICOLOR 类别）
+- 非地平均法术力正确计算
+
+**文件位置：** `app/src/main/java/com/mtgo/decklistmanager/data/analyzer/DeckAnalyzer.kt`
+
+### 阶段 3：依赖配置 ✅
+- [x] 添加 MPAndroidChart v3.1.0 依赖
+- [x] 配置 jitpack.io 仓库
+- [x] 更新 build.gradle
+- [x] 更新 settings.gradle
+
+### 阶段 4：UI 实现 ✅
+- [x] 创建 DeckAnalysisActivity
+- [x] 创建 DeckAnalysisViewModel
+- [x] 创建 DeckAnalysisPagerAdapter
+- [x] 创建 ManaCurveFragment（法术力曲线）
+- [x] 创建 ColorDistributionFragment（颜色分布）
+- [x] 创建 TypeDistributionFragment（类型分布）
+- [x] 创建所有布局文件
+- [x] 添加导航入口（DeckDetailActivity 菜单）
+- [x] 注册 Activity（AndroidManifest.xml）
+
+### 阶段 5：Bug 修复 ✅
+- [x] 修复法术力值计算错误
+- [x] 修复类型分布图表错乱
+- [x] 修复颜色分布总和不对
+- [x] 多色颜色改为金色
+- [x] 修复非地平均法术力计算
+- [x] 类型名称改为"地"
+- [x] 修复套牌下载混入其他赛事
+
+**7个 Bug 的详细说明：**
+
+1. **法术力值计算错误**
+   - 问题：只提取数字，忽略花色符号
+   - 修复：正确实现 CMC 计算（5u=6, r=1, 1ur=3）
+
+2. **类型分布图表错乱**
+   - 问题：BarEntry 参数顺序错误 + HorizontalBarChart
+   - 修复：改为标准 BarChart（X轴类别，Y轴数量）
+
+3. **颜色分布总和不对**
+   - 问题：多色卡牌被计入多个颜色
+   - 修复：添加 MULTICOLOR 类别单独统计
+
+4. **多色颜色**
+   - 问题：紫色不太合适
+   - 修复：改为金色 #FFD700
+
+5. **非地平均法术力**
+   - 问题：地牌数量只统计种类数
+   - 修复：使用 sumOf 统计实际数量
+
+6. **类型名称**
+   - 问题："地陆" 不对
+   - 修复：改为"地"
+
+7. **套牌下载混入其他赛事**
+   - 问题：Standard 赛事出现 Commander 套牌，Vintage 赛事出现 Pauper 套牌
+   - 原因：MTGTop8 的 deck ID 全局递增
+   - 修复：从 deck URL 提取赛事 ID，构造赛事 URL，精确匹配
+
+---
+
+## 🔧 当前待测试的工作
+
+### 测试项 1：套牌下载验证
+**状态：** ⏳ 待测试
+**优先级：** 🔥 高
+
+**测试步骤：**
+1. 找到 Vintage 赛事（2026年2月1日）
+2. 点击"下载套牌"
+3. 检查下载的套牌列表
+4. 确认没有 Pauper 或其他赛制的套牌
+
+**预期结果：**
+- ✅ 只下载属于该赛事的套牌
+- ✅ 没有其他赛制的套牌混入
+- ✅ 套牌数量正确
+
+### 测试项 2：套牌分析功能
+**状态：** ⏳ 待测试
+**优先级：** 🔥 高
+
+**测试步骤：**
+1. 打开任意套牌详情
+2. 点击右上角"套牌分析"菜单
+3. 查看三个标签页的图表
+4. 测试切换按钮
+
+**预期结果：**
+- ✅ 法术力曲线图表显示正确
+- ✅ 颜色分布饼图显示正确（多色为金色）
+- ✅ 类型分布柱状图显示正确
+- ✅ 统计摘要数据准确
+- ✅ "按数量"/"按牌名"切换正常
+
+### 测试项 3：数据准确性验证
+**状态：** ⏳ 待测试
+**优先级：** 🔥 高
+
+**验证项：**
+- [ ] 主牌数 = 所有主牌数量总和
+- [ ] 备牌数 = 所有备牌数量总和
+- [ ] 非地平均法术力 = 非地牌法术力平均值
+- [ ] 法术力曲线各值正确
+- [ ] 颜色分布各颜色数量正确
+- [ ] 类型分布各类型数量正确
+
+---
+
+## 🐛 已知问题
+
+### 需要测试确认的问题
+1. **套牌下载验证逻辑** - 需要实际测试确认是否正常工作
+2. **图表数据准确性** - 需要对比实际套牌数据验证
+
+---
+
+## 📝 下次会话开始时的快速恢复命令
+
+```
+请阅读以下文件以了解项目当前状态：
+1. PROJECT_STATUS.md - 整体进度
+2. SESSION_LOG.md - 上次会话详细记录
+3. CURRENT_TASK.md - 本文件，当前任务
+
+然后请帮我：
+1. 测试套牌下载功能（Vintage 赛事）
+2. 测试套牌分析功能
+3. 修复发现的问题
+4. 完成 v4.2.0 发布
+```
+
+---
+
+## 🎯 完成标准
+
+v4.2.0 完成的标准：
+- [ ] 所有测试项通过
+- [ ] 没有已知的 bug
+- [ ] 代码已提交到 dev/v4.2.0 分支
+- [ ] 版本号更新到 4.2.0
+- [ ] 创建 Git Release
+
+---
+
+## 📊 进度统计
+
+- **总体进度：** 95% [█████████▓]
+- **数据模型：** 100% [██████████]
+- **核心逻辑：** 100% [██████████]
+- **UI 实现：** 100% [██████████]
+- **Bug 修复：** 100% [██████████]
+- **测试验证：** 0% [░░░░░░░░░░] ← 当前阶段
+
+---
+
+## 📁 关键文件位置
+
+### 数据层
+- `app/src/main/java/com/mtgo/decklistmanager/domain/model/DeckAnalysis.kt` - 数据模型
+- `app/src/main/java/com/mtgo/decklistmanager/data/analyzer/DeckAnalyzer.kt` - 核心分析逻辑
+
+### UI 层
+- `app/src/main/java/com/mtgo/decklistmanager/ui/analysis/DeckAnalysisActivity.kt` - 主页面
+- `app/src/main/java/com/mtgo/decklistmanager/ui/analysis/DeckAnalysisViewModel.kt` - ViewModel
+- `app/src/main/java/com/mtgo/decklistmanager/ui/analysis/ManaCurveFragment.kt` - Fragment 1
+- `app/src/main/java/com/mtgo/decklistmanager/ui/analysis/ColorDistributionFragment.kt` - Fragment 2
+- `app/src/main/java/com/mtgo/decklistmanager/ui/analysis/TypeDistributionFragment.kt` - Fragment 3
+
+### 布局文件
+- `app/src/main/res/layout/activity_deck_analysis.xml`
+- `app/src/main/res/layout/fragment_mana_curve.xml`
+- `app/src/main/res/layout/fragment_color_distribution.xml`
+- `app/src/main/res/layout/fragment_type_distribution.xml`
+
+### 爬虫逻辑
+- `app/src/main/java/com/mtgo/decklistmanager/data/remote/api/MtgTop8Scraper.kt` - 赛事验证
+
+---
 
 **最后更新：** 2026-02-05
-**任务状态：** ✅ 已完成
-**当前版本：** v4.1.0
-**当前模块：** UI 优化
-
----
-
-## ✅ 本次会话完成的所有任务
-
-### 1. ✅ 修复双面牌背面忠诚度和攻防显示问题
-**问题：** 双面牌背面鹏洛客的忠诚度和生物的攻防不显示
-**原因：** `DecklistRepository.kt:1257` 的 `toDomainModel()` 函数缺少字段映射
-**修复：** 添加了三个字段到转换函数
-- `backFacePower = backFacePower`
-- `backFaceToughness = backFaceToughness`
-- `backFaceLoyalty = backFaceLoyalty`
-
-**测试结果：**
-- ✅ Ajani, Nacatl Pariah 背面鹏洛客显示忠诚度 3
-- ✅ Rowan's Story 背面生物显示力量/防御力 4/4
-
-### 2. ✅ 修复罗库传奇背面中文翻译缺失问题
-**问题：** The Legend of Roku (罗库传奇) 背面显示英文 "Avatar Roku"
-**原因：** API 返回的 `otherFaces[0]` 数据中：
-- 官方中文翻译缺失：`zhsFaceName: null`, `zhsTypeLine: null`, `zhsText: null`
-- 但有机器翻译：`atomicTranslatedName: 降世神通罗库`
-
-**修复：** 修改 `MtgchMapper.kt` 中三个字段的提取逻辑，添加机器翻译作为后备
-
-#### 修改的代码：
-1. **backFaceName** (第106-109行):
-```kotlin
-// 优先级：官方中文面名 > 机器翻译面名 > 英文面名
-otherFaces[0].zhsFaceName ?: otherFaces[0].atomicTranslatedName ?: otherFaces[0].faceName ?: otherFaces[0].name
-```
-
-2. **backFaceTypeLine** (第155-156行):
-```kotlin
-// 优先级：官方中文 > 机器翻译 > 英文
-otherFaces[0].zhsTypeLine ?: otherFaces[0].atomicTranslatedType ?: otherFaces[0].typeLine
-```
-
-3. **backFaceOracleText** (第167-168行):
-```kotlin
-// 优先级：官方中文 > 机器翻译 > 英文
-otherFaces[0].zhsText ?: otherFaces[0].atomicTranslatedText ?: otherFaces[0].oracleText
-```
-
-**测试结果：**
-- ✅ 罗库传奇背面显示 "降世神通罗库"
-- ✅ 背面类型和规则文本也使用机器翻译
-
-### 3. ✅ 移除所有调试日志
-**清理的文件：**
-- `MtgchMapper.kt` - 移除所有 Log.e 调试语句
-- `CardInfoEntity.kt` - 移除 toDomainModel() 中的日志
-- `CardInfoFragment.kt` - 移除攻防和忠诚度的日志
-
----
-
-## 📊 修改的文件总览
-
-### 核心修复
-1. **DecklistRepository.kt** (第1257-1297行)
-   - 修复 `toDomainModel()` 函数，添加缺失的背面字段
-
-2. **MtgchMapper.kt** (第106-109, 155-156, 167-168行)
-   - 修复背面名称、类型、规则文本的中文提取逻辑
-   - 添加机器翻译作为后备方案
-
-### 代码清理
-3. **MtgchMapper.kt**
-   - 移除调试日志（第37-47, 224-239行）
-   - 移除 Log 导入
-
-4. **CardInfoEntity.kt**
-   - 移除 toDomainModel() 中的调试日志（第178-179, 223-226行）
-
-5. **CardInfoFragment.kt**
-   - 移除攻防和忠诚度的调试日志（第154-157, 173-175行）
-
----
-
-## 🎯 版本状态
-
-**当前版本：** v4.1.0
-**版本状态：** ✅ 所有双面牌功能已完成并测试通过
-**下次版本：** v4.1.5 (深色模式优化)
-
----
-
-## 📝 下次会话任务
-
-### 优先级 1：提交代码到 Git
-1. 检查所有修改
-2. 提交代码到 GitHub
-3. 写清晰的 commit message
-
-### 优先级 2：版本发布准备
-1. 最终测试所有功能
-2. 更新版本号到 v4.1.0
-3. 准备发布说明
-
----
-
-## 📝 备注
-
-### 关键文件位置
-- MTGCH 映射：`app/src/main/java/com/mtgo/decklistmanager/data/remote/api/mtgch/MtgchMapper.kt`
-- Repository：`app/src/main/java/com/mtgo/decklistmanager/data/repository/DecklistRepository.kt`
-- Entity：`app/src/main/java/com/mtgo/decklistmanager/data/local/entity/CardInfoEntity.kt`
-
-### Git 状态
-- 当前分支：`dev/v4.1.0`
-- 修改的文件：5个文件
-- 状态：待提交
-
-### 数据库版本
-- 当前版本：10
-- MIGRATION_9_10：添加背面攻防字段
-
----
-
-**创建时间：** 2026-01-31
-**最后更新：** 2026-02-05
-**下次更新：** v4.1.0 发布后
-
----
-
-## ✅ 2026-02-05 新增修复
-
-### 修复 "Unknown Deck" 显示问题
-**问题：** 某些套牌在列表中显示 "Unknown Deck"
-**原因：** MTGTop8 爬虫无法提取套牌名称和玩家名称
-**修复：** 优化显示逻辑，当遇到 "Unknown Deck" 时：
-- 优先显示有效的套牌名称
-- 其次显示有效的玩家名称
-- 最后显示赛事名称
-
-**修改文件：**
-- `DecklistTableAdapter.kt` - 优化显示逻辑
-
-**效果对比：**
-| 套牌名称 | 玩家名称 | 修复前 | 修复后 |
-|---------|---------|--------|--------|
-| "Pinnacle Affinity" | "RootBeerAddict02" | "Pinnacle Affinity" | "Pinnacle Affinity" |
-| "Unknown Deck" | "RootBeerAddict02" | "Unknown Deck" | "RootBeerAddict02" |
-| "Unknown Deck" | "Unknown" | "Unknown Deck" | "Modern event - MTGO League" |
-
-**Git 提交：** b5419c9 - fix: 优化"Unknown Deck"显示逻辑
-
+**更新人：** Claude Sonnet 4.5
+**下次会话：** 测试和修复 v4.2.0，准备发布

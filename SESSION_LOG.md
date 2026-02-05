@@ -1323,3 +1323,69 @@ backFaceLoyalty = backFaceLoyalty
 3. 准备 v4.1.0 版本发布
 
 ---
+
+---
+
+## 📅 会话 2026-02-05 - v4.2.0 套牌分析功能开发
+
+### 时间信息
+- **开始时间：** 2026-02-05
+- **结束时间：** 2026-02-05
+- **会话时长：** 约4小时
+- **Claude版本：** Sonnet 4.5
+- **开发分支：** dev/v4.2.0
+
+### 本次会话目标
+- 完成套牌分析功能的开发
+- 修复各种数据统计和显示问题
+- 确保套牌下载不会混入其他赛事的套牌
+
+### 完成的工作
+
+#### 1. 创建套牌分析数据模型 ✅
+**文件：** `app/src/main/java/com/mtgo/decklistmanager/domain/model/DeckAnalysis.kt`
+
+创建了完整的数据模型包括：
+- `DeckAnalysis` - 套牌分析总数据类
+- `ManaCurve` - 法术力曲线（按数量/按牌名）
+- `ColorDistribution` - 颜色分布（按数量/按牌名）
+- `TypeDistribution` - 类型分布（按数量/按牌名）
+- `DeckStatistics` - 统计摘要
+- 枚举类型：ManaColor, CardType, Rarity
+
+#### 2. 实现 DeckAnalyzer 核心逻辑 ✅
+**文件：** `app/src/main/java/com/mtgo/decklistmanager/data/analyzer/DeckAnalyzer.kt`
+
+**重要的修复：**
+- 正确的 CMC 计算：5u=6, r=1, 1ur=3
+- 多色卡牌直接计入 MULTICOLOR 类别
+- 非地平均法术力正确排除地牌
+- 地牌数量按实际数量统计
+
+#### 3. 创建 UI 界面 ✅
+- DeckAnalysisActivity - 主页面
+- 三个 Fragment - 法术力曲线、颜色分布、类型分布
+- 三个布局文件
+- 添加导航入口（套牌详情菜单）
+
+#### 4. 修复7个重要bug ✅
+1. 法术力值计算错误 - 正确实现 CMC 计算
+2. 类型分布图表错乱 - 改为标准 BarChart
+3. 颜色分布总和不对 - 多色单独统计
+4. 多色颜色改为金色 #FFD700
+5. 非地平均法术力计算错误 - 正确排除地牌
+6. 类型名称"地陆"改为"地"
+7. 套牌下载混入其他赛事 - URL 精确匹配验证
+
+### 当前状态
+**v4.2.0 进度：** 95% [█████████▓]
+
+**已完成：** 核心功能、UI、主要bug修复
+**待测试：** 套牌下载验证、图表准确性
+
+### 下次会话任务
+1. 测试套牌下载验证（Vintage 赛事）
+2. 测试套牌分析功能
+3. 完成 v4.2.0 发布
+
+---
