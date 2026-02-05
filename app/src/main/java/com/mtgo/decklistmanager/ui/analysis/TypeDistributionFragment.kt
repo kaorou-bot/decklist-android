@@ -7,7 +7,8 @@ import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.github.mikephil.charting.charts.HorizontalBarChart
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
@@ -62,18 +63,21 @@ class TypeDistributionFragment : Fragment() {
     }
 
     private fun setupChart(analysis: DeckAnalysis) {
-        val chart = binding.horizontalBarChart
+        val chart = binding.barChart
 
         // 准备数据 - 根据当前模式选择数据源
         val types = if (isByQuantity) analysis.typeDistribution.types else analysis.typeDistribution.typesByCard
         val entries = ArrayList<BarEntry>()
         val typeLabels = ArrayList<String>()
 
-        CardType.entries.forEachIndexed { index, cardType ->
+        // 使用连续索引，确保数据对齐
+        var currentIndex = 0f
+        CardType.entries.forEach { cardType ->
             val count = types[cardType] ?: 0
             if (count > 0) {
-                entries.add(BarEntry(count.toFloat(), index.toFloat()))
+                entries.add(BarEntry(currentIndex, count.toFloat()))
                 typeLabels.add(cardType.displayName)
+                currentIndex++
             }
         }
 
@@ -85,12 +89,15 @@ class TypeDistributionFragment : Fragment() {
         val barData = BarData(dataSet)
         chart.data = barData
 
-        // 设置 Y 轴标签
-        chart.axisLeft.valueFormatter = IndexAxisValueFormatter(typeLabels.toTypedArray())
-
-        chart.axisRight.isEnabled = false
+        // 设置 X 轴标签（类别）
+        chart.xAxis.valueFormatter = IndexAxisValueFormatter(typeLabels.toTypedArray())
+        chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
         chart.xAxis.setDrawGridLines(false)
-        chart.xAxis.isEnabled = false
+        chart.xAxis.granularity = 1f
+
+        // 设置 Y 轴
+        chart.axisLeft.setDrawGridLines(false)
+        chart.axisRight.isEnabled = false
         chart.description.isEnabled = false
 
         chart.animateY(1000)

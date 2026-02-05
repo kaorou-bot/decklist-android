@@ -117,6 +117,7 @@ class ColorDistributionFragment : Fragment() {
             ManaColor.RED -> android.graphics.Color.parseColor("#D3202A")
             ManaColor.GREEN -> android.graphics.Color.parseColor("#00733E")
             ManaColor.COLORLESS -> android.graphics.Color.parseColor("#9E9E9E")
+            ManaColor.MULTICOLOR -> android.graphics.Color.parseColor("#9C27B0")
         }
     }
 

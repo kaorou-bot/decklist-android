@@ -30,8 +30,17 @@ class DeckAnalyzer @Inject constructor(
             AppLogger.d("DeckAnalyzer", "Analyzing decklist: $decklistId")
 
             val cards = cardDao.getCardsByDecklistId(decklistId)
+            AppLogger.d("DeckAnalyzer", "Total cards found: ${cards.size}")
+
             val mainDeck = cards.filter { it.location == "main" }
             val sideboard = cards.filter { it.location == "sideboard" }
+
+            AppLogger.d("DeckAnalyzer", "Main deck cards: ${mainDeck.size}, Sideboard cards: ${sideboard.size}")
+
+            // 调试：打印前10张牌的信息
+            mainDeck.take(10).forEach { card ->
+                AppLogger.d("DeckAnalyzer", "Card: ${card.cardName}, Qty: ${card.quantity}, Type: ${card.cardType}, Color: ${card.color}")
+            }
 
             // 获取套牌名称
             val decklist = decklistDao.getDecklistById(decklistId)
@@ -142,18 +151,18 @@ class DeckAnalyzer @Inject constructor(
             val colors = parseColors(card.color)
 
             if (colors.isEmpty()) {
-                // 无色卡牌 - 按数量统计
+                // 无色卡牌
                 mainColors[ManaColor.COLORLESS] = mainColors.getOrDefault(ManaColor.COLORLESS, 0) + quantity
-                // 按牌名统计
                 mainColorsByCard[ManaColor.COLORLESS] = mainColorsByCard.getOrDefault(ManaColor.COLORLESS, 0) + 1
+            } else if (colors.size == 1) {
+                // 单色卡牌
+                val color = colors[0]
+                mainColors[color] = mainColors.getOrDefault(color, 0) + quantity
+                mainColorsByCard[color] = mainColorsByCard.getOrDefault(color, 0) + 1
             } else {
-                // 多色卡牌，每个颜色都计数
-                colors.forEach { color ->
-                    // 按数量统计
-                    mainColors[color] = mainColors.getOrDefault(color, 0) + quantity
-                    // 按牌名统计（每种牌只计1次）
-                    mainColorsByCard[color] = mainColorsByCard.getOrDefault(color, 0) + 1
-                }
+                // 多色卡牌
+                mainColors[ManaColor.MULTICOLOR] = mainColors.getOrDefault(ManaColor.MULTICOLOR, 0) + quantity
+                mainColorsByCard[ManaColor.MULTICOLOR] = mainColorsByCard.getOrDefault(ManaColor.MULTICOLOR, 0) + 1
             }
         }
 
@@ -165,11 +174,13 @@ class DeckAnalyzer @Inject constructor(
             if (colors.isEmpty()) {
                 sideboardColors[ManaColor.COLORLESS] = sideboardColors.getOrDefault(ManaColor.COLORLESS, 0) + quantity
                 sideboardColorsByCard[ManaColor.COLORLESS] = sideboardColorsByCard.getOrDefault(ManaColor.COLORLESS, 0) + 1
+            } else if (colors.size == 1) {
+                val color = colors[0]
+                sideboardColors[color] = sideboardColors.getOrDefault(color, 0) + quantity
+                sideboardColorsByCard[color] = sideboardColorsByCard.getOrDefault(color, 0) + 1
             } else {
-                colors.forEach { color ->
-                    sideboardColors[color] = sideboardColors.getOrDefault(color, 0) + quantity
-                    sideboardColorsByCard[color] = sideboardColorsByCard.getOrDefault(color, 0) + 1
-                }
+                sideboardColors[ManaColor.MULTICOLOR] = sideboardColors.getOrDefault(ManaColor.MULTICOLOR, 0) + quantity
+                sideboardColorsByCard[ManaColor.MULTICOLOR] = sideboardColorsByCard.getOrDefault(ManaColor.MULTICOLOR, 0) + 1
             }
         }
 
@@ -308,12 +319,12 @@ class DeckAnalyzer @Inject constructor(
     }
 
     /**
-     * 解析颜色字符串，返回颜色集合
+     * 解析颜色字符串，返回颜色列表（按优先级排序）
      */
-    private fun parseColors(color: String?): Set<ManaColor> {
-        if (color.isNullOrBlank()) return emptySet()
+    private fun parseColors(color: String?): List<ManaColor> {
+        if (color.isNullOrBlank()) return emptyList()
 
-        val colors = mutableSetOf<ManaColor>()
+        val colors = mutableListOf<ManaColor>()
         val parts = color.split(",").map { it.trim() }
 
         parts.forEach { part ->
@@ -326,7 +337,16 @@ class DeckAnalyzer @Inject constructor(
             }
         }
 
-        return colors
+        // 按照固定优先级排序：W > U > B > R > G
+        val priorityOrder = listOf(
+            ManaColor.WHITE,
+            ManaColor.BLUE,
+            ManaColor.BLACK,
+            ManaColor.RED,
+            ManaColor.GREEN
+        )
+
+        return colors.sortedBy { priorityOrder.indexOf(it) }
     }
 
     /**

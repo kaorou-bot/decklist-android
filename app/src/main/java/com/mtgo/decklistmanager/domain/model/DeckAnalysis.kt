@@ -132,7 +132,8 @@ enum class ManaColor(val displayName: String, val colorCode: String) {
     BLACK("黑色", "#150B00"),
     RED("红色", "#D3202A"),
     GREEN("绿色", "#00733E"),
-    COLORLESS("无色", "#9E9E9E");
+    COLORLESS("无色", "#9E9E9E"),
+    MULTICOLOR("多色", "#9C27B0");  // 多色卡牌
 
     companion object {
         fun fromString(color: String?): ManaColor? {
