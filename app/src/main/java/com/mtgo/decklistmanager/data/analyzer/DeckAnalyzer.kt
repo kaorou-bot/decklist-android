@@ -254,8 +254,9 @@ class DeckAnalyzer @Inject constructor(
         val mainCount = mainDeck.sumOf { it.quantity }
         val sideboardCount = sideboard.sumOf { it.quantity }
 
-        val mainLands = mainDeck.count { isLand(it.cardType) }
-        val sideboardLands = sideboard.count { isLand(it.cardType) }
+        // 正确计算地牌和非地牌数量
+        val mainLands = mainDeck.filter { isLand(it.cardType) }.sumOf { it.quantity }
+        val sideboardLands = sideboard.filter { isLand(it.cardType) }.sumOf { it.quantity }
 
         val mainNonLands = mainCount - mainLands
         val sideboardNonLands = sideboardCount - sideboardLands
@@ -267,7 +268,7 @@ class DeckAnalyzer @Inject constructor(
         mainDeck.forEach { card ->
             if (!isLand(card.cardType)) {
                 val cmc = parseCMC(card.manaCost)
-                if (cmc != null) {
+                if (cmc != null && cmc > 0) {
                     mainTotalCMC += cmc * card.quantity
                 }
             }
@@ -276,7 +277,7 @@ class DeckAnalyzer @Inject constructor(
         sideboard.forEach { card ->
             if (!isLand(card.cardType)) {
                 val cmc = parseCMC(card.manaCost)
-                if (cmc != null) {
+                if (cmc != null && cmc > 0) {
                     sideboardTotalCMC += cmc * card.quantity
                 }
             }
