@@ -827,8 +827,87 @@ private fun formatDateToChinese(dateStr: String): String {
 
 ---
 
-**最后更新：** 2026-02-04
-**总会话数：** 5
+---
+
+## 📅 会话 2026-02-05 - 修复 "Unknown Deck" 显示问题
+
+### 时间信息
+- **开始时间：** 2026-02-05
+- **结束时间：** 2026-02-05
+- **会话时长：** 约30分钟
+- **Claude版本：** Sonnet 4.5
+
+### 本次会话目标
+- 修复套牌列表中显示 "Unknown Deck" 的问题
+- 优化用户界面显示逻辑
+
+### 发现的问题
+
+#### "Unknown Deck" 显示问题
+- **问题描述：** 某些套牌在列表中显示 "Unknown Deck" 而不是实际的套牌名称
+- **根本原因：**
+  1. MTGTop8 爬虫在抓取某些套牌时，无法从 HTML 中提取套牌名称和玩家名称
+  2. 爬虫返回默认值：`deckName = "Unknown Deck"`, `playerName = "Unknown"`
+  3. UI 层直接显示这些默认值，用户体验不佳
+- **受影响的数据：** 数据库中 ID=7 的套牌（https://mtgtop8.com/event?e=79880&f=MO&d=807152）
+
+### 完成的工作
+
+#### 1. 修复 UI 显示逻辑 ✅
+**文件：** `DecklistTableAdapter.kt`
+
+**修改前：**
+```kotlin
+binding.tvPlayerName.text = decklist.deckName ?: decklist.playerName ?: "Unknown Deck"
+```
+
+**修改后：**
+```kotlin
+val displayName = when {
+    !decklist.deckName.isNullOrEmpty() && decklist.deckName != "Unknown Deck" -> decklist.deckName
+    !decklist.playerName.isNullOrEmpty() && decklist.playerName != "Unknown" -> decklist.playerName
+    else -> decklist.eventName
+}
+binding.tvPlayerName.text = displayName
+```
+
+**效果：**
+- 当套牌名称为 "Unknown Deck" 时，显示玩家名称
+- 当玩家名称也为 "Unknown" 时，显示赛事名称
+- 避免显示不友好的 "Unknown Deck" 文本
+
+#### 2. 构建与测试 ✅
+- ✅ 成功构建 Debug APK
+- ✅ 成功安装到模拟器
+- ✅ 提交代码到 Git（commit b5419c9）
+
+### 技术细节
+
+#### 显示优先级
+```
+套牌名称（有效） > 玩家名称（有效） > 赛事名称
+```
+
+#### 示例
+| 套牌名称 | 玩家名称 | 显示内容 |
+|---------|---------|---------|
+| "Pinnacle Affinity" | "RootBeerAddict02" | "Pinnacle Affinity" |
+| "Unknown Deck" | "RootBeerAddict02" | "RootBeerAddict02" |
+| "Unknown Deck" | "Unknown" | "Modern event - MTGO League @ mtgtop8.com" |
+
+### 遗留问题
+- 无
+
+### 下次会话计划
+1. 准备 v4.1.0 正式发布
+2. 更新版本号到 4.1.0
+3. 生成 Release APK
+4. 编写发布说明
+
+---
+
+**最后更新：** 2026-02-05
+**总会话数：** 8
 
 ---
 

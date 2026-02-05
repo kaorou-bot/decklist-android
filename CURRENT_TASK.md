@@ -6,10 +6,10 @@
 
 ## 📍 当前任务状态
 
-**最后更新：** 2026-02-04
-**任务状态：** ✅ 全部完成
+**最后更新：** 2026-02-05
+**任务状态：** ✅ 已完成
 **当前版本：** v4.1.0
-**当前模块：** 双面牌功能完整修复
+**当前模块：** UI 优化
 
 ---
 
@@ -130,5 +130,30 @@ otherFaces[0].zhsText ?: otherFaces[0].atomicTranslatedText ?: otherFaces[0].ora
 ---
 
 **创建时间：** 2026-01-31
-**最后更新：** 2026-02-04
+**最后更新：** 2026-02-05
 **下次更新：** v4.1.0 发布后
+
+---
+
+## ✅ 2026-02-05 新增修复
+
+### 修复 "Unknown Deck" 显示问题
+**问题：** 某些套牌在列表中显示 "Unknown Deck"
+**原因：** MTGTop8 爬虫无法提取套牌名称和玩家名称
+**修复：** 优化显示逻辑，当遇到 "Unknown Deck" 时：
+- 优先显示有效的套牌名称
+- 其次显示有效的玩家名称
+- 最后显示赛事名称
+
+**修改文件：**
+- `DecklistTableAdapter.kt` - 优化显示逻辑
+
+**效果对比：**
+| 套牌名称 | 玩家名称 | 修复前 | 修复后 |
+|---------|---------|--------|--------|
+| "Pinnacle Affinity" | "RootBeerAddict02" | "Pinnacle Affinity" | "Pinnacle Affinity" |
+| "Unknown Deck" | "RootBeerAddict02" | "Unknown Deck" | "RootBeerAddict02" |
+| "Unknown Deck" | "Unknown" | "Unknown Deck" | "Modern event - MTGO League" |
+
+**Git 提交：** b5419c9 - fix: 优化"Unknown Deck"显示逻辑
+
