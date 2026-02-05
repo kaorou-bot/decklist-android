@@ -307,15 +307,48 @@ class DeckAnalyzer @Inject constructor(
 
     /**
      * 解析法术力值字符串，返回数值
+     * 正确的 CMC 计算逻辑：
+     * - 通用法术力（数字）直接相加
+     * - 每个有色符号（W/U/B/R/G）算 1
+     * - X 算 0
+     * - 没有法术力成本算 0
      */
     private fun parseCMC(manaCost: String?): Int? {
-        if (manaCost.isNullOrBlank()) return null
+        if (manaCost.isNullOrBlank()) return 0
 
-        // 移除所有花色符号，只保留数字
-        val digits = manaCost.filter { it.isDigit() }
-        if (digits.isEmpty()) return 0
+        var cmc = 0
+        var i = 0
 
-        return digits.toIntOrNull()
+        while (i < manaCost.length) {
+            val char = manaCost[i].uppercaseChar()
+            when {
+                // 处理数字（通用法术力）
+                char.isDigit() -> {
+                    // 提取完整数字
+                    val numStart = i
+                    while (i < manaCost.length && manaCost[i].isDigit()) {
+                        i++
+                    }
+                    val number = manaCost.substring(numStart, i).toIntOrNull() ?: 0
+                    cmc += number
+                }
+                // 处理 X（算0）
+                char == 'X' -> {
+                    i++
+                }
+                // 处理花色符号（W/U/B/R/G，每个算1）
+                char in setOf('W', 'U', 'B', 'R', 'G') -> {
+                    cmc += 1
+                    i++
+                }
+                // 处理其他字符（如 {} / 等）
+                else -> {
+                    i++
+                }
+            }
+        }
+
+        return cmc
     }
 
     /**
