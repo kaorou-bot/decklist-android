@@ -1597,4 +1597,33 @@ class DecklistRepository @Inject constructor(
             dateStr
         }
     }
+
+    /**
+     * 一次性修复：批量更新所有 NULL 的 display_name
+     * v4.1.0: 从 card_info 表中查找中文名称并更新到 cards 表
+     * 只需运行一次，之后所有套牌都会显示中文名称
+     */
+    suspend fun fixAllNullDisplayNames(): Int = withContext(Dispatchers.IO) {
+        try {
+            // 查找所有 display_name 为 NULL 的卡牌
+            val nullCards = cardDao.getCardsWithNullDisplayName()
+
+            var updatedCount = 0
+            for (card in nullCards) {
+                // 从 card_info 表中查找中文名称
+                val cardInfo = cardInfoDao.getCardInfoByEnName(card.cardName)
+                if (cardInfo != null) {
+                    // 更新 display_name
+                    cardDao.updateDisplayNameById(card.id, cardInfo.name)
+                    updatedCount++
+                }
+            }
+
+            AppLogger.d("DecklistRepository", "Fixed $updatedCount null display_names")
+            updatedCount
+        } catch (e: Exception) {
+            AppLogger.e("DecklistRepository", "Failed to fix display names: ${e.message}", e)
+            0
+        }
+    }
 }

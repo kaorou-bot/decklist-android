@@ -16,6 +16,7 @@ import com.mtgo.decklistmanager.domain.model.Decklist
 import com.mtgo.decklistmanager.domain.model.Event
 import com.mtgo.decklistmanager.ui.base.BaseActivity
 import com.mtgo.decklistmanager.ui.debug.LogViewerActivity
+import com.mtgo.decklistmanager.util.AppLogger
 import com.mtgo.decklistmanager.util.LanguagePreferenceManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -69,6 +70,9 @@ class MainActivity : BaseActivity() {
 
         // v4.0.0 在线模式：无需检查本地数据库，直接使用 MTGCH API
         // checkOfflineDatabase()
+
+        // v4.1.0: 一次性修复所有 NULL 的 display_name
+        viewModel.fixAllNullDisplayNames()
 
         // Initial tab selection - don't trigger listener
         isProgrammaticNav = true

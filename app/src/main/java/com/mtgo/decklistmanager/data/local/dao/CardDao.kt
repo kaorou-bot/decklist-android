@@ -152,4 +152,18 @@ interface CardDao {
         val mana_cost: String?,
         val color: String?
     )
+
+    /**
+     * 获取所有 display_name 为 NULL 的卡牌
+     * v4.1.0: 用于批量修复中文名称
+     */
+    @Query("SELECT * FROM cards WHERE display_name IS NULL")
+    suspend fun getCardsWithNullDisplayName(): List<CardEntity>
+
+    /**
+     * 根据 ID 更新单张卡牌的 display_name
+     * v4.1.0: 用于批量修复中文名称
+     */
+    @Query("UPDATE cards SET display_name = :displayName WHERE id = :cardId")
+    suspend fun updateDisplayNameById(cardId: Long, displayName: String)
 }

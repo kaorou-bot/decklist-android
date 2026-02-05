@@ -622,4 +622,21 @@ class MainViewModel @Inject constructor(
             dateStr
         }
     }
+
+    /**
+     * 一次性修复：批量更新所有 NULL 的 display_name
+     * v4.1.0: 在应用启动时自动修复所有缺失的中文名称
+     */
+    fun fixAllNullDisplayNames() {
+        viewModelScope.launch {
+            try {
+                val fixedCount = repository.fixAllNullDisplayNames()
+                if (fixedCount > 0) {
+                    AppLogger.d("MainViewModel", "✅ Fixed $fixedCount card display names")
+                }
+            } catch (e: Exception) {
+                AppLogger.e("MainViewModel", "Failed to fix display names: ${e.message}")
+            }
+        }
+    }
 }
