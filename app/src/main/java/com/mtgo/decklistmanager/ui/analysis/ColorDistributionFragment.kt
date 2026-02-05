@@ -18,12 +18,24 @@ import com.mtgo.decklistmanager.domain.model.DeckAnalysis
 import com.mtgo.decklistmanager.domain.model.ManaColor
 
 /**
+ * 自定义值格式化器 - 显示计数而非百分比
+ */
+class CountFormatter : com.github.mikephil.charting.formatter.ValueFormatter() {
+    override fun getFormattedValue(value: Float): String {
+        return value.toInt().toString()
+    }
+}
+
+/**
  * 颜色分布图表 Fragment
  */
 class ColorDistributionFragment : Fragment() {
 
     private var _binding: FragmentColorDistributionBinding? = null
     private val binding get() = _binding!!
+
+    private var currentAnalysis: DeckAnalysis? = null
+    private var isByQuantity = true // true: 按数量, false: 按牌名
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -37,18 +49,32 @@ class ColorDistributionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // 设置切换按钮
+        binding.toggleGroup.check(R.id.btnByQuantity)
+        binding.btnByQuantity.setOnClickListener {
+            isByQuantity = true
+            currentAnalysis?.let { setupChart(it) }
+        }
+        binding.btnByCardName.setOnClickListener {
+            isByQuantity = false
+            currentAnalysis?.let { setupChart(it) }
+        }
+
         // 获取父 Activity 的 ViewModel
         val viewModel = ViewModelProvider(requireActivity()).get(DeckAnalysisViewModel::class.java)
         viewModel.analysis.observe(viewLifecycleOwner) { analysis ->
-            analysis?.let { setupChart(it) }
+            analysis?.let {
+                currentAnalysis = it
+                setupChart(it)
+            }
         }
     }
 
     private fun setupChart(analysis: DeckAnalysis) {
         val chart = binding.pieChart
 
-        // 准备数据
-        val colors = analysis.colorDistribution.colors
+        // 准备数据 - 根据当前模式选择数据源
+        val colors = if (isByQuantity) analysis.colorDistribution.colors else analysis.colorDistribution.colorsByCard
         val entries = ArrayList<PieEntry>()
         val colorValues = ArrayList<Int>()
 
@@ -66,11 +92,14 @@ class ColorDistributionFragment : Fragment() {
         dataSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.text_primary)
         dataSet.sliceSpace = 3f
 
+        // 使用自定义格式化器，显示计数而非百分比
+        dataSet.valueFormatter = CountFormatter()
+
         val pieData = PieData(dataSet)
         chart.data = pieData
 
         // 设置格式化器
-        chart.setUsePercentValues(true)
+        chart.setUsePercentValues(false)  // 不使用百分比
         chart.setDrawEntryLabels(false)
         chart.description.isEnabled = false
         chart.centerText = "颜色分布"

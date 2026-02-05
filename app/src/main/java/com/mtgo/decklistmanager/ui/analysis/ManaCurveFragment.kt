@@ -25,6 +25,9 @@ class ManaCurveFragment : Fragment() {
     private var _binding: FragmentManaCurveBinding? = null
     private val binding get() = _binding!!
 
+    private var currentAnalysis: DeckAnalysis? = null
+    private var isByQuantity = true // true: 按数量, false: 按牌名
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -37,18 +40,32 @@ class ManaCurveFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // 设置切换按钮
+        binding.toggleGroup.check(R.id.btnByQuantity)
+        binding.btnByQuantity.setOnClickListener {
+            isByQuantity = true
+            currentAnalysis?.let { setupChart(it) }
+        }
+        binding.btnByCardName.setOnClickListener {
+            isByQuantity = false
+            currentAnalysis?.let { setupChart(it) }
+        }
+
         // 获取父 Activity 的 ViewModel
         val viewModel = ViewModelProvider(requireActivity()).get(DeckAnalysisViewModel::class.java)
         viewModel.analysis.observe(viewLifecycleOwner) { analysis ->
-            analysis?.let { setupChart(it) }
+            analysis?.let {
+                currentAnalysis = it
+                setupChart(it)
+            }
         }
     }
 
     private fun setupChart(analysis: DeckAnalysis) {
         val chart = binding.barChart
 
-        // 准备数据
-        val curve = analysis.manaCurve.curve
+        // 准备数据 - 根据当前模式选择数据源
+        val curve = if (isByQuantity) analysis.manaCurve.curve else analysis.manaCurve.curveByCard
         val entries = ArrayList<BarEntry>()
 
         // 0-6+ 法术力值

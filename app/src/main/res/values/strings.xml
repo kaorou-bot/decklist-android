@@ -83,4 +83,8 @@
     <string name="tab_mana_curve">法术力曲线</string>
     <string name="tab_color_distribution">颜色分布</string>
     <string name="tab_type_distribution">类型分布</string>
+
+    <!-- 分析显示模式 -->
+    <string name="mode_by_quantity">按数量</string>
+    <string name="mode_by_card_name">按牌名</string>
 </resources>

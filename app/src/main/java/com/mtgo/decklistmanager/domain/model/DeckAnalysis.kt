@@ -21,8 +21,10 @@ data class DeckAnalysis(
  * 法术力曲线
  */
 data class ManaCurve(
-    val curve: Map<Int, Int>,  // 法术力值 -> 数量（主牌）
+    val curve: Map<Int, Int>,  // 法术力值 -> 数量（主牌，按卡牌数量统计）
     val sideboardCurve: Map<Int, Int>,  // 备牌曲线
+    val curveByCard: Map<Int, Int>,  // 法术力值 -> 牌种数（主牌，按牌名统计）
+    val sideboardCurveByCard: Map<Int, Int>,  // 备牌牌种数
     val averageManaValue: Double,  // 平均法术力值
     val sideboardAverageManaValue: Double  // 备牌平均法术力值
 ) {
@@ -30,6 +32,8 @@ data class ManaCurve(
         val EMPTY = ManaCurve(
             curve = emptyMap(),
             sideboardCurve = emptyMap(),
+            curveByCard = emptyMap(),
+            sideboardCurveByCard = emptyMap(),
             averageManaValue = 0.0,
             sideboardAverageManaValue = 0.0
         )
@@ -40,8 +44,10 @@ data class ManaCurve(
  * 颜色分布
  */
 data class ColorDistribution(
-    val colors: Map<ManaColor, Int>,  // 颜色 -> 数量（主牌）
+    val colors: Map<ManaColor, Int>,  // 颜色 -> 数量（主牌，按卡牌数量统计）
     val sideboardColors: Map<ManaColor, Int>,  // 备牌颜色
+    val colorsByCard: Map<ManaColor, Int>,  // 颜色 -> 牌种数（主牌，按牌名统计）
+    val sideboardColorsByCard: Map<ManaColor, Int>,  // 备牌牌种数
     val totalCards: Int,
     val sideboardTotal: Int
 ) {
@@ -49,6 +55,8 @@ data class ColorDistribution(
         val EMPTY = ColorDistribution(
             colors = emptyMap(),
             sideboardColors = emptyMap(),
+            colorsByCard = emptyMap(),
+            sideboardColorsByCard = emptyMap(),
             totalCards = 0,
             sideboardTotal = 0
         )
@@ -67,8 +75,10 @@ data class ColorDistribution(
  * 类型分布
  */
 data class TypeDistribution(
-    val types: Map<CardType, Int>,  // 类型 -> 数量（主牌）
+    val types: Map<CardType, Int>,  // 类型 -> 数量（主牌，按卡牌数量统计）
     val sideboardTypes: Map<CardType, Int>,  // 备牌类型
+    val typesByCard: Map<CardType, Int>,  // 类型 -> 牌种数（主牌，按牌名统计）
+    val sideboardTypesByCard: Map<CardType, Int>,  // 备牌牌种数
     val totalCards: Int,
     val sideboardTotal: Int
 ) {
@@ -76,6 +86,8 @@ data class TypeDistribution(
         val EMPTY = TypeDistribution(
             types = emptyMap(),
             sideboardTypes = emptyMap(),
+            typesByCard = emptyMap(),
+            sideboardTypesByCard = emptyMap(),
             totalCards = 0,
             sideboardTotal = 0
         )
@@ -160,13 +172,36 @@ enum class CardType(val displayName: String) {
             if (typeLine.isNullOrBlank()) return OTHER
 
             return when {
-                typeLine.contains("Creature", ignoreCase = true) -> CREATURE
-                typeLine.contains("Instant", ignoreCase = true) -> INSTANT
-                typeLine.contains("Sorcery", ignoreCase = true) -> SORCERY
-                typeLine.contains("Enchantment", ignoreCase = true) -> ENCHANTMENT
-                typeLine.contains("Artifact", ignoreCase = true) -> ARTIFACT
-                typeLine.contains("Planeswalker", ignoreCase = true) -> PLANESWALKER
-                typeLine.contains("Land", ignoreCase = true) -> LAND
+                // 英文类型
+                typeLine.contains("Creature", ignoreCase = true) ||
+                // 中文类型
+                typeLine.contains("生物", ignoreCase = true) ||
+                typeLine.contains("生物") -> CREATURE
+
+                typeLine.contains("Instant", ignoreCase = true) ||
+                typeLine.contains("瞬间", ignoreCase = true) ||
+                typeLine.contains("瞬间") -> INSTANT
+
+                typeLine.contains("Sorcery", ignoreCase = true) ||
+                typeLine.contains("巫术", ignoreCase = true) ||
+                typeLine.contains("巫术") -> SORCERY
+
+                typeLine.contains("Enchantment", ignoreCase = true) ||
+                typeLine.contains("结界", ignoreCase = true) ||
+                typeLine.contains("结界") -> ENCHANTMENT
+
+                typeLine.contains("Artifact", ignoreCase = true) ||
+                typeLine.contains("神器", ignoreCase = true) ||
+                typeLine.contains("神器") -> ARTIFACT
+
+                typeLine.contains("Planeswalker", ignoreCase = true) ||
+                typeLine.contains("鹏洛客", ignoreCase = true) ||
+                typeLine.contains("鹏洛客") -> PLANESWALKER
+
+                typeLine.contains("Land", ignoreCase = true) ||
+                typeLine.contains("地", ignoreCase = true) ||
+                typeLine.contains("地陆") -> LAND
+
                 else -> OTHER
             }
         }

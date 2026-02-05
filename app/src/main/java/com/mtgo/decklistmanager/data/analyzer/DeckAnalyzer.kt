@@ -60,6 +60,8 @@ class DeckAnalyzer @Inject constructor(
     ): ManaCurve {
         val mainCurve = mutableMapOf<Int, Int>()
         val sideboardCurve = mutableMapOf<Int, Int>()
+        val mainCurveByCard = mutableMapOf<Int, Int>()
+        val sideboardCurveByCard = mutableMapOf<Int, Int>()
         var mainTotalCMC = 0.0
         var sideboardTotalCMC = 0.0
         var mainNonLandCount = 0
@@ -73,7 +75,12 @@ class DeckAnalyzer @Inject constructor(
             if (cmc != null) {
                 // 0-6+ 分别统计，7及以上合并为 7
                 val key = minOf(cmc, 7)
+
+                // 按卡牌数量统计
                 mainCurve[key] = mainCurve.getOrDefault(key, 0) + quantity
+
+                // 按牌名统计（每种牌只计1次）
+                mainCurveByCard[key] = mainCurveByCard.getOrDefault(key, 0) + 1
 
                 // 非地牌才计入平均法术力
                 if (!isLand(card.cardType)) {
@@ -90,7 +97,12 @@ class DeckAnalyzer @Inject constructor(
 
             if (cmc != null) {
                 val key = minOf(cmc, 7)
+
+                // 按卡牌数量统计
                 sideboardCurve[key] = sideboardCurve.getOrDefault(key, 0) + quantity
+
+                // 按牌名统计
+                sideboardCurveByCard[key] = sideboardCurveByCard.getOrDefault(key, 0) + 1
 
                 if (!isLand(card.cardType)) {
                     sideboardTotalCMC += cmc * quantity
@@ -105,6 +117,8 @@ class DeckAnalyzer @Inject constructor(
         return ManaCurve(
             curve = mainCurve,
             sideboardCurve = sideboardCurve,
+            curveByCard = mainCurveByCard,
+            sideboardCurveByCard = sideboardCurveByCard,
             averageManaValue = mainAverage,
             sideboardAverageManaValue = sideboardAverage
         )
@@ -119,6 +133,8 @@ class DeckAnalyzer @Inject constructor(
     ): ColorDistribution {
         val mainColors = mutableMapOf<ManaColor, Int>()
         val sideboardColors = mutableMapOf<ManaColor, Int>()
+        val mainColorsByCard = mutableMapOf<ManaColor, Int>()
+        val sideboardColorsByCard = mutableMapOf<ManaColor, Int>()
 
         // 统计主牌颜色
         mainDeck.forEach { card ->
@@ -126,12 +142,17 @@ class DeckAnalyzer @Inject constructor(
             val colors = parseColors(card.color)
 
             if (colors.isEmpty()) {
-                // 无色卡牌
+                // 无色卡牌 - 按数量统计
                 mainColors[ManaColor.COLORLESS] = mainColors.getOrDefault(ManaColor.COLORLESS, 0) + quantity
+                // 按牌名统计
+                mainColorsByCard[ManaColor.COLORLESS] = mainColorsByCard.getOrDefault(ManaColor.COLORLESS, 0) + 1
             } else {
                 // 多色卡牌，每个颜色都计数
                 colors.forEach { color ->
+                    // 按数量统计
                     mainColors[color] = mainColors.getOrDefault(color, 0) + quantity
+                    // 按牌名统计（每种牌只计1次）
+                    mainColorsByCard[color] = mainColorsByCard.getOrDefault(color, 0) + 1
                 }
             }
         }
@@ -143,9 +164,11 @@ class DeckAnalyzer @Inject constructor(
 
             if (colors.isEmpty()) {
                 sideboardColors[ManaColor.COLORLESS] = sideboardColors.getOrDefault(ManaColor.COLORLESS, 0) + quantity
+                sideboardColorsByCard[ManaColor.COLORLESS] = sideboardColorsByCard.getOrDefault(ManaColor.COLORLESS, 0) + 1
             } else {
                 colors.forEach { color ->
                     sideboardColors[color] = sideboardColors.getOrDefault(color, 0) + quantity
+                    sideboardColorsByCard[color] = sideboardColorsByCard.getOrDefault(color, 0) + 1
                 }
             }
         }
@@ -156,6 +179,8 @@ class DeckAnalyzer @Inject constructor(
         return ColorDistribution(
             colors = mainColors,
             sideboardColors = sideboardColors,
+            colorsByCard = mainColorsByCard,
+            sideboardColorsByCard = sideboardColorsByCard,
             totalCards = mainTotal,
             sideboardTotal = sideboardTotal
         )
@@ -170,13 +195,18 @@ class DeckAnalyzer @Inject constructor(
     ): TypeDistribution {
         val mainTypes = mutableMapOf<CardType, Int>()
         val sideboardTypes = mutableMapOf<CardType, Int>()
+        val mainTypesByCard = mutableMapOf<CardType, Int>()
+        val sideboardTypesByCard = mutableMapOf<CardType, Int>()
 
         // 统计主牌类型
         mainDeck.forEach { card ->
             val quantity = card.quantity
             val type = CardType.fromTypeLine(card.cardType)
 
+            // 按数量统计
             mainTypes[type] = mainTypes.getOrDefault(type, 0) + quantity
+            // 按牌名统计
+            mainTypesByCard[type] = mainTypesByCard.getOrDefault(type, 0) + 1
         }
 
         // 统计备牌类型
@@ -184,7 +214,10 @@ class DeckAnalyzer @Inject constructor(
             val quantity = card.quantity
             val type = CardType.fromTypeLine(card.cardType)
 
+            // 按数量统计
             sideboardTypes[type] = sideboardTypes.getOrDefault(type, 0) + quantity
+            // 按牌名统计
+            sideboardTypesByCard[type] = sideboardTypesByCard.getOrDefault(type, 0) + 1
         }
 
         val mainTotal = mainDeck.sumOf { it.quantity }
@@ -193,6 +226,8 @@ class DeckAnalyzer @Inject constructor(
         return TypeDistribution(
             types = mainTypes,
             sideboardTypes = sideboardTypes,
+            typesByCard = mainTypesByCard,
+            sideboardTypesByCard = sideboardTypesByCard,
             totalCards = mainTotal,
             sideboardTotal = sideboardTotal
         )
