@@ -35,8 +35,13 @@ class DecklistTableAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(decklist: Decklist) {
-            // 优先显示套牌名称，如果没有则显示玩家名称
-            binding.tvPlayerName.text = decklist.deckName ?: decklist.playerName ?: "Unknown Deck"
+            // 优先显示套牌名称，如果没有则显示玩家名称，最后显示赛事名称
+            val displayName = when {
+                !decklist.deckName.isNullOrEmpty() && decklist.deckName != "Unknown Deck" -> decklist.deckName
+                !decklist.playerName.isNullOrEmpty() && decklist.playerName != "Unknown" -> decklist.playerName
+                else -> decklist.eventName
+            }
+            binding.tvPlayerName.text = displayName
             binding.tvRecord.text = decklist.record ?: "N/A"
 
             // Show/hide loading indicator
