@@ -555,10 +555,16 @@ class DecklistRepository @Inject constructor(
         // 例如：
         //   Wear/Tear -> Wear // Tear
         //   Wear / Tear -> Wear // Tear
-        if (cardName.contains("/") && !cardName.contains("//")) {
-            return cardName.replace(" / ", " // ").replace("/", " // ")
+        return when {
+            // 已经是正确的双斜杠格式
+            " // " in cardName -> cardName
+            // 单斜杠带空格：Wear / Tear -> Wear // Tear
+            " / " in cardName -> cardName.replace(" / ", " // ")
+            // 单斜杠不带空格：Wear/Tear -> Wear // Tear
+            "/" in cardName -> cardName.replace("/", " // ")
+            // 其他情况保持不变
+            else -> cardName
         }
-        return cardName
     }
 
     private suspend fun fetchCardInfoFromApi(cardName: String): CardInfo? {
