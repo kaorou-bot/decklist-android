@@ -105,6 +105,50 @@
 - 统一日期格式为中文格式（YYYY年MM月DD日）
 - 修复赛事日期格式转换
 
+### 5. 修复套牌页面卡牌中文名称缺失问题
+**问题：** 某些卡牌在套牌页面显示英文名，但在详情页显示中文名
+**原因：** `cards` 表中有些记录的 `display_name` 字段为 NULL
+**修复：**
+- 添加 `updateDisplayNameByName()` 方法
+- 添加 `getCardsWithNullDisplayName()` 和 `getCardsWithMissingData()` 查询方法
+- 在应用启动和套牌详情加载时自动修复
+
+**效果：**
+- 所有套牌中的同名卡牌都会显示中文名称
+- Subtlety 显示为"锐敏"，Meticulous Archive 显示为"整洁档案库"
+
+### 6. 修复套牌页面法术力值不显示问题
+**问题：** 某些卡牌（Subtlety, Force of Negation 等）不显示法术力值
+**原因：** `cards` 表中有些记录的 `mana_cost` 字段为 NULL
+**修复：**
+- 添加 `updateCardDetails()` 同时更新 `display_name` 和 `mana_cost`
+- 查询条件改为：`display_name IS NULL OR mana_cost IS NULL`
+
+**效果：**
+- Subtlety 现在显示法术力值 {2}{U}{U}
+- Force of Negation 显示法术力值 {1}{U}{U}
+
+### 7. 修复连体牌名称匹配问题
+**问题：** 连体牌（如 Wear // Tear）在套牌页面不显示信息
+**原因：** 名称格式不匹配（`Wear / Tear` vs `Wear // Tear`）
+**修复：**
+- 修复 `normalizeCardName()` 方法，正确处理所有连体牌格式
+- 添加 `generateAlternativeNames()` 生成多种可能的名称变体
+
+**效果：**
+- Wear // Tear 成功显示：损耗 // 穿破 {1}{R}
+- 所有连体牌都能正确匹配
+
+### 8. 加深白色法术力符号颜色
+**问题：** 白色法术力符号颜色 #F8F6D8 太浅，看不清
+**修复：** 改为 #E8D8A0（更深的金黄色）
+**效果：** 白色法术力符号现在更容易识别
+
+### 9. 优化双面牌切换按钮文案
+**问题：** 按钮文案切换显示（"查看反面"/"查看正面"）
+**修复：** 统一使用固定文案"查看其他部分"
+**效果：** 用户体验更一致，文案更简洁
+
 ---
 
 ## 🔧 技术改进
