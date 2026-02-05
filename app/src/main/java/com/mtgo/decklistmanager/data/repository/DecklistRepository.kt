@@ -1605,8 +1605,8 @@ class DecklistRepository @Inject constructor(
      */
     suspend fun fixAllNullDisplayNames(): Int = withContext(Dispatchers.IO) {
         try {
-            // 查找所有 display_name 为 NULL 的卡牌
-            val nullCards = cardDao.getCardsWithNullDisplayName()
+            // 查找所有 display_name 或 mana_cost 为 NULL 的卡牌
+            val nullCards = cardDao.getCardsWithMissingData()
 
             var updatedCount = 0
             for (card in nullCards) {
@@ -1619,7 +1619,7 @@ class DecklistRepository @Inject constructor(
                 }
             }
 
-            AppLogger.d("DecklistRepository", "Fixed $updatedCount null display_names and mana_costs")
+            AppLogger.d("DecklistRepository", "✅ Fixed $updatedCount cards with missing display_names or mana_costs")
             updatedCount
         } catch (e: Exception) {
             AppLogger.e("DecklistRepository", "Failed to fix display names and mana costs: ${e.message}", e)

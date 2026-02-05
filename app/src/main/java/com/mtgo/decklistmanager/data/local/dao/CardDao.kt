@@ -161,6 +161,13 @@ interface CardDao {
     suspend fun getCardsWithNullDisplayName(): List<CardEntity>
 
     /**
+     * 获取所有需要修复的卡牌（display_name 或 mana_cost 为 NULL）
+     * v4.1.0: 用于批量修复中文名称和法术力值
+     */
+    @Query("SELECT * FROM cards WHERE display_name IS NULL OR mana_cost IS NULL")
+    suspend fun getCardsWithMissingData(): List<CardEntity>
+
+    /**
      * 根据 ID 更新单张卡牌的 display_name
      * v4.1.0: 用于批量修复中文名称
      */

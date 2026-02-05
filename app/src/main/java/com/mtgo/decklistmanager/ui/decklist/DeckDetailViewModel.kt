@@ -108,7 +108,12 @@ class DeckDetailViewModel @Inject constructor(
         cardSet = cardSet,
         // 若 displayName 为 null，则回退使用英文名，确保中文名始终有值
         cardNameZh = displayName ?: cardName
-    )
+    ).also {
+        // 调试日志
+        if (it.cardName.contains("Force of Negation") || it.cardName.contains("Subtlety")) {
+            AppLogger.d("DeckDetailViewModel", "CardEntity.toCard(): ${it.cardNameZh}, manaCost=${it.manaCost}")
+        }
+    }
 
     /**
      * 加载牌组详情
