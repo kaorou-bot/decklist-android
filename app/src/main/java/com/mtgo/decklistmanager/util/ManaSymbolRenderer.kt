@@ -112,7 +112,7 @@ object ManaSymbolRenderer {
      */
     private fun getManaColor(symbol: String): Int {
         return when (symbol.uppercase()) {
-            "W" -> Color.parseColor("#F8F6D8")  // 白色
+            "W" -> Color.parseColor("#E8D8A0")  // 白色 - 加深，更易读
             "U" -> Color.parseColor("#0E68AB")  // 蓝色
             "B" -> Color.parseColor("#150B00")  // 黑色
             "R" -> Color.parseColor("#D3202A")  // 红色
