@@ -165,7 +165,7 @@ enum class CardType(val displayName: String) {
     ENCHANTMENT("结界"),
     ARTIFACT("神器"),
     PLANESWALKER("鹏洛客"),
-    LAND("地陆"),
+    LAND("地"),
     OTHER("其他");
 
     companion object {
