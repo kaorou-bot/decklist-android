@@ -58,7 +58,7 @@
                         android:id="@+id/btnFlipCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="查看反面"
+                        android:text="查看其他部分"
                         android:visibility="gone"
                         android:layout_margin="8dp"
                         app:cornerRadius="8dp"

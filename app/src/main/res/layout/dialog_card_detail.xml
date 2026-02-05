@@ -22,7 +22,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="8dp"
-        android:text="查看反面"
+        android:text="查看其他部分"
         style="@style/Widget.Material3.Button.OutlinedButton"
         android:visibility="gone" />
 

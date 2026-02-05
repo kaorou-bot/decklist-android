@@ -64,7 +64,7 @@ class CardInfoFragment : DialogFragment() {
             // 设置双面牌切换按钮（仅双面牌显示）
             if (cardInfo.isDualFaced) {
                 btnFlipCard.visibility = View.VISIBLE
-                btnFlipCard.text = if (isShowingFront) "查看反面" else "查看正面"
+                btnFlipCard.text = "查看其他部分"
                 btnFlipCard.setOnClickListener {
                     isShowingFront = !isShowingFront
                     updateCardDisplay()
@@ -105,9 +105,9 @@ class CardInfoFragment : DialogFragment() {
                 imageViewCard.visibility = View.GONE
             }
 
-            // 更新切换按钮文本
+            // 更新切换按钮文本（保持固定文本）
             if (cardInfo.isDualFaced) {
-                btnFlipCard.text = if (isShowingFront) "查看反面" else "查看正面"
+                btnFlipCard.text = "查看其他部分"
             }
 
             // 构建详细信息文本

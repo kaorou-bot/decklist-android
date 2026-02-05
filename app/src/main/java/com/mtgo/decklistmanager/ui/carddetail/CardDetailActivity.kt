@@ -122,7 +122,7 @@ class CardDetailActivity : AppCompatActivity() {
             // Update flip button visibility and text
             if (cardInfo.isDualFaced) {
                 btnFlipCard.visibility = View.VISIBLE
-                btnFlipCard.text = if (isShowingFront) "查看反面" else "查看正面"
+                btnFlipCard.text = "查看其他部分"
 
                 // Set flip button click listener
                 btnFlipCard.setOnClickListener {
