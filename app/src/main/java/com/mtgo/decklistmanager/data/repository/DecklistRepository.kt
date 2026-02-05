@@ -1599,9 +1599,9 @@ class DecklistRepository @Inject constructor(
     }
 
     /**
-     * 一次性修复：批量更新所有 NULL 的 display_name
-     * v4.1.0: 从 card_info 表中查找中文名称并更新到 cards 表
-     * 只需运行一次，之后所有套牌都会显示中文名称
+     * 一次性修复：批量更新所有 NULL 的 display_name 和 mana_cost
+     * v4.1.0: 从 card_info 表中查找中文名称和法术力值并更新到 cards 表
+     * 只需运行一次，之后所有套牌都会显示中文名称和法术力值
      */
     suspend fun fixAllNullDisplayNames(): Int = withContext(Dispatchers.IO) {
         try {
@@ -1610,19 +1610,19 @@ class DecklistRepository @Inject constructor(
 
             var updatedCount = 0
             for (card in nullCards) {
-                // 从 card_info 表中查找中文名称
+                // 从 card_info 表中查找中文名称和法术力值
                 val cardInfo = cardInfoDao.getCardInfoByEnName(card.cardName)
                 if (cardInfo != null) {
-                    // 更新 display_name
-                    cardDao.updateDisplayNameById(card.id, cardInfo.name)
+                    // 更新 display_name 和 mana_cost
+                    cardDao.updateCardDetails(card.id, cardInfo.name, cardInfo.manaCost)
                     updatedCount++
                 }
             }
 
-            AppLogger.d("DecklistRepository", "Fixed $updatedCount null display_names")
+            AppLogger.d("DecklistRepository", "Fixed $updatedCount null display_names and mana_costs")
             updatedCount
         } catch (e: Exception) {
-            AppLogger.e("DecklistRepository", "Failed to fix display names: ${e.message}", e)
+            AppLogger.e("DecklistRepository", "Failed to fix display names and mana costs: ${e.message}", e)
             0
         }
     }

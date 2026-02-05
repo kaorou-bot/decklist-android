@@ -155,7 +155,7 @@ interface CardDao {
 
     /**
      * 获取所有 display_name 为 NULL 的卡牌
-     * v4.1.0: 用于批量修复中文名称
+     * v4.1.0: 用于批量修复中文名称和法术力值
      */
     @Query("SELECT * FROM cards WHERE display_name IS NULL")
     suspend fun getCardsWithNullDisplayName(): List<CardEntity>
@@ -166,4 +166,16 @@ interface CardDao {
      */
     @Query("UPDATE cards SET display_name = :displayName WHERE id = :cardId")
     suspend fun updateDisplayNameById(cardId: Long, displayName: String)
+
+    /**
+     * 根据 ID 同时更新 display_name 和 mana_cost
+     * v4.1.0: 用于批量修复缺失的数据
+     */
+    @Query("""
+        UPDATE cards
+        SET display_name = :displayName,
+            mana_cost = :manaCost
+        WHERE id = :cardId
+    """)
+    suspend fun updateCardDetails(cardId: Long, displayName: String, manaCost: String?)
 }
