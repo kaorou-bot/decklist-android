@@ -581,13 +581,17 @@ class MtgTop8Scraper {
                             val playerInfo = extractPlayerAndDeckName(deckUrl)
 
                             // 验证套牌是否属于目标赛事
-                            // 通过比较赛事名称来验证（使用简单的包含匹配）
-                            val belongsToEvent = playerInfo.eventName.isNotEmpty() &&
-                                (eventInfo.eventName.contains(playerInfo.eventName) ||
-                                 playerInfo.eventName.contains(eventInfo.eventName))
+                            // 检查赛事 URL 是否匹配
+                            val deckEventUrl = extractEventUrlFromDeckPage(deckUrl)
+                            val belongsToEvent = deckEventUrl != null && deckEventUrl == eventUrl
 
-                            if (!belongsToEvent && playerInfo.eventName.isNotEmpty()) {
-                                AppLogger.d(TAG, "Deck #$deckId belongs to different event: '${playerInfo.eventName}' (target: '${eventInfo.eventName}')")
+                            if (!belongsToEvent) {
+                                AppLogger.w(TAG, "Deck #$deckId belongs to different event!")
+                                AppLogger.w(TAG, "  Target event URL: $eventUrl")
+                                AppLogger.w(TAG, "  Deck event URL: $deckEventUrl")
+                                AppLogger.w(TAG, "  Target event name: '${eventInfo.eventName}'")
+                                AppLogger.w(TAG, "  Deck event name: '${playerInfo.eventName}'")
+                                AppLogger.w(TAG, "  Deck: ${playerInfo.playerName} - ${playerInfo.deckName}")
                                 null  // 跳过不属于此赛事的套牌
                             } else {
                                 AppLogger.d(TAG, "Found deck #$deckId: ${playerInfo.playerName} - ${playerInfo.deckName}")
@@ -1219,8 +1223,9 @@ class MtgTop8Scraper {
                 }
             }
 
-            // 提取赛事名称 - 从页面中查找
+            // 提取赛事名称和URL - 从页面中查找
             var eventName = ""
+            var eventUrl = ""
 
             // 策略1: 从 div.event_title 的第一个元素提取（通常是赛事名称）
             if (titleElements.isNotEmpty()) {
@@ -1229,6 +1234,19 @@ class MtgTop8Scraper {
                 val rankPattern = Regex("^#([\\d\\-]+)\\s+")
                 eventName = firstTitleText.replace(rankPattern, "").trim()
                 AppLogger.d(TAG, "Extracted event name from event_title: '$eventName'")
+
+                // 尝试从第一个 div.event_title 中提取赛事链接
+                val linkElement = titleElements[0].selectFirst("a")
+                if (linkElement != null) {
+                    eventUrl = linkElement.attr("href")
+                    if (eventUrl.isNotEmpty()) {
+                        // 确保是完整URL
+                        if (!eventUrl.startsWith("http")) {
+                            eventUrl = "https://mtgtop8.com/$eventUrl"
+                        }
+                        AppLogger.d(TAG, "Extracted event URL: $eventUrl")
+                    }
+                }
             }
 
             // 策略2: 如果没找到，尝试从页面标题提取
@@ -1240,7 +1258,7 @@ class MtgTop8Scraper {
                 }
             }
 
-            AppLogger.d(TAG, "Final result - Player: '$playerName', Deck: '$deckName', Record: '$record', Date: '$eventDate', Event: '$eventName'")
+            AppLogger.d(TAG, "Final result - Player: '$playerName', Deck: '$deckName', Record: '$record', Date: '$eventDate', Event: '$eventName', EventURL: '$eventUrl'")
 
             PlayerDeckInfo(
                 playerName = playerName,
@@ -1252,6 +1270,36 @@ class MtgTop8Scraper {
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error extracting player/deck info: ${e.message}", e)
             PlayerDeckInfo("Unknown", "Unknown Deck", "", "", "")
+        }
+    }
+
+    /**
+     * 从套牌页面提取赛事 URL
+     */
+    private suspend fun extractEventUrlFromDeckPage(deckUrl: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val doc = Jsoup.connect(deckUrl)
+                .userAgent(Network.USER_AGENT)
+                .timeout(Network.TIMEOUT_MS)
+                .get()
+
+            // 从 div.event_title 中查找赛事链接
+            val titleElements = doc.select("div.event_title a")
+            if (titleElements.isNotEmpty()) {
+                var href = titleElements[0].attr("href")
+                if (href.isNotEmpty()) {
+                    // 确保是完整URL
+                    if (!href.startsWith("http")) {
+                        href = "https://mtgtop8.com/$href"
+                    }
+                    return@withContext href
+                }
+            }
+
+            null
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error extracting event URL: ${e.message}")
+            null
         }
     }
 
