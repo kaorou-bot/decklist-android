@@ -580,18 +580,29 @@ class MtgTop8Scraper {
                             // 从页面提取玩家名称、卡组名称、排名和日期
                             val playerInfo = extractPlayerAndDeckName(deckUrl)
 
-                            AppLogger.d(TAG, "Found deck #$deckId: ${playerInfo.playerName} - ${playerInfo.deckName}")
+                            // 验证套牌是否属于目标赛事
+                            // 通过比较赛事名称来验证（使用简单的包含匹配）
+                            val belongsToEvent = playerInfo.eventName.isNotEmpty() &&
+                                (eventInfo.eventName.contains(playerInfo.eventName) ||
+                                 playerInfo.eventName.contains(eventInfo.eventName))
 
-                            Pair(deckId, MtgTop8DecklistDto(
-                                deckId = "${eventId}_d$deckId",
-                                deckName = playerInfo.deckName,
-                                playerName = playerInfo.playerName,
-                                eventName = eventInfo.eventName,
-                                eventDate = playerInfo.date.ifEmpty { eventInfo.eventDate },
-                                record = playerInfo.record,
-                                format = eventInfo.format,
-                                url = deckUrl
-                            ))
+                            if (!belongsToEvent && playerInfo.eventName.isNotEmpty()) {
+                                AppLogger.d(TAG, "Deck #$deckId belongs to different event: '${playerInfo.eventName}' (target: '${eventInfo.eventName}')")
+                                null  // 跳过不属于此赛事的套牌
+                            } else {
+                                AppLogger.d(TAG, "Found deck #$deckId: ${playerInfo.playerName} - ${playerInfo.deckName}")
+
+                                Pair(deckId, MtgTop8DecklistDto(
+                                    deckId = "${eventId}_d$deckId",
+                                    deckName = playerInfo.deckName,
+                                    playerName = playerInfo.playerName,
+                                    eventName = eventInfo.eventName,
+                                    eventDate = playerInfo.date.ifEmpty { eventInfo.eventDate },
+                                    record = playerInfo.record,
+                                    format = eventInfo.format,
+                                    url = deckUrl
+                                ))
+                            }
                         } else {
                             null
                         }
@@ -1208,17 +1219,39 @@ class MtgTop8Scraper {
                 }
             }
 
-            AppLogger.d(TAG, "Final result - Player: '$playerName', Deck: '$deckName', Record: '$record', Date: '$eventDate'")
+            // 提取赛事名称 - 从页面中查找
+            var eventName = ""
+
+            // 策略1: 从 div.event_title 的第一个元素提取（通常是赛事名称）
+            if (titleElements.isNotEmpty()) {
+                val firstTitleText = titleElements[0].text().trim()
+                // 移除排名前缀
+                val rankPattern = Regex("^#([\\d\\-]+)\\s+")
+                eventName = firstTitleText.replace(rankPattern, "").trim()
+                AppLogger.d(TAG, "Extracted event name from event_title: '$eventName'")
+            }
+
+            // 策略2: 如果没找到，尝试从页面标题提取
+            if (eventName.isEmpty() && pageTitle.contains(" - ")) {
+                val parts = pageTitle.split(" - ", limit = 2)
+                if (parts.isNotEmpty()) {
+                    eventName = parts[0].trim()
+                    AppLogger.d(TAG, "Extracted event name from page title: '$eventName'")
+                }
+            }
+
+            AppLogger.d(TAG, "Final result - Player: '$playerName', Deck: '$deckName', Record: '$record', Date: '$eventDate', Event: '$eventName'")
 
             PlayerDeckInfo(
                 playerName = playerName,
                 deckName = deckName,
                 record = record,
-                date = eventDate
+                date = eventDate,
+                eventName = eventName
             )
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error extracting player/deck info: ${e.message}", e)
-            PlayerDeckInfo("Unknown", "Unknown Deck", "", "")
+            PlayerDeckInfo("Unknown", "Unknown Deck", "", "", "")
         }
     }
 
@@ -1229,6 +1262,7 @@ class MtgTop8Scraper {
         val playerName: String,
         val deckName: String,
         val record: String,
-        val date: String
+        val date: String,
+        val eventName: String  // 套牌所属的赛事名称
     )
 }
