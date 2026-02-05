@@ -298,6 +298,14 @@ class DecklistRepository @Inject constructor(
 
                                     AppLogger.d("DecklistRepository", "  Found: $cardName -> $displayName (mana: ${mtgchCard.manaCost})")
 
+                                    // 先更新所有同名卡牌的 display_name（确保其他套牌也能看到中文名）
+                                    // displayName 在这里保证不为 null（因为最后有 ?: mtgchCard.name）
+                                    cardDao.updateDisplayNameByName(
+                                        cardName = cardName,
+                                        displayName = displayName!!
+                                    )
+
+                                    // 然后更新当前套牌中卡牌的其他详细信息
                                     cards.filter { it.cardName == cardName }.forEach { card ->
                                         cardDao.updateDetails(
                                             cardId = card.id,

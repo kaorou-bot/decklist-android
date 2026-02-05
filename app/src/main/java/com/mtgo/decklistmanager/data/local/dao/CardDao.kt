@@ -118,6 +118,21 @@ interface CardDao {
     )
 
     /**
+     * 根据卡牌名称更新所有同名卡牌的显示名称（中文名）
+     * v4.1.0: 确保所有套牌中的同名卡牌都能显示中文名
+     */
+    @Query("""
+        UPDATE cards
+        SET display_name = :displayName
+        WHERE card_name = :cardName
+          AND display_name IS NULL
+    """)
+    suspend fun updateDisplayNameByName(
+        cardName: String,
+        displayName: String
+    )
+
+    /**
      * 搜索卡牌（按名称）
      */
     @Query("""
