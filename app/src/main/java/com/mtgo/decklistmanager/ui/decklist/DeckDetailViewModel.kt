@@ -117,6 +117,9 @@ class DeckDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                // v4.1.0: 首先修复所有 NULL 的 display_name 和 mana_cost
+                repository.fixAllNullDisplayNames()
+
                 // 首次加载时修复双面牌数据
                 repository.fixDualFacedCards()
 
