@@ -73,4 +73,14 @@
 
     <!-- Card Quantity -->
     <string name="card_quantity">%1$d× %2$s</string>
+
+    <!-- Deck Analysis -->
+    <string name="deck_analysis_title">套牌分析</string>
+    <string name="statistics_summary">📊 统计摘要</string>
+    <string name="main_deck_count">主牌数</string>
+    <string name="sideboard_count">备牌数</string>
+    <string name="average_mana_value">平均法术力</string>
+    <string name="tab_mana_curve">法术力曲线</string>
+    <string name="tab_color_distribution">颜色分布</string>
+    <string name="tab_type_distribution">类型分布</string>
 </resources>

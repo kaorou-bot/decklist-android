@@ -22,10 +22,12 @@ import com.mtgo.decklistmanager.databinding.ActivityDeckDetailBinding
 import com.mtgo.decklistmanager.domain.model.Card
 import com.mtgo.decklistmanager.domain.model.CardLocation
 import com.mtgo.decklistmanager.domain.model.Decklist
+import com.mtgo.decklistmanager.ui.analysis.DeckAnalysisActivity
 import com.mtgo.decklistmanager.ui.dialog.ExportFormatDialog
 import com.mtgo.decklistmanager.util.ManaSymbolRenderer
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import android.content.Intent
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -87,6 +89,10 @@ class DeckDetailActivity : AppCompatActivity() {
                 showExportFormatDialog()
                 true
             }
+            R.id.action_analyze -> {
+                openDeckAnalysis()
+                true
+            }
             R.id.action_share -> {
                 showExportFormatDialog()
                 true
@@ -108,6 +114,16 @@ class DeckDetailActivity : AppCompatActivity() {
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
             }
+        }
+    }
+
+    private fun openDeckAnalysis() {
+        currentDecklist?.let { decklist ->
+            val intent = Intent(this, DeckAnalysisActivity::class.java).apply {
+                putExtra(DeckAnalysisActivity.EXTRA_DECKLIST_ID, decklist.id)
+                putExtra(DeckAnalysisActivity.EXTRA_DECKLIST_NAME, decklist.deckName ?: "Unknown Deck")
+            }
+            startActivity(intent)
         }
     }
 

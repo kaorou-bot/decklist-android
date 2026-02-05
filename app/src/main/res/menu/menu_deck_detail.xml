@@ -16,6 +16,13 @@
         android:icon="@android:drawable/ic_menu_save"
         app:showAsAction="ifRoom" />
 
+    <!-- 分析套牌 -->
+    <item
+        android:id="@+id/action_analyze"
+        android:title="套牌分析"
+        android:icon="@android:drawable/ic_menu_info_details"
+        app:showAsAction="ifRoom" />
+
     <!-- 分享 -->
     <item
         android:id="@+id/action_share"
