@@ -1283,7 +1283,29 @@ class MtgTop8Scraper {
                 .timeout(Network.TIMEOUT_MS)
                 .get()
 
-            // 从 div.event_title 中查找赛事链接
+            // 策略1: 从 deck URL 本身提取赛事 ID
+            // URL 格式: https://mtgtop8.com/?e=EVENT_ID&d=DECK_ID&f=FORMAT
+            val eventPattern = Regex("[?&]e=(\\d+)")
+            val eventMatch = eventPattern.find(deckUrl)
+            if (eventMatch != null) {
+                val eventId = eventMatch.groupValues[1]
+
+                // 提取 format
+                val formatPattern = Regex("[?&]f=(\\w+)")
+                val formatMatch = formatPattern.find(deckUrl)
+                val format = if (formatMatch != null) {
+                    "&f=${formatMatch.groupValues[1]}"
+                } else {
+                    ""
+                }
+
+                // 构造标准赛事 URL
+                val eventUrl = "https://mtgtop8.com/event?e=$eventId$format"
+                AppLogger.d(TAG, "Extracted event URL from deck URL: $eventUrl")
+                return@withContext eventUrl
+            }
+
+            // 策略2: 从 div.event_title 中查找赛事链接
             val titleElements = doc.select("div.event_title a")
             if (titleElements.isNotEmpty()) {
                 var href = titleElements[0].attr("href")
@@ -1292,10 +1314,12 @@ class MtgTop8Scraper {
                     if (!href.startsWith("http")) {
                         href = "https://mtgtop8.com/$href"
                     }
+                    AppLogger.d(TAG, "Extracted event URL from link: $href")
                     return@withContext href
                 }
             }
 
+            AppLogger.w(TAG, "Could not extract event URL from deck page")
             null
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error extracting event URL: ${e.message}")
