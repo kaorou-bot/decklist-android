@@ -552,9 +552,11 @@ class DecklistRepository @Inject constructor(
      */
     private fun normalizeCardName(cardName: String): String {
         // 处理连体牌格式：将 "/" 转换为 " // "
-        // 例如：Wear/Tear -> Wear // Tear
+        // 例如：
+        //   Wear/Tear -> Wear // Tear
+        //   Wear / Tear -> Wear // Tear
         if (cardName.contains("/") && !cardName.contains("//")) {
-            return cardName.replace("/", " // ")
+            return cardName.replace(" / ", " // ").replace("/", " // ")
         }
         return cardName
     }
@@ -1610,12 +1612,27 @@ class DecklistRepository @Inject constructor(
 
             var updatedCount = 0
             for (card in nullCards) {
-                // 从 card_info 表中查找中文名称和法术力值
-                val cardInfo = cardInfoDao.getCardInfoByEnName(card.cardName)
+                // 尝试多种方式匹配卡牌
+                var cardInfo = cardInfoDao.getCardInfoByEnName(card.cardName)
+
+                // 如果直接匹配失败，尝试连体牌名称转换
+                if (cardInfo == null) {
+                    val alternativeNames = generateAlternativeNames(card.cardName)
+                    for (altName in alternativeNames) {
+                        cardInfo = cardInfoDao.getCardInfoByEnName(altName)
+                        if (cardInfo != null) {
+                            AppLogger.d("DecklistRepository", "Matched ${card.cardName} -> $altName")
+                            break
+                        }
+                    }
+                }
+
                 if (cardInfo != null) {
                     // 更新 display_name 和 mana_cost
                     cardDao.updateCardDetails(card.id, cardInfo.name, cardInfo.manaCost)
                     updatedCount++
+                } else {
+                    AppLogger.w("DecklistRepository", "No match found for: ${card.cardName}")
                 }
             }
 
@@ -1625,5 +1642,33 @@ class DecklistRepository @Inject constructor(
             AppLogger.e("DecklistRepository", "Failed to fix display names and mana costs: ${e.message}", e)
             0
         }
+    }
+
+    /**
+     * 生成卡牌名称的多种可能形式
+     * 用于处理连体牌、双面牌等特殊命名
+     */
+    private fun generateAlternativeNames(cardName: String): List<String> {
+        val alternatives = mutableListOf<String>()
+
+        // 1. 处理单斜杠 " / " -> 双斜杠 " // "
+        if (" / " in cardName) {
+            alternatives.add(cardName.replace(" / ", " // "))
+        }
+
+        // 2. 处理双斜杠 " // " -> 单斜杠 " / "
+        if (" // " in cardName) {
+            alternatives.add(cardName.replace(" // ", " / "))
+        }
+
+        // 3. 处理无空格单斜杠 "/" -> " // "
+        if ("/" in cardName && " / " !in cardName && " // " !in cardName) {
+            // "Wear/Tear" -> "Wear // Tear"
+            alternatives.add(cardName.replace("/", " // "))
+            // "Wear/Tear" -> "Wear / Tear"
+            alternatives.add(cardName.replace("/", " / "))
+        }
+
+        return alternatives
     }
 }
