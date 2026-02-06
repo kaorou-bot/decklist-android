@@ -207,7 +207,7 @@ enum class CardType(val displayName: String) {
             // 单一类型判断
             return when {
                 hasCreature -> CREATURE
-                hasInstant -> INSTANT
+                hasInstant || typeLine.contains("Interrupt", ignoreCase = true) -> INSTANT
                 typeLine.contains("Sorcery", ignoreCase = true) || typeLine.contains("法术") || typeLine.contains("巫术") -> SORCERY
                 hasEnchantment -> ENCHANTMENT
                 hasArtifact -> ARTIFACT

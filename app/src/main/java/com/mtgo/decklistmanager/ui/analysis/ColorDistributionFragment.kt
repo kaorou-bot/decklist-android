@@ -92,9 +92,9 @@ class ColorDistributionFragment : Fragment() {
 
         val dataSet = PieDataSet(entries, "颜色分布")
         dataSet.colors = colorValues
-        dataSet.valueTextSize = 14f
         dataSet.sliceSpace = 3f
-        dataSet.valueTextColor = android.graphics.Color.BLACK
+        // 禁用 value 的显示，只显示 entry labels
+        dataSet.setDrawValues(false)
 
         val pieData = PieData(dataSet)
         chart.data = pieData
@@ -103,7 +103,7 @@ class ColorDistributionFragment : Fragment() {
         chart.setUsePercentValues(false)  // 不使用百分比
         chart.setDrawEntryLabels(true)   // 显示标签（使用 PieEntry 的 label）
         chart.setEntryLabelTextSize(14f)
-        chart.setEntryLabelColor(android.graphics.Color.BLACK)
+        chart.setEntryLabelColor(android.graphics.Color.WHITE)
         chart.description.isEnabled = false
         chart.centerText = "颜色分布"
         chart.setCenterTextSize(18f)
