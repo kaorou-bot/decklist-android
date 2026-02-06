@@ -1,6 +1,7 @@
 package com.mtgo.decklistmanager.data.analyzer
 
 import com.mtgo.decklistmanager.data.local.dao.CardDao
+import com.mtgo.decklistmanager.data.local.dao.CardInfoDao
 import com.mtgo.decklistmanager.data.local.dao.DecklistDao
 import com.mtgo.decklistmanager.data.local.entity.CardEntity
 import com.mtgo.decklistmanager.domain.model.*
@@ -17,6 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class DeckAnalyzer @Inject constructor(
     private val cardDao: CardDao,
+    private val cardInfoDao: CardInfoDao,
     private val decklistDao: DecklistDao
 ) {
 
@@ -200,7 +202,7 @@ class DeckAnalyzer @Inject constructor(
     /**
      * 计算类型分布
      */
-    private fun calculateTypeDistribution(
+    private suspend fun calculateTypeDistribution(
         mainDeck: List<CardEntity>,
         sideboard: List<CardEntity>
     ): TypeDistribution {
@@ -214,14 +216,15 @@ class DeckAnalyzer @Inject constructor(
             val quantity = card.quantity
             var type = CardType.fromTypeLine(card.cardType)
 
-            // 如果类型为 null 或 OTHER，尝试根据卡牌名称推断
-            if (card.cardType.isNullOrBlank() || type == com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
-                val inferredType = CardType.inferFromCardName(card.cardName)
-                if (inferredType != com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
-                    type = inferredType
-                    AppLogger.d("DeckAnalyzer", "推断类型: ${card.cardName} -> ${type.displayName}")
-                } else {
-                    AppLogger.d("DeckAnalyzer", "无法推断类型: ${card.cardName} - 原始类型: ${card.cardType}")
+            // 如果 CardEntity 的类型为 null，从 CardInfo 表获取
+            if (card.cardType.isNullOrBlank()) {
+                try {
+                    val cardInfo = cardInfoDao.getCardInfoByNameOrEnName(card.cardName)
+                    if (cardInfo != null && !cardInfo.typeLine.isNullOrBlank()) {
+                        type = CardType.fromTypeLine(cardInfo.typeLine)
+                    }
+                } catch (e: Exception) {
+                    AppLogger.w("DeckAnalyzer", "Failed to get card info for ${card.cardName}: ${e.message}")
                 }
             }
 
@@ -236,14 +239,15 @@ class DeckAnalyzer @Inject constructor(
             val quantity = card.quantity
             var type = CardType.fromTypeLine(card.cardType)
 
-            // 如果类型为 null 或 OTHER，尝试根据卡牌名称推断
-            if (card.cardType.isNullOrBlank() || type == com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
-                val inferredType = CardType.inferFromCardName(card.cardName)
-                if (inferredType != com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
-                    type = inferredType
-                    AppLogger.d("DeckAnalyzer", "推断类型(备牌): ${card.cardName} -> ${type.displayName}")
-                } else {
-                    AppLogger.d("DeckAnalyzer", "无法推断类型(备牌): ${card.cardName} - 原始类型: ${card.cardType}")
+            // 如果 CardEntity 的类型为 null，从 CardInfo 表获取
+            if (card.cardType.isNullOrBlank()) {
+                try {
+                    val cardInfo = cardInfoDao.getCardInfoByNameOrEnName(card.cardName)
+                    if (cardInfo != null && !cardInfo.typeLine.isNullOrBlank()) {
+                        type = CardType.fromTypeLine(cardInfo.typeLine)
+                    }
+                } catch (e: Exception) {
+                    AppLogger.w("DeckAnalyzer", "Failed to get card info for ${card.cardName}: ${e.message}")
                 }
             }
 
