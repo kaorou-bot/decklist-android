@@ -252,7 +252,7 @@ class MainActivity : BaseActivity() {
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                // 在收藏列表标签页 - 左滑收藏，右滑无操作
+                // 在收藏列表标签页 - 左滑取消收藏，右滑无操作
                 if (currentTab == TAB_FAVORITES && rvDecklists.adapter == decklistAdapter) {
                     if (direction == ItemTouchHelper.LEFT) {
                         val position = viewHolder.adapterPosition
@@ -271,6 +271,15 @@ class MainActivity : BaseActivity() {
                                     if (newState) "Added to favorites" else "Removed from favorites",
                                     Toast.LENGTH_SHORT
                                 ).show()
+
+                                // 刷新列表以更新图标状态
+                                if (!newState) {
+                                    // 如果取消了收藏，从列表中移除
+                                    viewModel.loadFavoriteDecklists()
+                                } else {
+                                    // 如果添加了收藏，刷新列表更新图标
+                                    viewModel.loadFavoriteDecklists()
+                                }
                             }
                         }
                     } else {

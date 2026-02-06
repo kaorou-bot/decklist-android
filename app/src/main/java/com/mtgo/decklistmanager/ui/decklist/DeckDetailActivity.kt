@@ -60,6 +60,21 @@ class DeckDetailActivity : AppCompatActivity() {
         loadData()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 重新检查收藏状态（因为用户可能在MainActivity中改变了收藏状态）
+        currentDecklist?.let { decklist ->
+            lifecycleScope.launch {
+                val wasFavorite = isFavorite
+                isFavorite = viewModel.isFavorite(decklist.id)
+                // 如果状态改变了，更新图标
+                if (wasFavorite != isFavorite) {
+                    updateFavoriteIcon()
+                }
+            }
+        }
+    }
+
     private fun setupButtons() {
         // 返回按钮
         binding.btnBack.setOnClickListener {
