@@ -453,6 +453,13 @@ class MainViewModel @Inject constructor(
     }
 
     /**
+     * 检查套牌是否已收藏
+     */
+    suspend fun isFavorite(decklistId: Long): Boolean {
+        return repository.isFavorite(decklistId)
+    }
+
+    /**
      * 加载收藏数量
      */
     private fun loadFavoriteCount() {

@@ -184,13 +184,17 @@ class MainActivity : BaseActivity() {
 
     private fun setupRecyclerView() {
         // Decklist Adapter for favorites tab
-        decklistAdapter = DecklistAdapter { decklist ->
-            // Open deck detail activity
-            val intent = Intent(this, DeckDetailActivity::class.java).apply {
-                putExtra("decklistId", decklist.id)
-            }
-            startActivity(intent)
-        }
+        decklistAdapter = DecklistAdapter(
+            onItemClick = { decklist ->
+                // Open deck detail activity
+                val intent = Intent(this, DeckDetailActivity::class.java).apply {
+                    putExtra("decklistId", decklist.id)
+                }
+                startActivity(intent)
+            },
+            viewModel = viewModel,
+            coroutineScope = this.lifecycleScope
+        )
 
         // Event Adapter for event list tab
         eventAdapter = EventAdapter { event ->
@@ -225,7 +229,7 @@ class MainActivity : BaseActivity() {
     private fun setupSwipeToDelete() {
         val swipeCallback = object : ItemTouchHelper.SimpleCallback(
             0,
-            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+            0 // 初始设置为0，稍后根据当前标签页动态设置
         ) {
             override fun onMove(
                 recyclerView: RecyclerView,
@@ -233,6 +237,18 @@ class MainActivity : BaseActivity() {
                 target: RecyclerView.ViewHolder
             ): Boolean {
                 return false // 不支持拖拽
+            }
+
+            override fun getSwipeDirs(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder
+            ): Int {
+                // 根据当前标签页返回滑动方向
+                return when (currentTab) {
+                    TAB_FAVORITES -> ItemTouchHelper.LEFT // 收藏页面只支持左滑
+                    TAB_EVENT_LIST -> ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT // 赛事页面支持左右滑动
+                    else -> 0 // 其他页面不支持滑动
+                }
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
