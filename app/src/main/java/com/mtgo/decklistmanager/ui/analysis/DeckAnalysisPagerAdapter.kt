@@ -9,14 +9,18 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
  */
 class DeckAnalysisPagerAdapter(activity: FragmentActivity) : FragmentStateAdapter(activity) {
 
+    val fragmentMap = mutableMapOf<Int, Fragment>()
+
     override fun getItemCount(): Int = 3
 
     override fun createFragment(position: Int): Fragment {
-        return when (position) {
+        val fragment = when (position) {
             0 -> ManaCurveFragment()
             1 -> ColorDistributionFragment()
             2 -> TypeDistributionFragment()
             else -> throw IllegalArgumentException("Invalid position: $position")
         }
+        fragmentMap[position] = fragment
+        return fragment
     }
 }

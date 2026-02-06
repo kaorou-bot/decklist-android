@@ -34,7 +34,7 @@
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="颜色分布" />
+                android:text="非地牌颜色分布" />
 
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
@@ -95,15 +95,51 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="📊 统计摘要"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="12dp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="📊 统计摘要"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <!-- 主牌/备牌切换按钮组 -->
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/toggleGroup"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:singleSelection="true"
+                            app:selectionRequired="true">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnMainDeck"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="主牌"
+                                android:minWidth="60dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSideboard"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="备牌"
+                                android:minWidth="60dp" />
+
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                    </LinearLayout>
 
                     <GridLayout
+                        android:id="@+id/statsGrid"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:columnCount="2"
@@ -113,12 +149,12 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
-                            android:text="主牌数"
+                            android:text="总卡牌数"
                             android:textColor="#666666"
                             android:layout_marginBottom="4dp" />
 
                         <TextView
-                            android:id="@+id/tvMainDeckCount"
+                            android:id="@+id/tvTotalCount"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
@@ -131,19 +167,19 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
-                            android:text="备牌数"
+                            android:text="地牌数"
                             android:textColor="#666666"
                             android:layout_marginBottom="4dp" />
 
                         <TextView
-                            android:id="@+id/tvSideboardCount"
+                            android:id="@+id/tvLandCount"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:textStyle="bold"
                             android:textColor="#000000"
                             android:gravity="end"
-                            tools:text="15" />
+                            tools:text="24" />
 
                         <TextView
                             android:layout_width="0dp"

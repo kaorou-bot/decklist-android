@@ -28,6 +28,12 @@ class TypeDistributionFragment : Fragment() {
 
     private var currentAnalysis: DeckAnalysis? = null
     private var isByQuantity = true // true: 按数量, false: 按牌名
+    private var isSideboardMode = false // true: 备牌模式, false: 主牌模式
+
+    fun setSideboardMode(isSideboard: Boolean) {
+        isSideboardMode = isSideboard
+        currentAnalysis?.let { setupChart(it) }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -66,14 +72,20 @@ class TypeDistributionFragment : Fragment() {
         val chart = binding.barChart
 
         // 准备数据 - 根据当前模式选择数据源
-        val types = if (isByQuantity) analysis.typeDistribution.types else analysis.typeDistribution.typesByCard
+        val (types, typesByCard) = if (isSideboardMode) {
+            analysis.typeDistribution.sideboardTypes to analysis.typeDistribution.sideboardTypesByCard
+        } else {
+            analysis.typeDistribution.types to analysis.typeDistribution.typesByCard
+        }
+
+        val selectedTypes = if (isByQuantity) types else typesByCard
         val entries = ArrayList<BarEntry>()
         val typeLabels = ArrayList<String>()
 
         // 使用连续索引，确保数据对齐
         var currentIndex = 0f
         CardType.entries.forEach { cardType ->
-            val count = types[cardType] ?: 0
+            val count = selectedTypes[cardType] ?: 0
             if (count > 0) {
                 entries.add(BarEntry(currentIndex, count.toFloat()))
                 typeLabels.add(cardType.displayName)

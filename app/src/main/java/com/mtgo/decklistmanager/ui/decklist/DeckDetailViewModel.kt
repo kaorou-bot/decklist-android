@@ -110,7 +110,7 @@ class DeckDetailViewModel @Inject constructor(
         cardNameZh = displayName ?: cardName
     ).also {
         // 调试日志
-        if (it.cardName.contains("Force of Negation") || it.cardName.contains("Subtlety")) {
+        if (it.cardName.contains("Force of Negation") || it.cardName.contains("Subtlety") || it.cardName.contains("Flash")) {
             AppLogger.d("DeckDetailViewModel", "CardEntity.toCard(): ${it.cardNameZh}, manaCost=${it.manaCost}")
         }
     }

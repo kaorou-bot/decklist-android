@@ -48,53 +48,48 @@ class DeckDetailActivity : AppCompatActivity() {
     private var currentDecklist: Decklist? = null
     private var allCards: List<Card> = emptyList()
     private var isFavorite = false
-    private var favoriteMenuItem: MenuItem? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDeckDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setupToolbar()
+        setupButtons()
         setupCardLists()
         setupObservers()
         loadData()
     }
 
-    private fun setupToolbar() {
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.setDisplayShowHomeEnabled(true)
-        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_arrow_back)
+    private fun setupButtons() {
+        // 返回按钮
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
+
+        // 收藏按钮
+        binding.btnFavorite.setOnClickListener {
+            toggleFavorite()
+        }
+
+        // 导出和分享按钮
+        binding.btnExportShare.setOnClickListener {
+            showExportFormatDialog()
+        }
+
+        // 分析按钮
+        binding.btnAnalysis.setOnClickListener {
+            openDeckAnalysis()
+        }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_deck_detail, menu)
-        favoriteMenuItem = menu.findItem(R.id.action_favorite)
-        updateFavoriteIcon()
-        return true
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        return false // 不再使用菜单
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
                 finish()
-                true
-            }
-            R.id.action_favorite -> {
-                toggleFavorite()
-                true
-            }
-            R.id.action_export -> {
-                showExportFormatDialog()
-                true
-            }
-            R.id.action_analyze -> {
-                openDeckAnalysis()
-                true
-            }
-            R.id.action_share -> {
-                showExportFormatDialog()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -128,14 +123,10 @@ class DeckDetailActivity : AppCompatActivity() {
     }
 
     private fun updateFavoriteIcon() {
-        favoriteMenuItem?.apply {
-            if (isFavorite) {
-                setIcon(android.R.drawable.star_big_on)
-                setTitle("Remove from Favorites")
-            } else {
-                setIcon(android.R.drawable.star_big_off)
-                setTitle("Add to Favorites")
-            }
+        if (isFavorite) {
+            binding.btnFavorite.setIconResource(R.drawable.ic_favorite_filled)
+        } else {
+            binding.btnFavorite.setIconResource(R.drawable.ic_favorite_border)
         }
     }
 
@@ -311,6 +302,9 @@ class DeckDetailActivity : AppCompatActivity() {
     }
 
     private fun updateDecklistInfo(decklist: Decklist) {
+        // 设置顶部标题
+        binding.tvDeckNameTitle.text = decklist.deckName ?: decklist.eventName ?: "Unknown Deck"
+
         binding.apply {
             tvEventName.text = decklist.eventName
             tvFormat.text = "Format: ${decklist.format}"

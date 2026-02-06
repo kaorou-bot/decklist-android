@@ -225,28 +225,29 @@ class DecklistRepository @Inject constructor(
 
             AppLogger.d("DecklistRepository", "fetchScryfallDetails: Processing ${uniqueCardNames.size} unique cards")
 
-            // 检查哪些卡牌在数据库中已经有详情
-            val cardsNeedingFetch = uniqueCardNames.filter { cardName ->
-                val cached = cardInfoDao.getCardInfoByNameOrEnName(normalizeCardName(cardName))
-                cached == null
+            // 检查哪些卡牌在 cards 表中缺失 display_name 或 mana_cost
+            val cardsNeedingUpdate = uniqueCardNames.filter { cardName ->
+                // 查找该卡牌在当前套牌中的记录
+                val cardRecords = cards.filter { it.cardName == cardName }
+                // 如果有任何一张卡缺失 display_name 或 mana_cost，就需要更新
+                cardRecords.any { it.displayName.isNullOrBlank() || it.manaCost.isNullOrBlank() }
             }
 
-            AppLogger.d("DecklistRepository", "Cache check: ${uniqueCardNames.size - cardsNeedingFetch.size} cached, ${cardsNeedingFetch.size} need fetch")
+            AppLogger.d("DecklistRepository", "Cards data check: ${uniqueCardNames.size - cardsNeedingUpdate.size} complete, ${cardsNeedingUpdate.size} need update")
 
-            // 如果所有卡牌都已缓存，直接返回
-            if (cardsNeedingFetch.isEmpty()) {
-                AppLogger.d("DecklistRepository", "All cards already cached, skipping API fetch")
+            // 如果所有卡牌都已完整，直接返回
+            if (cardsNeedingUpdate.isEmpty()) {
+                AppLogger.d("DecklistRepository", "All cards already complete, skipping update")
                 return@coroutineScope
             }
 
-            AppLogger.d("DecklistRepository", "Fetching ${cardsNeedingFetch.size} uncached cards from mtgch.com")
+            AppLogger.d("DecklistRepository", "Updating ${cardsNeedingUpdate.size} cards from card_info cache or API")
 
             // 使用 Semaphore 控制并发数量，避免过多请求
-            // 减少并发数以避免 API 429 错误
             val semaphore = Semaphore(2)
 
-            // 并发获取未缓存的卡牌详情
-            cardsNeedingFetch.mapIndexed { index, cardName ->
+            // 并发获取需要更新的卡牌详情
+            cardsNeedingUpdate.mapIndexed { index, cardName ->
                 async {
                     semaphore.acquire()
                     try {
@@ -258,76 +259,107 @@ class DecklistRepository @Inject constructor(
                         // 标准化卡名（处理连体牌格式）
                         val formattedCardName = normalizeCardName(cardName)
 
-                        val response = mtgchApi.searchCard(
-                            query = formattedCardName,
-                            pageSize = 10,
-                            priorityChinese = true
-                        )
-                        if (response.isSuccessful && response.body() != null) {
-                            val searchResponse = response.body()!!
-                            val results = searchResponse.data
-                            if (results != null && results.isNotEmpty()) {
-                                // 精确匹配
-                                val exactMatch = results.find { card ->
-                                    val nameMatch = card.name?.equals(formattedCardName, ignoreCase = true) == true
-                                    val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
-                                    val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
+                        // 首先尝试从 card_info 表读取缓存数据
+                        val cachedCardInfo = cardInfoDao.getCardInfoByNameOrEnName(formattedCardName)
 
-                                    // 双面牌特殊处理
-                                    val dualFaceMatch = card.name?.contains("//") == true &&
-                                        (card.name.startsWith("$formattedCardName //", ignoreCase = true) ||
-                                         card.name.endsWith("// $formattedCardName", ignoreCase = true) ||
-                                         card.name.contains(" // $formattedCardName //", ignoreCase = true))
+                        if (cachedCardInfo != null) {
+                            // 从缓存获取数据，更新 cards 表
+                            val displayName = cachedCardInfo.name
 
-                                    // 连体牌特殊处理：检查原始卡名
-                                    val splitMatch = !cardName.contains("/") && card.name?.contains("//") == true &&
-                                        card.name.equals(formattedCardName, ignoreCase = true)
+                            AppLogger.d("DecklistRepository", "  Found in cache: $cardName -> $displayName (mana: ${cachedCardInfo.manaCost})")
 
-                                    nameMatch || zhNameMatch || translatedNameMatch || dualFaceMatch || splitMatch
-                                }
+                            // 更新当前套牌中卡牌的详细信息
+                            cards.filter { it.cardName == cardName }.forEach { card ->
+                                cardDao.updateDetails(
+                                    cardId = card.id,
+                                    manaCost = cachedCardInfo.manaCost,
+                                    color = cachedCardInfo.colors,
+                                    rarity = cachedCardInfo.rarity,
+                                    cardType = cachedCardInfo.typeLine,
+                                    cardSet = cachedCardInfo.setName,
+                                    displayName = displayName
+                                )
+                            }
+                        } else {
+                            // 缓存未命中，调用 API
+                            AppLogger.d("DecklistRepository", "  Cache miss for: $cardName, fetching from API")
 
-                                if (exactMatch != null) {
-                                    val mtgchCard = exactMatch
-
-                                    // 更新所有同名卡牌的法术力值和中文名
-                                    var displayName = mtgchCard.zhsName
-                                        ?: mtgchCard.atomicTranslatedName
-                                        ?: mtgchCard.name
-
-                                    displayName = getBasicLandChineseName(displayName) ?: displayName
-
-                                    AppLogger.d("DecklistRepository", "  Found: $cardName -> $displayName (mana: ${mtgchCard.manaCost})")
-
-                                    // 先更新所有同名卡牌的 display_name（确保其他套牌也能看到中文名）
-                                    // displayName 在这里保证不为 null（因为最后有 ?: mtgchCard.name）
-                                    cardDao.updateDisplayNameByName(
-                                        cardName = cardName,
-                                        displayName = displayName!!
-                                    )
-
-                                    // 然后更新当前套牌中卡牌的其他详细信息
-                                    cards.filter { it.cardName == cardName }.forEach { card ->
-                                        cardDao.updateDetails(
-                                            cardId = card.id,
-                                            manaCost = mtgchCard.manaCost,
-                                            color = mtgchCard.colors?.joinToString(","),
-                                            rarity = mtgchCard.rarity,
-                                            cardType = mtgchCard.zhsTypeLine ?: mtgchCard.atomicTranslatedType ?: mtgchCard.typeLine,
-                                            cardSet = mtgchCard.setName,
-                                            displayName = displayName
-                                        )
+                            val response = mtgchApi.searchCard(
+                                query = formattedCardName,
+                                pageSize = 20,
+                                priorityChinese = true
+                            )
+                            if (response.isSuccessful && response.body() != null) {
+                                val searchResponse = response.body()!!
+                                val results = searchResponse.data
+                                if (results != null && results.isNotEmpty()) {
+                                    // 调试：打印所有结果
+                                    AppLogger.d("DecklistRepository", "    API returned ${results.size} results for '$formattedCardName':")
+                                    results.take(5).forEachIndexed { index, card ->
+                                        AppLogger.d("DecklistRepository", "      [$index] ${card.name} (zh: ${card.zhsName})")
                                     }
 
-                                    // 缓存到 CardInfo 表
-                                    val cardInfoEntity = mtgchCard.toEntity()
-                                    val finalName = getBasicLandChineseName(cardInfoEntity.name)
-                                    if (finalName != null) {
-                                        cardInfoEntity.copy(name = finalName)
+                                    // 精确匹配
+                                    val exactMatch = results.find { card ->
+                                        val nameMatch = card.name?.equals(formattedCardName, ignoreCase = true) == true
+                                        val zhNameMatch = card.zhsName?.equals(cardName, ignoreCase = true) == true
+                                        val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
+
+                                        // 双面牌特殊处理
+                                        val dualFaceMatch = card.name?.contains("//") == true &&
+                                            (card.name.startsWith("$formattedCardName //", ignoreCase = true) ||
+                                             card.name.endsWith("// $formattedCardName", ignoreCase = true) ||
+                                             card.name.contains(" // $formattedCardName //", ignoreCase = true))
+
+                                        // 连体牌特殊处理：检查原始卡名
+                                        val splitMatch = !cardName.contains("/") && card.name?.contains("//") == true &&
+                                            card.name.equals(formattedCardName, ignoreCase = true)
+
+                                        nameMatch || zhNameMatch || translatedNameMatch || dualFaceMatch || splitMatch
+                                    }
+
+                                    if (exactMatch != null) {
+                                        val mtgchCard = exactMatch
+
+                                        // 更新所有同名卡牌的法术力值和中文名
+                                        var displayName = mtgchCard.zhsName
+                                            ?: mtgchCard.atomicTranslatedName
+                                            ?: mtgchCard.name
+
+                                        displayName = getBasicLandChineseName(displayName) ?: displayName
+
+                                        AppLogger.d("DecklistRepository", "    Found: $cardName -> $displayName (mana: ${mtgchCard.manaCost})")
+
+                                        // 先更新所有同名卡牌的 display_name（确保其他套牌也能看到中文名）
+                                        cardDao.updateDisplayNameByName(
+                                            cardName = cardName,
+                                            displayName = displayName!!
+                                        )
+
+                                        // 然后更新当前套牌中卡牌的其他详细信息
+                                        cards.filter { it.cardName == cardName }.forEach { card ->
+                                            cardDao.updateDetails(
+                                                cardId = card.id,
+                                                manaCost = mtgchCard.manaCost,
+                                                color = mtgchCard.colors?.joinToString(","),
+                                                rarity = mtgchCard.rarity,
+                                                cardType = mtgchCard.zhsTypeLine ?: mtgchCard.atomicTranslatedType ?: mtgchCard.typeLine,
+                                                cardSet = mtgchCard.setName,
+                                                displayName = displayName
+                                            )
+                                        }
+
+                                        // 缓存到 CardInfo 表
+                                        val cardInfoEntity = mtgchCard.toEntity()
+                                        val finalName = getBasicLandChineseName(cardInfoEntity.name)
+                                        if (finalName != null) {
+                                            cardInfoEntity.copy(name = finalName)
+                                        } else {
+                                            cardInfoEntity
+                                        }.let { cardInfoDao.insertOrUpdate(it) }
                                     } else {
-                                        cardInfoEntity
-                                    }.let { cardInfoDao.insertOrUpdate(it) }
-                                } else {
-                                    AppLogger.w("DecklistRepository", "  No exact match found for: $cardName (formatted: $formattedCardName)")
+                                        AppLogger.w("DecklistRepository", "    No exact match found for: $cardName (formatted: $formattedCardName)")
+                                    }
                                 }
                             }
                         }
@@ -1648,6 +1680,64 @@ class DecklistRepository @Inject constructor(
             AppLogger.e("DecklistRepository", "Failed to fix display names and mana costs: ${e.message}", e)
             0
         }
+    }
+
+    /**
+     * 硬编码的常见卡牌映射表
+     * 用于处理无法从 API 获取数据的情况
+     */
+    private fun getFallbackCardInfo(cardName: String): Pair<String, String>? {
+        // key: 英文名, value: (中文名, 法术力值)
+        val fallbackMap = mapOf(
+            // Vintage 常用瞬间
+            "Flash" to Pair("闪现", ""),
+            "Force of Will" to Pair("意志之力", "{2}{U}{P}"),
+            "Force of Negation" to Pair("否定之力", "{1}{U}{U}"),
+            "Mental Misstep" to Pair("心智歧探", "{U}{P}"),
+            "Gitaxian Probe" to Pair("吉拉陵族探针", "{U}{P}"),
+
+            // 常见地牌
+            "Flooded Strand" to Pair("浸水群岛", ""),
+            "Misty Rainforest" to Pair("雾雨林", ""),
+            "Scalding Tarn" to Pair("沸泉", ""),
+            "Polluted Delta" to Pair("污染三角洲", ""),
+            "Windswept Heath" to Pair("风蚀荒原", ""),
+            "Wooded Foothills" to Pair("树林 foothills", ""),
+            "Bloodstained Mire" to Pair("血斑泥沼", ""),
+            "Arid Mesa" to Pair("干旱台地", ""),
+            "Verdant Catacombs" to Pair("翠绿墓园", ""),
+            "Marsh Flats" to Pair("沼泽平地", ""),
+            "Catacombs" to Pair("墓穴", ""),
+            "Twilight Mire" to Pair("暮光泥沼", ""),
+            "Graven Coves" to Pair("墓穴湾", ""),
+
+            // 对地
+            "Underground Sea" to Pair("地下海", ""),
+            "Tundra" to Pair("冻原", ""),
+            "Tropical Island" to Pair("热带岛", ""),
+            "Taiga" to Pair("泰加", ""),
+            "Savannah" to Pair("热带草原", ""),
+            "Badlands" to Pair("荒原", ""),
+            "Volcanic Island" to Pair("火山岛", ""),
+            "Bayou" to Pair("长沼", ""),
+            "Scrubland" to Pair("灌丛", ""),
+            "Plateau" to Pair("高原", ""),
+
+            // 特殊地
+            "Wasteland" to Pair("荒原", ""),
+            "Strip Mine" to Pair("矿坑", ""),
+            "Urza's Saga" to Pair("乌尔za传", ""),
+            "Lorien Revealed" to Pair("洛汗揭示", ""),
+
+            // 基本地
+            "Plains" to Pair("平原", ""),
+            "Island" to Pair("海岛", ""),
+            "Swamp" to Pair("沼泽", ""),
+            "Mountain" to Pair("山脉", ""),
+            "Forest" to Pair("森林", "")
+        )
+
+        return fallbackMap[cardName]
     }
 
     /**

@@ -7,34 +7,103 @@
     android:background="#F5F5F5"
     tools:context=".ui.decklist.DeckDetailActivity">
 
-    <!-- Header with back arrow, deck name, and favorite star -->
-    <com.google.android.material.appbar.AppBarLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/white"
-        android:elevation="4dp">
-
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/md_surface"
-            app:navigationIcon="@drawable/ic_arrow_back"
-            app:titleTextColor="@color/md_on_surface" />
-
-    </com.google.android.material.appbar.AppBarLayout>
-
     <!-- Main Content -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
+
+            <!-- Top Action Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@android:color/white"
+                android:elevation="4dp"
+                android:padding="8dp"
+                android:gravity="center_vertical">
+
+                <!-- Back Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBack"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:contentDescription="返回"
+                    app:icon="@drawable/ic_arrow_back"
+                    app:iconSize="24dp"
+                    style="@style/Widget.Material3.Button.IconButton" />
+
+                <!-- Deck Name -->
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvDeckNameTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="套牌名称"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
+
+                <!-- Spacer -->
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="0" />
+
+                <!-- Favorite Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFavorite"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:contentDescription="收藏"
+                    app:icon="@drawable/ic_favorite_border"
+                    app:iconSize="24dp"
+                    style="@style/Widget.Material3.Button.IconButton" />
+
+                <!-- Export & Share Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExportShare"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:contentDescription="导出和分享"
+                    app:icon="@drawable/ic_share"
+                    app:iconSize="24dp"
+                    style="@style/Widget.Material3.Button.IconButton" />
+
+                <!-- Analysis Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAnalysis"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:contentDescription="套牌分析"
+                    app:icon="@drawable/ic_analyze"
+                    app:iconSize="24dp"
+                    style="@style/Widget.Material3.Button.IconButton" />
+
+            </LinearLayout>
+
+            <!-- Content padding -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
             <!-- Deck Info Card -->
             <com.google.android.material.card.MaterialCardView
@@ -227,6 +296,8 @@
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
 
         </LinearLayout>
 

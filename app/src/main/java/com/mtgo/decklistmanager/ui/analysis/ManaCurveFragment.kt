@@ -27,6 +27,12 @@ class ManaCurveFragment : Fragment() {
 
     private var currentAnalysis: DeckAnalysis? = null
     private var isByQuantity = true // true: 按数量, false: 按牌名
+    private var isSideboardMode = false // true: 备牌模式, false: 主牌模式
+
+    fun setSideboardMode(isSideboard: Boolean) {
+        isSideboardMode = isSideboard
+        currentAnalysis?.let { setupChart(it) }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -65,12 +71,18 @@ class ManaCurveFragment : Fragment() {
         val chart = binding.barChart
 
         // 准备数据 - 根据当前模式选择数据源
-        val curve = if (isByQuantity) analysis.manaCurve.curve else analysis.manaCurve.curveByCard
+        val (curve, curveByCard) = if (isSideboardMode) {
+            analysis.manaCurve.sideboardCurve to analysis.manaCurve.sideboardCurveByCard
+        } else {
+            analysis.manaCurve.curve to analysis.manaCurve.curveByCard
+        }
+
+        val selectedCurve = if (isByQuantity) curve else curveByCard
         val entries = ArrayList<BarEntry>()
 
         // 0-6+ 法术力值
         for (i in 0..7) {
-            val count = curve[i] ?: 0
+            val count = selectedCurve[i] ?: 0
             entries.add(BarEntry(i.toFloat(), count.toFloat()))
         }
 

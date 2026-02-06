@@ -235,6 +235,11 @@ class EventDetailActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
+        // 返回按钮
+        findViewById<MaterialButton>(R.id.btnBack).setOnClickListener {
+            finish()
+        }
+
         btnDownloadDecklists.setOnClickListener {
             // Get event info
             val event = viewModel.event.value

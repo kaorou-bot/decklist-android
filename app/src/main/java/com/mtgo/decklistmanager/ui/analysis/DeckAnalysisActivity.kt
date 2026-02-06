@@ -37,6 +37,8 @@ class DeckAnalysisActivity : AppCompatActivity() {
     private lateinit var viewModel: DeckAnalysisViewModel
 
     private var decklistId: Long = 0L
+    private var isSideboardMode = false // true: 备牌模式, false: 主牌模式
+    private lateinit var currentAnalysis: com.mtgo.decklistmanager.domain.model.DeckAnalysis
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +61,9 @@ class DeckAnalysisActivity : AppCompatActivity() {
 
         // 设置 ViewPager 和 TabLayout
         setupViewPager()
+
+        // 设置主牌/备牌切换按钮
+        setupToggleButtons()
 
         // 加载数据
         loadData()
@@ -83,11 +88,43 @@ class DeckAnalysisActivity : AppCompatActivity() {
             try {
                 viewModel.loadAnalysis(decklistId)
                 viewModel.analysis.observe(this@DeckAnalysisActivity) { analysis ->
-                    analysis?.let { updateUI(it) }
+                    analysis?.let {
+                        currentAnalysis = it
+                        updateUI(it)
+                    }
                 }
             } catch (e: Exception) {
                 AppLogger.e("DeckAnalysisActivity", "Failed to load analysis: ${e.message}", e)
                 finish()
+            }
+        }
+    }
+
+    private fun setupToggleButtons() {
+        // 默认选中主牌
+        binding.toggleGroup.check(R.id.btnMainDeck)
+
+        binding.btnMainDeck.setOnClickListener {
+            isSideboardMode = false
+            updateStatsUI()
+            notifyFragmentsModeChanged()
+        }
+
+        binding.btnSideboard.setOnClickListener {
+            isSideboardMode = true
+            updateStatsUI()
+            notifyFragmentsModeChanged()
+        }
+    }
+
+    private fun notifyFragmentsModeChanged() {
+        // 通知所有 Fragment 更新显示
+        val adapter = binding.viewPager.adapter as? DeckAnalysisPagerAdapter
+        adapter?.fragmentMap?.values?.forEach { fragment ->
+            when (fragment) {
+                is ManaCurveFragment -> fragment.setSideboardMode(isSideboardMode)
+                is ColorDistributionFragment -> fragment.setSideboardMode(isSideboardMode)
+                is TypeDistributionFragment -> fragment.setSideboardMode(isSideboardMode)
             }
         }
     }
@@ -97,9 +134,24 @@ class DeckAnalysisActivity : AppCompatActivity() {
         binding.tvDeckName.text = analysis.decklistName
 
         // 更新统计摘要
-        binding.tvMainDeckCount.text = analysis.statistics.mainDeckCount.toString()
-        binding.tvSideboardCount.text = analysis.statistics.sideboardCount.toString()
-        binding.tvAverageMana.text = String.format("%.2f", analysis.statistics.averageManaValue)
+        updateStatsUI()
+    }
+
+    private fun updateStatsUI() {
+        if (!::currentAnalysis.isInitialized) return
+
+        val stats = currentAnalysis.statistics
+        if (isSideboardMode) {
+            // 显示备牌数据
+            binding.tvTotalCount.text = stats.sideboardCount.toString()
+            binding.tvLandCount.text = stats.sideboardLandCount.toString()
+            binding.tvAverageMana.text = String.format("%.2f", stats.sideboardAverageManaValue)
+        } else {
+            // 显示主牌数据
+            binding.tvTotalCount.text = stats.mainDeckCount.toString()
+            binding.tvLandCount.text = stats.landCount.toString()
+            binding.tvAverageMana.text = String.format("%.2f", stats.averageManaValue)
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

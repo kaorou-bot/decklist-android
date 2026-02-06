@@ -136,9 +136,9 @@ class DeckAnalyzer @Inject constructor(
     }
 
     /**
-     * 计算颜色分布
+     * 计算颜色分布（排除地牌）
      */
-    private fun calculateColorDistribution(
+    private suspend fun calculateColorDistribution(
         mainDeck: List<CardEntity>,
         sideboard: List<CardEntity>
     ): ColorDistribution {
@@ -147,8 +147,12 @@ class DeckAnalyzer @Inject constructor(
         val mainColorsByCard = mutableMapOf<ManaColor, Int>()
         val sideboardColorsByCard = mutableMapOf<ManaColor, Int>()
 
-        // 统计主牌颜色
+        // 统计主牌颜色（排除地牌）
         mainDeck.forEach { card ->
+            // 获取卡牌类型，跳过地牌
+            val typeLine = getCardTypeLine(card)
+            if (isLand(typeLine)) return@forEach
+
             val quantity = card.quantity
             val colors = parseColors(card.color)
 
@@ -168,8 +172,12 @@ class DeckAnalyzer @Inject constructor(
             }
         }
 
-        // 统计备牌颜色
+        // 统计备牌颜色（排除地牌）
         sideboard.forEach { card ->
+            // 获取卡牌类型，跳过地牌
+            val typeLine = getCardTypeLine(card)
+            if (isLand(typeLine)) return@forEach
+
             val quantity = card.quantity
             val colors = parseColors(card.color)
 
@@ -186,8 +194,9 @@ class DeckAnalyzer @Inject constructor(
             }
         }
 
-        val mainTotal = mainDeck.sumOf { it.quantity }
-        val sideboardTotal = sideboard.sumOf { it.quantity }
+        // 计算非地牌总数
+        val mainTotal = mainColors.values.sum()
+        val sideboardTotal = sideboardColors.values.sum()
 
         return ColorDistribution(
             colors = mainColors,
@@ -273,16 +282,30 @@ class DeckAnalyzer @Inject constructor(
     /**
      * 计算统计摘要
      */
-    private fun calculateStatistics(
+    private suspend fun calculateStatistics(
         mainDeck: List<CardEntity>,
         sideboard: List<CardEntity>
     ): DeckStatistics {
         val mainCount = mainDeck.sumOf { it.quantity }
         val sideboardCount = sideboard.sumOf { it.quantity }
 
-        // 正确计算地牌和非地牌数量
-        val mainLands = mainDeck.filter { isLand(it.cardType) }.sumOf { it.quantity }
-        val sideboardLands = sideboard.filter { isLand(it.cardType) }.sumOf { it.quantity }
+        AppLogger.d("DeckAnalyzer", "Calculating statistics: mainDeck=$mainCount, sideboard=$sideboardCount")
+
+        // 正确计算地牌和非地牌数量（从 CardInfo 表获取类型）
+        val mainLands = mainDeck.sumOf { card ->
+            val typeLine = getCardTypeLine(card)
+            val isLand = isLand(typeLine)
+            if (isLand && card.quantity > 0) {
+                AppLogger.d("DeckAnalyzer", "  Land found: ${card.cardName} (qty: ${card.quantity}, type: $typeLine)")
+            }
+            if (isLand) card.quantity else 0
+        }
+        val sideboardLands = sideboard.sumOf { card ->
+            val typeLine = getCardTypeLine(card)
+            if (isLand(typeLine)) card.quantity else 0
+        }
+
+        AppLogger.d("DeckAnalyzer", "Land count: main=$mainLands, sideboard=$sideboardLands")
 
         val mainNonLands = mainCount - mainLands
         val sideboardNonLands = sideboardCount - sideboardLands
@@ -292,7 +315,8 @@ class DeckAnalyzer @Inject constructor(
         var sideboardTotalCMC = 0.0
 
         mainDeck.forEach { card ->
-            if (!isLand(card.cardType)) {
+            val typeLine = getCardTypeLine(card)
+            if (!isLand(typeLine)) {
                 val cmc = parseCMC(card.manaCost)
                 if (cmc != null && cmc > 0) {
                     mainTotalCMC += cmc * card.quantity
@@ -301,7 +325,8 @@ class DeckAnalyzer @Inject constructor(
         }
 
         sideboard.forEach { card ->
-            if (!isLand(card.cardType)) {
+            val typeLine = getCardTypeLine(card)
+            if (!isLand(typeLine)) {
                 val cmc = parseCMC(card.manaCost)
                 if (cmc != null && cmc > 0) {
                     sideboardTotalCMC += cmc * card.quantity
@@ -410,10 +435,32 @@ class DeckAnalyzer @Inject constructor(
     }
 
     /**
+     * 获取卡牌的类型行（如果 CardEntity 的 cardType 为空，从 CardInfo 表获取）
+     */
+    private suspend fun getCardTypeLine(card: CardEntity): String? {
+        if (!card.cardType.isNullOrBlank()) {
+            return card.cardType
+        }
+
+        // 从 CardInfo 表获取类型
+        try {
+            val cardInfo = cardInfoDao.getCardInfoByNameOrEnName(card.cardName)
+            if (cardInfo != null && !cardInfo.typeLine.isNullOrBlank()) {
+                return cardInfo.typeLine
+            }
+        } catch (e: Exception) {
+            AppLogger.w("DeckAnalyzer", "Failed to get card info for ${card.cardName}: ${e.message}")
+        }
+
+        return null
+    }
+
+    /**
      * 判断是否为地牌
      */
     private fun isLand(cardType: String?): Boolean {
         if (cardType.isNullOrBlank()) return false
-        return cardType.contains("Land", ignoreCase = true)
+        return cardType.contains("Land", ignoreCase = true) ||
+               cardType.contains("地", ignoreCase = true)
     }
 }

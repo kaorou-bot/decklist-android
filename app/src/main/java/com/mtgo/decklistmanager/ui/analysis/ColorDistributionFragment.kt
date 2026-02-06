@@ -37,6 +37,12 @@ class ColorDistributionFragment : Fragment() {
 
     private var currentAnalysis: DeckAnalysis? = null
     private var isByQuantity = true // true: 按数量, false: 按牌名
+    private var isSideboardMode = false // true: 备牌模式, false: 主牌模式
+
+    fun setSideboardMode(isSideboard: Boolean) {
+        isSideboardMode = isSideboard
+        currentAnalysis?.let { setupChart(it) }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -75,13 +81,18 @@ class ColorDistributionFragment : Fragment() {
         val chart = binding.pieChart
 
         // 准备数据 - 根据当前模式选择数据源
-        val colors = if (isByQuantity) analysis.colorDistribution.colors else analysis.colorDistribution.colorsByCard
+        val (colors, colorsByCard) = if (isSideboardMode) {
+            analysis.colorDistribution.sideboardColors to analysis.colorDistribution.sideboardColorsByCard
+        } else {
+            analysis.colorDistribution.colors to analysis.colorDistribution.colorsByCard
+        }
+
+        val selectedColors = if (isByQuantity) colors else colorsByCard
         val entries = ArrayList<PieEntry>()
         val colorValues = ArrayList<Int>()
-        val labels = ArrayList<String>()
 
         ManaColor.entries.forEach { manaColor ->
-            val count = colors[manaColor] ?: 0
+            val count = selectedColors[manaColor] ?: 0
             if (count > 0) {
                 // 使用标签作为 data，以便在格式化器中获取
                 val label = "${manaColor.displayName} ${count}"

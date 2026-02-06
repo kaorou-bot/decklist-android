@@ -81,7 +81,7 @@
     <string name="sideboard_count">备牌数</string>
     <string name="average_mana_value">非地平均法术力</string>
     <string name="tab_mana_curve">法术力曲线</string>
-    <string name="tab_color_distribution">颜色分布</string>
+    <string name="tab_color_distribution">非地牌颜色分布</string>
     <string name="tab_type_distribution">类型分布</string>
 
     <!-- 分析显示模式 -->
