@@ -212,7 +212,12 @@ class DeckAnalyzer @Inject constructor(
         // 统计主牌类型
         mainDeck.forEach { card ->
             val quantity = card.quantity
-            val type = CardType.fromTypeLine(card.cardType)
+            var type = CardType.fromTypeLine(card.cardType)
+
+            // 如果类型为 null 或 OTHER，尝试根据卡牌名称推断
+            if (card.cardType.isNullOrBlank() || type == com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
+                type = CardType.inferFromCardName(card.cardName)
+            }
 
             // 按数量统计
             mainTypes[type] = mainTypes.getOrDefault(type, 0) + quantity
@@ -223,7 +228,12 @@ class DeckAnalyzer @Inject constructor(
         // 统计备牌类型
         sideboard.forEach { card ->
             val quantity = card.quantity
-            val type = CardType.fromTypeLine(card.cardType)
+            var type = CardType.fromTypeLine(card.cardType)
+
+            // 如果类型为 null 或 OTHER，尝试根据卡牌名称推断
+            if (card.cardType.isNullOrBlank() || type == com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
+                type = CardType.inferFromCardName(card.cardName)
+            }
 
             // 按数量统计
             sideboardTypes[type] = sideboardTypes.getOrDefault(type, 0) + quantity

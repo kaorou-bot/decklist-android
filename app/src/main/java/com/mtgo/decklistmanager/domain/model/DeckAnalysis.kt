@@ -190,8 +190,14 @@ enum class CardType(val displayName: String) {
             val hasCreature = typeLine.contains("Creature", ignoreCase = true) || typeLine.contains("生物")
             val hasLand = typeLine.contains("Land", ignoreCase = true) || typeLine.contains("地")
             val hasEnchantment = typeLine.contains("Enchantment", ignoreCase = true) || typeLine.contains("结界")
-            val hasInstant = typeLine.contains("Instant", ignoreCase = true) || typeLine.contains("瞬间")
-            val hasKindred = typeLine.contains("Kindred", ignoreCase = true) || typeLine.contains("亲缘") || typeLine.contains("部族")
+            // Instant 包括老版本的 Interrupt
+            val hasInstant = typeLine.contains("Instant", ignoreCase = true) ||
+                           typeLine.contains("Interrupt", ignoreCase = true) ||
+                           typeLine.contains("瞬间")
+            val hasKindred = typeLine.contains("Kindred", ignoreCase = true) ||
+                            typeLine.contains("亲缘") ||
+                            typeLine.contains("部族") ||
+                            typeLine.contains("Tribal", ignoreCase = true)
             val hasBattle = typeLine.contains("Battle", ignoreCase = true) || typeLine.contains("战役")
 
             // 组合类型判断（按优先级）
@@ -207,14 +213,63 @@ enum class CardType(val displayName: String) {
             // 单一类型判断
             return when {
                 hasCreature -> CREATURE
-                hasInstant || typeLine.contains("Interrupt", ignoreCase = true) -> INSTANT
-                typeLine.contains("Sorcery", ignoreCase = true) || typeLine.contains("法术") || typeLine.contains("巫术") -> SORCERY
+                hasInstant -> INSTANT  // 已包含 Interrupt
+                // Sorcery 包括老版本的
+                typeLine.contains("Sorcery", ignoreCase = true) ||
+                typeLine.contains("法术") ||
+                typeLine.contains("巫术") -> SORCERY
                 hasEnchantment -> ENCHANTMENT
                 hasArtifact -> ARTIFACT
-                typeLine.contains("Planeswalker", ignoreCase = true) || typeLine.contains("鹏洛客") -> PLANESWALKER
+                typeLine.contains("Planeswalker", ignoreCase = true) ||
+                typeLine.contains("鹏洛客") -> PLANESWALKER
                 hasLand -> LAND
                 hasKindred -> KINDRED
                 hasBattle -> BATTLE
+                else -> OTHER
+            }
+        }
+
+        /**
+         * 当类型信息为 null 时，根据卡牌名称推断类型
+         * 这主要用于处理基本地等常见卡牌
+         */
+        fun inferFromCardName(cardName: String): CardType {
+            val name = cardName.lowercase()
+
+            // 基本地和常见地牌
+            val basicLands = setOf(
+                "plains", "森", "岛", "swamp", "mountain", "forest",
+                "snow-covered plains", "积雪的平原", "snow-covered island", "积雪山岛",
+                "snow-covered swamp", "积雪的沼泽", "snow-covered mountain", "积雪的山脉",
+                "snow-covered forest", "积雪的森林"
+            )
+
+            // 检索地（fetch lands）
+            val fetchLands = setOf(
+                "flooded strand", "浸水群岛", "polluted delta", "污染三角洲",
+                "bloodstained mire", "血斑泥沼", "wooded foothills", "树林 foothills",
+                "windswept heath", "风蚀荒原", "arid mesa", "干旱台地",
+                "misty rainforest", "雾雨林", "scalding tarn", "沸泉",
+                "verdant catacombs", "翠绿墓园", "marsh flats", "沼泽平地",
+                "catacombs", "twilight mire", "暮光泥沼", "graven coves", "墓穴湾"
+            )
+
+            // 对地
+            val dualLands = setOf(
+                "underground sea", "地下海", "tropical island", "热带岛",
+                "taiga", "泰加", "savannah", "热带草原", "badlands", "荒原",
+                "volcanic island", "火山岛", "bayou", "长沼泽",
+                "scrubland", "灌丛", "plateau", "高原"
+            )
+
+            // 其他特殊地
+            val otherLands = setOf(
+                "lorien revealed", "洛汗揭示"
+            )
+
+            return when {
+                name in basicLands || name in fetchLands || name in dualLands || name in otherLands -> LAND
+                // 可以根据需要添加更多规则
                 else -> OTHER
             }
         }
