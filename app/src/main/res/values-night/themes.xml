@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Dark Theme - Inherits from Base with night-specific overrides -->
+    <style name="Theme.MTGODecklistManager" parent="Base.Theme.MTGODecklistManager">
+        <!-- Dark mode specific overrides -->
+        <item name="android:statusBarColor">@color/md_surface</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+    </style>
+</resources>

@@ -433,21 +433,22 @@ class MainViewModel @Inject constructor(
 
     /**
      * 切换收藏状态
+     * v4.2.1: 改为suspend函数以便调用者获取返回值
      */
-    fun toggleFavorite(decklistId: Long) {
-        viewModelScope.launch {
-            try {
-                val isFavorite = repository.toggleFavorite(decklistId)
-                loadFavoriteCount()
+    suspend fun toggleFavorite(decklistId: Long): Boolean {
+        return try {
+            val isFavorite = repository.toggleFavorite(decklistId)
+            loadFavoriteCount()
 
-                _statusMessage.value = if (isFavorite) {
-                    "Added to favorites"
-                } else {
-                    "Removed from favorites"
-                }
-            } catch (e: Exception) {
-                _statusMessage.value = "Failed to toggle favorite: ${e.message}"
+            _statusMessage.value = if (isFavorite) {
+                "Added to favorites"
+            } else {
+                "Removed from favorites"
             }
+            isFavorite
+        } catch (e: Exception) {
+            _statusMessage.value = "Failed to toggle favorite: ${e.message}"
+            false
         }
     }
 

@@ -11,6 +11,7 @@ import com.mtgo.decklistmanager.domain.model.Decklist
 
 /**
  * Decklist Adapter - 牌组列表适配器
+ * v4.2.1: 支持左滑收藏功能
  */
 class DecklistAdapter(
     private val onItemClick: (Decklist) -> Unit
@@ -27,6 +28,13 @@ class DecklistAdapter(
 
     override fun onBindViewHolder(holder: DecklistViewHolder, position: Int) {
         holder.bind(getItem(position))
+    }
+
+    /**
+     * 获取指定位置的套牌（用于滑动操作）
+     */
+    fun getItemAtPosition(position: Int): Decklist {
+        return getItem(position)
     }
 
     class DecklistViewHolder(

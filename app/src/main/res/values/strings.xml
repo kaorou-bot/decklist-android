@@ -87,4 +87,33 @@
     <!-- 分析显示模式 -->
     <string name="mode_by_quantity">按数量</string>
     <string name="mode_by_card_name">按牌名</string>
+
+    <!-- Settings -->
+    <string name="settings">设置</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_about">关于</string>
+    <string name="theme_mode">主题模式</string>
+    <string name="theme_mode_summary">选择应用主题</string>
+    <string name="app_version">版本</string>
+    <string name="open_source_licenses">开源许可</string>
+    <string name="open_source_licenses_summary">查看使用的开源库许可信息</string>
+    <string name="back">返回</string>
+
+    <!-- Theme Modes -->
+    <string name="theme_system">跟随系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+
+    <!-- Arrays for preferences -->
+    <string-array name="theme_mode_entries">
+        <item>@string/theme_system</item>
+        <item>@string/theme_light</item>
+        <item>@string/theme_dark</item>
+    </string-array>
+
+    <string-array name="theme_mode_values">
+        <item>system</item>
+        <item>light</item>
+        <item>dark</item>
+    </string-array>
 </resources>

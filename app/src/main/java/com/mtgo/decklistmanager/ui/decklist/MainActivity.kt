@@ -236,8 +236,35 @@ class MainActivity : BaseActivity() {
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                // 只在赛事列表标签页允许删除
-                if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
+                // 在收藏列表标签页 - 左滑收藏，右滑无操作
+                if (currentTab == TAB_FAVORITES && rvDecklists.adapter == decklistAdapter) {
+                    if (direction == ItemTouchHelper.LEFT) {
+                        val position = viewHolder.adapterPosition
+                        if (position != RecyclerView.NO_POSITION) {
+                            val decklist = decklistAdapter.getItemAtPosition(position)
+
+                            // 立即恢复视图
+                            viewHolder.itemView.alpha = 1f
+                            viewHolder.itemView.translationX = 0f
+
+                            // 切换收藏状态
+                            lifecycleScope.launch {
+                                val newState = viewModel.toggleFavorite(decklist.id)
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    if (newState) "Added to favorites" else "Removed from favorites",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } else {
+                        // 右滑时恢复视图
+                        viewHolder.itemView.alpha = 1f
+                        viewHolder.itemView.translationX = 0f
+                    }
+                }
+                // 在赛事列表标签页允许删除
+                else if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
                     val position = viewHolder.adapterPosition
                     if (position != RecyclerView.NO_POSITION) {
                         // v4.0.0: 使用 eventSectionAdapter 获取 item
@@ -287,8 +314,36 @@ class MainActivity : BaseActivity() {
                 actionState: Int,
                 isCurrentlyActive: Boolean
             ) {
-                // 只在赛事列表标签页绘制删除背景
-                if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
+                val itemView = viewHolder.itemView
+
+                // 在收藏列表标签页 - 绘制收藏背景
+                if (currentTab == TAB_FAVORITES && rvDecklists.adapter == decklistAdapter) {
+                    val paint = Paint()
+                    val textPaint = Paint()
+                    textPaint.color = Color.WHITE
+                    textPaint.textSize = 48f
+
+                    if (dX < 0) {
+                        // 向左滑动 - 显示收藏图标背景
+                        paint.color = Color.parseColor("#FFB74D") // 橙色
+                        c.drawRect(
+                            RectF(
+                                itemView.right.toFloat() + dX,
+                                itemView.top.toFloat(),
+                                itemView.right.toFloat(),
+                                itemView.bottom.toFloat()
+                            ), paint
+                        )
+                        // 绘制"取消收藏"文字
+                        val text = "取消收藏"
+                        val textWidth = textPaint.measureText(text)
+                        val textX = itemView.right + dX / 2 - textWidth / 2
+                        val textY = itemView.top + (itemView.bottom - itemView.top) / 2 + 48f / 3
+                        c.drawText(text, textX, textY, textPaint)
+                    }
+                }
+                // 在赛事列表标签页绘制删除背景
+                else if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
                     val itemView = viewHolder.itemView
                     val paint = Paint()
                     val textPaint = Paint()
@@ -645,6 +700,12 @@ class MainActivity : BaseActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+                true
+            }
+            R.id.menu_settings -> {
+                // 打开设置
+                val intent = Intent(this, com.mtgo.decklistmanager.ui.settings.SettingsActivity::class.java)
+                startActivity(intent)
                 true
             }
             R.id.menu_view_logs -> {

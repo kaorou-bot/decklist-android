@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Appearance Settings -->
+    <PreferenceCategory android:title="@string/settings_appearance">
+
+        <ListPreference
+            android:key="theme_mode"
+            android:title="@string/theme_mode"
+            android:entries="@array/theme_mode_entries"
+            android:entryValues="@array/theme_mode_values"
+            android:defaultValue="system"
+            android:summary="@string/theme_mode_summary"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <!-- About Settings -->
+    <PreferenceCategory android:title="@string/settings_about">
+
+        <Preference
+            android:key="version"
+            android:title="@string/app_version"
+            android:summary="4.2.0"
+            android:selectable="false" />
+
+        <Preference
+            android:key="license"
+            android:title="@string/open_source_licenses"
+            android:summary="@string/open_source_licenses_summary" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

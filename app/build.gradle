@@ -136,6 +136,9 @@ dependencies {
     // DataStore for preferences
     implementation "androidx.datastore:datastore-preferences:1.0.0"
 
+    // Preference library for settings
+    implementation "androidx.preference:preference-ktx:1.2.1"
+
     // WorkManager for background tasks
     implementation "androidx.work:work-runtime-ktx:$work_version"
 
