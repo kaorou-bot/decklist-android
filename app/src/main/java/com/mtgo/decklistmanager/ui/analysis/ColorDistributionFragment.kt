@@ -18,11 +18,22 @@ import com.mtgo.decklistmanager.domain.model.DeckAnalysis
 import com.mtgo.decklistmanager.domain.model.ManaColor
 
 /**
- * 自定义值格式化器 - 显示计数而非百分比
+ * 自定义值格式化器 - 显示"颜色名称 数量"
  */
-class CountFormatter : com.github.mikephil.charting.formatter.ValueFormatter() {
+class ColorLabelFormatter : com.github.mikephil.charting.formatter.ValueFormatter() {
+    private var labels = listOf<String>()
+
+    fun setLabels(labels: List<String>) {
+        this.labels = labels
+    }
+
     override fun getFormattedValue(value: Float): String {
-        return value.toInt().toString()
+        val index = value.toInt()
+        return if (index < labels.size) {
+            "${labels[index]} ${value.toInt()}"
+        } else {
+            value.toInt().toString()
+        }
     }
 }
 
@@ -77,33 +88,38 @@ class ColorDistributionFragment : Fragment() {
         val colors = if (isByQuantity) analysis.colorDistribution.colors else analysis.colorDistribution.colorsByCard
         val entries = ArrayList<PieEntry>()
         val colorValues = ArrayList<Int>()
+        val labels = ArrayList<String>()
 
         ManaColor.entries.forEach { manaColor ->
             val count = colors[manaColor] ?: 0
             if (count > 0) {
-                entries.add(PieEntry(count.toFloat(), manaColor.displayName))
+                entries.add(PieEntry(count.toFloat(), labels.size.toFloat()))
                 colorValues.add(getColor(manaColor))
+                labels.add(manaColor.displayName)
             }
         }
 
         val dataSet = PieDataSet(entries, "颜色分布")
         dataSet.colors = colorValues
         dataSet.valueTextSize = 14f
-        dataSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.text_primary)
         dataSet.sliceSpace = 3f
+        dataSet.valueTextColor = android.graphics.Color.BLACK  // 默认黑色文字
 
-        // 使用自定义格式化器，显示计数而非百分比
-        dataSet.valueFormatter = CountFormatter()
+        // 使用自定义格式化器，显示"颜色名称 数量"
+        val formatter = ColorLabelFormatter()
+        formatter.setLabels(labels)
+        dataSet.valueFormatter = formatter
 
         val pieData = PieData(dataSet)
         chart.data = pieData
 
         // 设置格式化器
         chart.setUsePercentValues(false)  // 不使用百分比
-        chart.setDrawEntryLabels(false)
+        chart.setDrawEntryLabels(true)   // 显示标签
         chart.description.isEnabled = false
         chart.centerText = "颜色分布"
         chart.setCenterTextSize(18f)
+        chart.legend.isEnabled = false  // 禁用图例
 
         chart.animateY(1000)
         chart.invalidate()
@@ -118,6 +134,14 @@ class ColorDistributionFragment : Fragment() {
             ManaColor.GREEN -> android.graphics.Color.parseColor("#00733E")
             ManaColor.COLORLESS -> android.graphics.Color.parseColor("#9E9E9E")
             ManaColor.MULTICOLOR -> android.graphics.Color.parseColor("#FFD700")  // 金色
+        }
+    }
+
+    private fun getValueTextColor(manaColor: ManaColor): Int {
+        // 黑色和深蓝色使用白色文字，其他使用黑色文字
+        return when (manaColor) {
+            ManaColor.BLACK, ManaColor.BLUE -> android.graphics.Color.WHITE
+            else -> android.graphics.Color.BLACK
         }
     }
 

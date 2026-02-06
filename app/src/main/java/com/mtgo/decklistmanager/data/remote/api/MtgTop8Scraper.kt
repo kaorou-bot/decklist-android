@@ -543,31 +543,20 @@ class MtgTop8Scraper {
 
             AppLogger.d(TAG, "Event info: name=${eventInfo.eventName}, date=${eventInfo.eventDate}, format=${eventInfo.format}")
 
-            // 第一步：从赛事页面提取第一个卡组的 d 参数
-            val firstDeckId = extractFirstDeckId(eventUrl)
-            if (firstDeckId == null) {
-                AppLogger.w(TAG, "Failed to extract first deck ID from event page")
+            // 第一步：从赛事页面提取所有卡组的 d 参数
+            val deckIdsInEvent = extractDeckIdsFromEvent(eventUrl)
+            if (deckIdsInEvent.isEmpty()) {
+                AppLogger.w(TAG, "Failed to extract deck IDs from event page")
                 return@withContext null
             }
 
-            AppLogger.d(TAG, "First deck ID: $firstDeckId")
+            AppLogger.d(TAG, "Found ${deckIdsInEvent.size} deck IDs in event page: $deckIdsInEvent")
 
-            // 第二步：统计实际卡组数量，并发枚举
-            val actualDeckCount = countDecklistsInEvent(eventUrl)
-            val decksToCheck = if (actualDeckCount > 0) {
-                actualDeckCount
-            } else {
-                50 // 如果无法统计，使用默认值
-            }
+            // 第二步：并发检查所有提取到的 deck ID
+            AppLogger.d(TAG, "Concurrent checking ${deckIdsInEvent.size} deck IDs")
 
-            AppLogger.d(TAG, "Will check $decksToCheck deck IDs")
-
-            val checkRange = firstDeckId..(firstDeckId + decksToCheck - 1)
-
-            AppLogger.d(TAG, "Concurrent checking deck IDs from $firstDeckId to ${firstDeckId + decksToCheck - 1}")
-
-            // 并发检查所有可能的ID
-            val results = checkRange.map { deckId ->
+            // 并发检查所有提取到的 deck ID
+            val results = deckIdsInEvent.map { deckId ->
                 async {
                     try {
                         val deckUrl = buildDeckUrl(eventUrl, deckId)
@@ -580,33 +569,21 @@ class MtgTop8Scraper {
                             // 从页面提取玩家名称、卡组名称、排名和日期
                             val playerInfo = extractPlayerAndDeckName(deckUrl)
 
-                            // 验证套牌是否属于目标赛事
-                            // 检查赛事 URL 是否匹配
-                            val deckEventUrl = extractEventUrlFromDeckPage(deckUrl)
-                            val belongsToEvent = deckEventUrl != null && deckEventUrl == eventUrl
+                            // 接受所有能获取到数据的套牌
+                            // 注意：我们是从目标赛事页面枚举 deck ID 的，
+                            // 所以理论上这些套牌都属于该赛事
+                            AppLogger.d(TAG, "Found deck #$deckId: ${playerInfo.playerName} - ${playerInfo.deckName}")
 
-                            if (!belongsToEvent) {
-                                AppLogger.w(TAG, "Deck #$deckId belongs to different event!")
-                                AppLogger.w(TAG, "  Target event URL: $eventUrl")
-                                AppLogger.w(TAG, "  Deck event URL: $deckEventUrl")
-                                AppLogger.w(TAG, "  Target event name: '${eventInfo.eventName}'")
-                                AppLogger.w(TAG, "  Deck event name: '${playerInfo.eventName}'")
-                                AppLogger.w(TAG, "  Deck: ${playerInfo.playerName} - ${playerInfo.deckName}")
-                                null  // 跳过不属于此赛事的套牌
-                            } else {
-                                AppLogger.d(TAG, "Found deck #$deckId: ${playerInfo.playerName} - ${playerInfo.deckName}")
-
-                                Pair(deckId, MtgTop8DecklistDto(
-                                    deckId = "${eventId}_d$deckId",
-                                    deckName = playerInfo.deckName,
-                                    playerName = playerInfo.playerName,
-                                    eventName = eventInfo.eventName,
-                                    eventDate = playerInfo.date.ifEmpty { eventInfo.eventDate },
-                                    record = playerInfo.record,
-                                    format = eventInfo.format,
-                                    url = deckUrl
-                                ))
-                            }
+                            Pair(deckId, MtgTop8DecklistDto(
+                                deckId = "${eventId}_d$deckId",
+                                deckName = playerInfo.deckName,
+                                playerName = playerInfo.playerName,
+                                eventName = eventInfo.eventName,
+                                eventDate = playerInfo.date.ifEmpty { eventInfo.eventDate },
+                                record = playerInfo.record,
+                                format = eventInfo.format,
+                                url = deckUrl
+                            ))
                         } else {
                             null
                         }
@@ -1042,10 +1019,10 @@ class MtgTop8Scraper {
     }
 
     /**
-     * 从赛事页面统计实际有多少个卡组
-     * 通过统计页面中所有有效的d参数来获取
+     * 从赛事页面提取所有卡组的 deck ID
+     * 通过解析页面中所有包含d参数的链接来获取
      */
-    private suspend fun countDecklistsInEvent(eventUrl: String): Int = withContext(Dispatchers.IO) {
+    private suspend fun extractDeckIdsFromEvent(eventUrl: String): List<Int> = withContext(Dispatchers.IO) {
         try {
             val doc = Jsoup.connect(eventUrl)
                 .userAgent(Network.USER_AGENT)
@@ -1069,11 +1046,11 @@ class MtgTop8Scraper {
                 }
             }
 
-            AppLogger.d(TAG, "Found ${deckIds.size} decklists in event page")
-            deckIds.size
+            AppLogger.d(TAG, "Found ${deckIds.size} unique deck IDs in event page: ${deckIds.sorted()}")
+            deckIds.sorted()
         } catch (e: Exception) {
-            AppLogger.e(TAG, "Error counting decklists: ${e.message}")
-            0
+            AppLogger.e(TAG, "Error extracting deck IDs: ${e.message}")
+            emptyList()
         }
     }
 
@@ -1275,6 +1252,8 @@ class MtgTop8Scraper {
 
     /**
      * 从套牌页面提取赛事 URL
+     *
+     * 优先从页面 HTML 内容中提取真正的赛事链接，而不是从 URL 参数构造
      */
     private suspend fun extractEventUrlFromDeckPage(deckUrl: String): String? = withContext(Dispatchers.IO) {
         try {
@@ -1283,8 +1262,25 @@ class MtgTop8Scraper {
                 .timeout(Network.TIMEOUT_MS)
                 .get()
 
-            // 策略1: 从 deck URL 本身提取赛事 ID
+            // 策略1: 从 div.event_title 中查找赛事链接（最可靠）
+            // 这是真正从页面 HTML 中提取的链接，反映套牌实际所属的赛事
+            val titleElements = doc.select("div.event_title a")
+            if (titleElements.isNotEmpty()) {
+                var href = titleElements[0].attr("href")
+                if (href.isNotEmpty()) {
+                    // 确保是完整URL
+                    if (!href.startsWith("http")) {
+                        href = "https://mtgtop8.com/$href"
+                    }
+                    AppLogger.d(TAG, "Extracted event URL from link: $href")
+                    return@withContext href
+                }
+            }
+
+            // 策略2: 如果页面中没有链接，从 deck URL 本身提取赛事 ID
             // URL 格式: https://mtgtop8.com/?e=EVENT_ID&d=DECK_ID&f=FORMAT
+            // 注意：这个方法不可靠，因为 URL 参数可能不准确
+            AppLogger.w(TAG, "No event link found in deck page, falling back to URL extraction")
             val eventPattern = Regex("[?&]e=(\\d+)")
             val eventMatch = eventPattern.find(deckUrl)
             if (eventMatch != null) {
@@ -1301,22 +1297,8 @@ class MtgTop8Scraper {
 
                 // 构造标准赛事 URL
                 val eventUrl = "https://mtgtop8.com/event?e=$eventId$format"
-                AppLogger.d(TAG, "Extracted event URL from deck URL: $eventUrl")
+                AppLogger.d(TAG, "Extracted event URL from deck URL (fallback): $eventUrl")
                 return@withContext eventUrl
-            }
-
-            // 策略2: 从 div.event_title 中查找赛事链接
-            val titleElements = doc.select("div.event_title a")
-            if (titleElements.isNotEmpty()) {
-                var href = titleElements[0].attr("href")
-                if (href.isNotEmpty()) {
-                    // 确保是完整URL
-                    if (!href.startsWith("http")) {
-                        href = "https://mtgtop8.com/$href"
-                    }
-                    AppLogger.d(TAG, "Extracted event URL from link: $href")
-                    return@withContext href
-                }
             }
 
             AppLogger.w(TAG, "Could not extract event URL from deck page")

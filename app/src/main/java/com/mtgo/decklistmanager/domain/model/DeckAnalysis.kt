@@ -160,49 +160,61 @@ enum class ManaColor(val displayName: String, val colorCode: String) {
  */
 enum class CardType(val displayName: String) {
     CREATURE("生物"),
-    INSTANT("法术"),
-    SORCERY("巫术"),
+    INSTANT("瞬间"),
+    SORCERY("法术"),
     ENCHANTMENT("结界"),
     ARTIFACT("神器"),
     PLANESWALKER("鹏洛客"),
     LAND("地"),
+    KINDRED("亲缘"),
+    BATTLE("战役"),
+    // 组合类型（当卡牌有多种类型时使用）
+    ARTIFACT_CREATURE("神器生物"),
+    ARTIFACT_LAND("神器地"),
+    LAND_CREATURE("地生物"),
+    LAND_ENCHANTMENT("地结界"),
+    ENCHANTMENT_CREATURE("结界生物"),
+    KINDRED_INSTANT("亲缘瞬间"),
     OTHER("其他");
 
     companion object {
+        /**
+         * 从类型行解析卡牌类型
+         * 支持组合类型（如"Artifact Land"应计为ARTIFACT_LAND）
+         */
         fun fromTypeLine(typeLine: String?): CardType {
             if (typeLine.isNullOrBlank()) return OTHER
 
+            // 检查组合类型
+            val hasArtifact = typeLine.contains("Artifact", ignoreCase = true) || typeLine.contains("神器")
+            val hasCreature = typeLine.contains("Creature", ignoreCase = true) || typeLine.contains("生物")
+            val hasLand = typeLine.contains("Land", ignoreCase = true) || typeLine.contains("地")
+            val hasEnchantment = typeLine.contains("Enchantment", ignoreCase = true) || typeLine.contains("结界")
+            val hasInstant = typeLine.contains("Instant", ignoreCase = true) || typeLine.contains("瞬间")
+            val hasKindred = typeLine.contains("Kindred", ignoreCase = true) || typeLine.contains("亲缘") || typeLine.contains("部族")
+            val hasBattle = typeLine.contains("Battle", ignoreCase = true) || typeLine.contains("战役")
+
+            // 组合类型判断（按优先级）
+            when {
+                hasArtifact && hasLand -> return ARTIFACT_LAND
+                hasLand && hasCreature -> return LAND_CREATURE
+                hasLand && hasEnchantment -> return LAND_ENCHANTMENT
+                hasEnchantment && hasCreature -> return ENCHANTMENT_CREATURE
+                hasArtifact && hasCreature -> return ARTIFACT_CREATURE
+                hasKindred && hasInstant -> return KINDRED_INSTANT
+            }
+
+            // 单一类型判断
             return when {
-                // 英文类型
-                typeLine.contains("Creature", ignoreCase = true) ||
-                // 中文类型
-                typeLine.contains("生物", ignoreCase = true) ||
-                typeLine.contains("生物") -> CREATURE
-
-                typeLine.contains("Instant", ignoreCase = true) ||
-                typeLine.contains("瞬间", ignoreCase = true) ||
-                typeLine.contains("瞬间") -> INSTANT
-
-                typeLine.contains("Sorcery", ignoreCase = true) ||
-                typeLine.contains("巫术", ignoreCase = true) ||
-                typeLine.contains("巫术") -> SORCERY
-
-                typeLine.contains("Enchantment", ignoreCase = true) ||
-                typeLine.contains("结界", ignoreCase = true) ||
-                typeLine.contains("结界") -> ENCHANTMENT
-
-                typeLine.contains("Artifact", ignoreCase = true) ||
-                typeLine.contains("神器", ignoreCase = true) ||
-                typeLine.contains("神器") -> ARTIFACT
-
-                typeLine.contains("Planeswalker", ignoreCase = true) ||
-                typeLine.contains("鹏洛客", ignoreCase = true) ||
-                typeLine.contains("鹏洛客") -> PLANESWALKER
-
-                typeLine.contains("Land", ignoreCase = true) ||
-                typeLine.contains("地", ignoreCase = true) ||
-                typeLine.contains("地陆") -> LAND
-
+                hasCreature -> CREATURE
+                hasInstant -> INSTANT
+                typeLine.contains("Sorcery", ignoreCase = true) || typeLine.contains("法术") || typeLine.contains("巫术") -> SORCERY
+                hasEnchantment -> ENCHANTMENT
+                hasArtifact -> ARTIFACT
+                typeLine.contains("Planeswalker", ignoreCase = true) || typeLine.contains("鹏洛客") -> PLANESWALKER
+                hasLand -> LAND
+                hasKindred -> KINDRED
+                hasBattle -> BATTLE
                 else -> OTHER
             }
         }
