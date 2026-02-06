@@ -216,7 +216,13 @@ class DeckAnalyzer @Inject constructor(
 
             // 如果类型为 null 或 OTHER，尝试根据卡牌名称推断
             if (card.cardType.isNullOrBlank() || type == com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
-                type = CardType.inferFromCardName(card.cardName)
+                val inferredType = CardType.inferFromCardName(card.cardName)
+                if (inferredType != com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
+                    type = inferredType
+                    AppLogger.d("DeckAnalyzer", "推断类型: ${card.cardName} -> ${type.displayName}")
+                } else {
+                    AppLogger.d("DeckAnalyzer", "无法推断类型: ${card.cardName} - 原始类型: ${card.cardType}")
+                }
             }
 
             // 按数量统计
@@ -232,7 +238,13 @@ class DeckAnalyzer @Inject constructor(
 
             // 如果类型为 null 或 OTHER，尝试根据卡牌名称推断
             if (card.cardType.isNullOrBlank() || type == com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
-                type = CardType.inferFromCardName(card.cardName)
+                val inferredType = CardType.inferFromCardName(card.cardName)
+                if (inferredType != com.mtgo.decklistmanager.domain.model.CardType.OTHER) {
+                    type = inferredType
+                    AppLogger.d("DeckAnalyzer", "推断类型(备牌): ${card.cardName} -> ${type.displayName}")
+                } else {
+                    AppLogger.d("DeckAnalyzer", "无法推断类型(备牌): ${card.cardName} - 原始类型: ${card.cardType}")
+                }
             }
 
             // 按数量统计

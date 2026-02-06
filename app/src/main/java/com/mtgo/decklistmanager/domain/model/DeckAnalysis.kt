@@ -236,15 +236,19 @@ enum class CardType(val displayName: String) {
         fun inferFromCardName(cardName: String): CardType {
             val name = cardName.lowercase()
 
-            // 基本地和常见地牌
+            // 基本地 - 包括中英文名称
             val basicLands = setOf(
-                "plains", "森", "岛", "swamp", "mountain", "forest",
-                "snow-covered plains", "积雪的平原", "snow-covered island", "积雪山岛",
-                "snow-covered swamp", "积雪的沼泽", "snow-covered mountain", "积雪的山脉",
-                "snow-covered forest", "积雪的森林"
+                // 英文
+                "plains", "island", "swamp", "mountain", "forest",
+                "snow-covered plains", "snow-covered island", "snow-covered swamp",
+                "snow-covered mountain", "snow-covered forest",
+                // 中文
+                "平原", "海岛", "沼泽", "山脉", "森林",
+                "积雪的平原", "积雪山岛", "积雪的沼泽", "积雪的山脉", "积雪的森林",
+                "森", "岛"  // 简化名称
             )
 
-            // 检索地（fetch lands）
+            // 检索地
             val fetchLands = setOf(
                 "flooded strand", "浸水群岛", "polluted delta", "污染三角洲",
                 "bloodstained mire", "血斑泥沼", "wooded foothills", "树林 foothills",
@@ -258,17 +262,33 @@ enum class CardType(val displayName: String) {
             val dualLands = setOf(
                 "underground sea", "地下海", "tropical island", "热带岛",
                 "taiga", "泰加", "savannah", "热带草原", "badlands", "荒原",
-                "volcanic island", "火山岛", "bayou", "长沼泽",
-                "scrubland", "灌丛", "plateau", "高原"
+                "volcanic island", "火山岛", "bayou", "长沼",
+                "scrubland", "灌丛", "plateau", "高原",
+                "tundra", "冻原"
             )
 
             // 其他特殊地
             val otherLands = setOf(
-                "lorien revealed", "洛汗揭示"
+                "lorien revealed", "洛汗揭示",
+                "wasteland", "荒原",
+                "strip mine", "矿坑"
+            )
+
+            // 瞬间 - 已知常用于 Vintage 的瞬间
+            val knownInstants = setOf(
+                "force of will", "意志之力", "force of negation",
+                "mental misstep", "心智歧探"
+            )
+
+            // 法术 - 已知常用于 Vintage 的法术
+            val knownSorceries = setOf(
+                "gitaxian probe", "吉拉陆族探针"
             )
 
             return when {
                 name in basicLands || name in fetchLands || name in dualLands || name in otherLands -> LAND
+                name in knownInstants -> INSTANT
+                name in knownSorceries -> SORCERY
                 // 可以根据需要添加更多规则
                 else -> OTHER
             }
