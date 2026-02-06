@@ -15,7 +15,6 @@ import com.mtgo.decklistmanager.R
 import com.mtgo.decklistmanager.domain.model.Decklist
 import com.mtgo.decklistmanager.domain.model.Event
 import com.mtgo.decklistmanager.ui.base.BaseActivity
-import com.mtgo.decklistmanager.ui.debug.LogViewerActivity
 import com.mtgo.decklistmanager.util.AppLogger
 import com.mtgo.decklistmanager.util.LanguagePreferenceManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -680,12 +679,6 @@ class MainActivity : BaseActivity() {
             R.id.menu_settings -> {
                 // 打开设置
                 val intent = Intent(this, com.mtgo.decklistmanager.ui.settings.SettingsActivity::class.java)
-                startActivity(intent)
-                true
-            }
-            R.id.menu_view_logs -> {
-                // 查看日志
-                val intent = Intent(this, LogViewerActivity::class.java)
                 startActivity(intent)
                 true
             }

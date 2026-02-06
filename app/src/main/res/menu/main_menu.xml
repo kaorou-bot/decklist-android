@@ -26,10 +26,4 @@
         android:icon="@android:drawable/ic_menu_preferences"
         app:showAsAction="never" />
 
-    <item
-        android:id="@+id/menu_view_logs"
-        android:title="查看日志"
-        android:icon="@android:drawable/ic_menu_info_details"
-        app:showAsAction="never" />
-
 </menu>

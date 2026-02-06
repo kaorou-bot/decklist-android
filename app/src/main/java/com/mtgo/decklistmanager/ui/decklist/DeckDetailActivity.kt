@@ -75,11 +75,7 @@ class DeckDetailActivity : AppCompatActivity() {
     private fun refreshFavoriteStatus() {
         currentDecklist?.let { decklist ->
             lifecycleScope.launch {
-                val wasFavorite = isFavorite
                 val newFavoriteState = viewModel.isFavorite(decklist.id)
-                android.util.Log.d("DeckDetailActivity", "refreshFavoriteStatus: wasFavorite=$wasFavorite, newFavoriteState=$newFavoriteState")
-
-                // 无论状态是否改变都更新图标（确保同步）
                 isFavorite = newFavoriteState
                 updateFavoriteIcon()
             }
@@ -124,10 +120,8 @@ class DeckDetailActivity : AppCompatActivity() {
 
     private fun toggleFavorite() {
         currentDecklist?.let { decklist ->
-            android.util.Log.d("DeckDetailActivity", "toggleFavorite: decklistId=${decklist.id}, current isFavorite=$isFavorite")
             lifecycleScope.launch {
                 val newState = viewModel.toggleFavorite(decklist.id)
-                android.util.Log.d("DeckDetailActivity", "toggleFavorite: newState=$newState")
                 isFavorite = newState
                 updateFavoriteIcon()
 
@@ -151,7 +145,6 @@ class DeckDetailActivity : AppCompatActivity() {
     }
 
     private fun updateFavoriteIcon() {
-        android.util.Log.d("DeckDetailActivity", "updateFavoriteIcon: isFavorite=$isFavorite")
         if (isFavorite) {
             binding.btnFavorite.setIconResource(R.drawable.ic_favorite_filled)
         } else {
@@ -326,7 +319,6 @@ class DeckDetailActivity : AppCompatActivity() {
         // Check if this decklist is favorited
         lifecycleScope.launch {
             val favoriteState = viewModel.isFavorite(decklistId)
-            android.util.Log.d("DeckDetailActivity", "loadData: decklistId=$decklistId, isFavorite=$favoriteState")
             isFavorite = favoriteState
             updateFavoriteIcon()
         }
