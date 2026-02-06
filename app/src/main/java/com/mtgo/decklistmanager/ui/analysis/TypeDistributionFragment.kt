@@ -86,6 +86,9 @@ class TypeDistributionFragment : Fragment() {
         dataSet.valueTextSize = 12f
         dataSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.text_primary)
 
+        // 使用整数格式化器
+        dataSet.valueFormatter = IntegerFormatter()
+
         val barData = BarData(dataSet)
         chart.data = barData
 
