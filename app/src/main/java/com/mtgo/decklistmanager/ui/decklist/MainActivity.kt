@@ -192,6 +192,20 @@ class MainActivity : BaseActivity() {
                 }
                 startActivity(intent)
             },
+            onFavoriteClick = { decklist ->
+                // Toggle favorite status
+                lifecycleScope.launch {
+                    val newState = viewModel.toggleFavorite(decklist.id)
+                    Toast.makeText(
+                        this@MainActivity,
+                        if (newState) "Added to favorites" else "Removed from favorites",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    // Refresh list to update icon
+                    viewModel.loadFavoriteDecklists()
+                }
+            },
             viewModel = viewModel,
             coroutineScope = this.lifecycleScope
         )

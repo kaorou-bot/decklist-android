@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
  */
 class DecklistAdapter(
     private val onItemClick: (Decklist) -> Unit,
+    private val onFavoriteClick: (Decklist) -> Unit = {},
     private val viewModel: MainViewModel? = null,
     private val coroutineScope: LifecycleCoroutineScope? = null
 ) : ListAdapter<Decklist, DecklistAdapter.DecklistViewHolder>(DecklistDiffCallback()) {
@@ -31,7 +32,7 @@ class DecklistAdapter(
             parent,
             false
         )
-        return DecklistViewHolder(binding, onItemClick, viewModel, coroutineScope)
+        return DecklistViewHolder(binding, onItemClick, onFavoriteClick, viewModel, coroutineScope)
     }
 
     override fun onBindViewHolder(holder: DecklistViewHolder, position: Int) {
@@ -48,6 +49,7 @@ class DecklistAdapter(
     class DecklistViewHolder(
         private val binding: ItemDecklistBinding,
         private val onItemClick: (Decklist) -> Unit,
+        private val onFavoriteClick: (Decklist) -> Unit,
         private val viewModel: MainViewModel? = null,
         private val coroutineScope: LifecycleCoroutineScope? = null
     ) : RecyclerView.ViewHolder(binding.root) {
@@ -68,6 +70,11 @@ class DecklistAdapter(
                         if (isFavorite) R.drawable.ic_favorite_filled
                         else R.drawable.ic_favorite_border
                     )
+                }
+
+                // 红心点击事件
+                ivFavorite.setOnClickListener {
+                    onFavoriteClick(decklist)
                 }
 
                 root.setOnClickListener {
