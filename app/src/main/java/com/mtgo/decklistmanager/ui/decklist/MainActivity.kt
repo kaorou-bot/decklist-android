@@ -243,53 +243,17 @@ class MainActivity : BaseActivity() {
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder
             ): Int {
-                // 根据当前标签页返回滑动方向
-                return when (currentTab) {
-                    TAB_FAVORITES -> ItemTouchHelper.LEFT // 收藏页面只支持左滑
-                    TAB_EVENT_LIST -> ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT // 赛事页面支持左右滑动
-                    else -> 0 // 其他页面不支持滑动
+                // 只在赛事列表标签页启用滑动，收藏页面禁用滑动以允许正常滚动
+                return if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
+                    ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+                } else {
+                    0 // 其他页面不支持滑动，确保可以正常滚动
                 }
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                // 在收藏列表标签页 - 左滑取消收藏，右滑无操作
-                if (currentTab == TAB_FAVORITES && rvDecklists.adapter == decklistAdapter) {
-                    if (direction == ItemTouchHelper.LEFT) {
-                        val position = viewHolder.adapterPosition
-                        if (position != RecyclerView.NO_POSITION) {
-                            val decklist = decklistAdapter.getItemAtPosition(position)
-
-                            // 立即恢复视图
-                            viewHolder.itemView.alpha = 1f
-                            viewHolder.itemView.translationX = 0f
-
-                            // 切换收藏状态
-                            lifecycleScope.launch {
-                                val newState = viewModel.toggleFavorite(decklist.id)
-                                Toast.makeText(
-                                    this@MainActivity,
-                                    if (newState) "Added to favorites" else "Removed from favorites",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                // 刷新列表以更新图标状态
-                                if (!newState) {
-                                    // 如果取消了收藏，从列表中移除
-                                    viewModel.loadFavoriteDecklists()
-                                } else {
-                                    // 如果添加了收藏，刷新列表更新图标
-                                    viewModel.loadFavoriteDecklists()
-                                }
-                            }
-                        }
-                    } else {
-                        // 右滑时恢复视图
-                        viewHolder.itemView.alpha = 1f
-                        viewHolder.itemView.translationX = 0f
-                    }
-                }
-                // 在赛事列表标签页允许删除
-                else if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
+                // 只在赛事列表标签页允许删除
+                if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
                     val position = viewHolder.adapterPosition
                     if (position != RecyclerView.NO_POSITION) {
                         // v4.0.0: 使用 eventSectionAdapter 获取 item
@@ -339,36 +303,8 @@ class MainActivity : BaseActivity() {
                 actionState: Int,
                 isCurrentlyActive: Boolean
             ) {
-                val itemView = viewHolder.itemView
-
-                // 在收藏列表标签页 - 绘制收藏背景
-                if (currentTab == TAB_FAVORITES && rvDecklists.adapter == decklistAdapter) {
-                    val paint = Paint()
-                    val textPaint = Paint()
-                    textPaint.color = Color.WHITE
-                    textPaint.textSize = 48f
-
-                    if (dX < 0) {
-                        // 向左滑动 - 显示收藏图标背景
-                        paint.color = Color.parseColor("#FFB74D") // 橙色
-                        c.drawRect(
-                            RectF(
-                                itemView.right.toFloat() + dX,
-                                itemView.top.toFloat(),
-                                itemView.right.toFloat(),
-                                itemView.bottom.toFloat()
-                            ), paint
-                        )
-                        // 绘制"取消收藏"文字
-                        val text = "取消收藏"
-                        val textWidth = textPaint.measureText(text)
-                        val textX = itemView.right + dX / 2 - textWidth / 2
-                        val textY = itemView.top + (itemView.bottom - itemView.top) / 2 + 48f / 3
-                        c.drawText(text, textX, textY, textPaint)
-                    }
-                }
-                // 在赛事列表标签页绘制删除背景
-                else if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
+                // 只在赛事列表标签页绘制删除背景
+                if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
                     val itemView = viewHolder.itemView
                     val paint = Paint()
                     val textPaint = Paint()
