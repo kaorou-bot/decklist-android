@@ -269,7 +269,6 @@ enum class CardType(val displayName: String) {
 
             // 其他特殊地
             val otherLands = setOf(
-                "lorien revealed", "洛汗揭示",
                 "wasteland", "荒原",
                 "strip mine", "矿坑"
             )
@@ -282,7 +281,8 @@ enum class CardType(val displayName: String) {
 
             // 法术 - 已知常用于 Vintage 的法术
             val knownSorceries = setOf(
-                "gitaxian probe", "吉拉陆族探针"
+                "gitaxian probe", "吉拉陆族探针",
+                "lorien revealed", "洛汗揭示"
             )
 
             return when {
