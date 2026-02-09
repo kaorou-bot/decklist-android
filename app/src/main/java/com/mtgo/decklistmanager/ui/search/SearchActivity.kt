@@ -17,6 +17,7 @@ import com.mtgo.decklistmanager.databinding.ActivitySearchBinding
 import com.mtgo.decklistmanager.databinding.BottomSheetAdvancedSearchBinding
 import com.mtgo.decklistmanager.ui.search.model.*
 import com.mtgo.decklistmanager.ui.decklist.CardInfoFragment
+import com.mtgo.decklistmanager.util.Debouncer
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -39,6 +40,9 @@ class SearchActivity : AppCompatActivity() {
     // 当前显示的卡牌详情对话框（防止重复打开）
     private var currentDetailDialog: androidx.appcompat.app.AlertDialog? = null
 
+    // 搜索防抖器（用户停止输入 300ms 后自动搜索）
+    private val searchDebouncer = Debouncer(delayMillis = 300, scope = lifecycleScope)
+
     // 下拉菜单选项
     private val operatorOptions = listOf("任意", "=", ">", "<", ">=", "<=")
     private val formatOptions = Format.values().map { it.displayName }
@@ -60,7 +64,22 @@ class SearchActivity : AppCompatActivity() {
 
         setupRecyclerViews()
         observeViewModel()
+        setupSearchDebouncer()
         setupListeners()
+    }
+
+    /**
+     * 设置搜索防抖器
+     */
+    private fun setupSearchDebouncer() {
+        searchDebouncer.setOnDebounceListener {
+            // 用户停止输入 300ms 后自动执行搜索
+            val query = binding.editTextQuery.text?.toString() ?: ""
+            // 只在有输入时才自动搜索，空文本不触发
+            if (query.isNotEmpty()) {
+                viewModel.search(query, filters = currentFilters)
+            }
+        }
     }
 
     private fun setupRecyclerViews() {
@@ -163,6 +182,16 @@ class SearchActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        // 文本变化监听（防抖搜索）
+        binding.editTextQuery.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                // 触发防抖，用户停止输入 300ms 后才搜索
+                searchDebouncer.debounce()
+            }
+        })
+
         // 回车键搜索
         binding.editTextQuery.setOnEditorActionListener { _, _, _ ->
             performSearch()
