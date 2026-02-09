@@ -493,6 +493,24 @@ class MtgTop8Scraper {
                 }
             }
 
+            // 如果没有提取到日期，尝试从其他地方获取或使用默认值
+            if (eventDate.isEmpty()) {
+                // 尝试从页面其他元素获取日期
+                val allText = doc.text()
+                val datePattern = Regex("\\d{2}/\\d{2}/\\d{2}")
+                val dateMatch = datePattern.find(allText)
+                if (dateMatch != null) {
+                    eventDate = convertDateToStandard(dateMatch.value)
+                } else {
+                    // 如果还是找不到，使用当前日期作为后备
+                    val currentDate = java.time.LocalDate.now()
+                    eventDate = currentDate.toString()
+                    AppLogger.w(TAG, "Could not extract event date from page, using current date: $eventDate")
+                }
+            }
+
+            AppLogger.d(TAG, "Extracted event date: '$eventDate'")
+
             // 从URL提取format参数（如果有的话）
             val formatPattern = Regex("[?&]f=([^&]+)")
             val formatMatch = formatPattern.find(eventUrl)
