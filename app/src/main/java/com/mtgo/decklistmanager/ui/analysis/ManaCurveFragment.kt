@@ -100,11 +100,19 @@ class ManaCurveFragment : Fragment() {
         // 设置 X 轴标签
         val labels = arrayOf("0", "1", "2", "3", "4", "5", "6", "6+")
         chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
-
         chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
+        chart.xAxis.textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
         chart.xAxis.setDrawGridLines(false)
+
+        // 设置 Y 轴标签颜色
+        chart.axisLeft.textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
         chart.axisLeft.setDrawGridLines(false)
         chart.axisRight.isEnabled = false
+
+        // 设置图例文字颜色
+        chart.legend.textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
+        chart.legend.textSize = 12f
+
         chart.description.isEnabled = false
         chart.setFitBars(true)
 

@@ -107,12 +107,19 @@ class TypeDistributionFragment : Fragment() {
         // 设置 X 轴标签（类别）
         chart.xAxis.valueFormatter = IndexAxisValueFormatter(typeLabels.toTypedArray())
         chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
+        chart.xAxis.textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
         chart.xAxis.setDrawGridLines(false)
         chart.xAxis.granularity = 1f
 
         // 设置 Y 轴
+        chart.axisLeft.textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
         chart.axisLeft.setDrawGridLines(false)
         chart.axisRight.isEnabled = false
+
+        // 设置图例文字颜色
+        chart.legend.textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
+        chart.legend.textSize = 12f
+
         chart.description.isEnabled = false
 
         chart.animateY(1000)

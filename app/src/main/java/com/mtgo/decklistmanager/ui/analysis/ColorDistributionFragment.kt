@@ -114,10 +114,11 @@ class ColorDistributionFragment : Fragment() {
         chart.setUsePercentValues(false)  // 不使用百分比
         chart.setDrawEntryLabels(true)   // 显示标签（使用 PieEntry 的 label）
         chart.setEntryLabelTextSize(14f)
-        chart.setEntryLabelColor(android.graphics.Color.WHITE)
+        chart.setEntryLabelColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
         chart.description.isEnabled = false
         chart.centerText = "颜色分布"
         chart.setCenterTextSize(18f)
+        chart.setCenterTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
         chart.legend.isEnabled = false  // 禁用图例
 
         chart.animateY(1000)
