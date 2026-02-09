@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
+    android:background="@color/background"
     tools:context=".ui.decklist.EventDetailActivity">
 
     <!-- Main Content Area -->
@@ -159,7 +159,7 @@
                 android:layout_height="wrap_content"
                 android:text="下载所有套牌"
                 android:textSize="14sp"
-                app:backgroundTint="#E0E0E0"
+                app:backgroundTint="@color/divider"
                 android:textColor="@color/text_primary"
                 app:cornerRadius="8dp"
                 android:padding="12dp"
@@ -234,7 +234,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:padding="12dp"
-                        android:background="#F0F0F0">
+                        android:background="@color/background_elevated">
 
                         <com.google.android.material.textview.MaterialTextView
                             android:layout_width="0dp"

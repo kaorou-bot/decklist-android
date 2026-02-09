@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
+    android:background="@color/background"
     tools:context=".ui.decklist.DeckDetailActivity">
 
     <!-- Main Content -->
@@ -201,7 +201,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:padding="12dp"
-                        android:background="#F0F0F0"
+                        android:background="@color/background_elevated"
                         android:gravity="center_vertical">
 
                         <com.google.android.material.textview.MaterialTextView
@@ -260,7 +260,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:padding="12dp"
-                        android:background="#F0F0F0"
+                        android:background="@color/background_elevated"
                         android:gravity="center_vertical">
 
                         <com.google.android.material.textview.MaterialTextView
