@@ -15,15 +15,9 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/menu_language"
-        android:title="语言"
-        android:icon="@android:drawable/ic_menu_manage"
-        app:showAsAction="never" />
-
-    <item
         android:id="@+id/menu_settings"
         android:title="@string/settings"
-        android:icon="@android:drawable/ic_menu_preferences"
-        app:showAsAction="never" />
+        android:icon="@drawable/ic_settings"
+        app:showAsAction="ifRoom" />
 
 </menu>

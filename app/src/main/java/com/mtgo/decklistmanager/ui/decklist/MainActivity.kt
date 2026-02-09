@@ -655,27 +655,6 @@ class MainActivity : BaseActivity() {
                 Toast.makeText(this, "已刷新", Toast.LENGTH_SHORT).show()
                 true
             }
-            R.id.menu_language -> {
-                // 切换语言
-                lifecycleScope.launch {
-                    val newLanguage = languagePreferenceManager.toggleLanguage()
-                    val languageName = if (newLanguage == LanguagePreferenceManager.LANGUAGE_CHINESE) {
-                        "中文"
-                    } else {
-                        "English"
-                    }
-
-                    // 清除卡牌缓存
-                    viewModel.clearCardCache()
-
-                    Toast.makeText(
-                        this@MainActivity,
-                        "已切换至$languageName，卡牌信息将在下次查看时更新",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                true
-            }
             R.id.menu_settings -> {
                 // 打开设置
                 val intent = Intent(this, com.mtgo.decklistmanager.ui.settings.SettingsActivity::class.java)

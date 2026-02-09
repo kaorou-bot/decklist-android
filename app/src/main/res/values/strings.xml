@@ -97,6 +97,8 @@
     <string name="app_version">版本</string>
     <string name="open_source_licenses">开源许可</string>
     <string name="open_source_licenses_summary">查看使用的开源库许可信息</string>
+    <string name="language">语言</string>
+    <string name="language_summary">选择应用语言</string>
     <string name="back">返回</string>
 
     <!-- Theme Modes -->

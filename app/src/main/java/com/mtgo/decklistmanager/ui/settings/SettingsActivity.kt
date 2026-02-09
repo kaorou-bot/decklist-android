@@ -1,5 +1,7 @@
 package com.mtgo.decklistmanager.ui.settings
 
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -9,6 +11,7 @@ import androidx.preference.Preference
 import com.google.android.material.button.MaterialButton
 import com.mtgo.decklistmanager.R
 import com.mtgo.decklistmanager.util.AppLogger
+import java.util.Locale
 
 /**
  * Settings Activity - 设置界面
@@ -52,6 +55,25 @@ class SettingsActivity : AppCompatActivity() {
                 AppLogger.d("SettingsActivity", "Theme changed to: $newValue")
                 true
             }
+
+            // Language preference
+            val languagePreference = findPreference<ListPreference>("language")
+            languagePreference?.setOnPreferenceChangeListener { _, newValue ->
+                val languageCode = newValue as String
+                setLanguage(languageCode)
+                AppLogger.d("SettingsActivity", "Language changed to: $languageCode")
+                // Restart activity to apply language changes
+                activity?.recreate()
+                true
+            }
+        }
+
+        private fun setLanguage(languageCode: String) {
+            val locale = Locale(languageCode)
+            Locale.setDefault(locale)
+            val config = Configuration()
+            config.setLocale(locale)
+            activity?.resources?.updateConfiguration(config, activity?.resources?.displayMetrics)
         }
     }
 }

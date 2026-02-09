@@ -200,7 +200,7 @@
             android:orientation="vertical"
             android:gravity="center"
             android:padding="24dp"
-            android:background="@android:color/white"
+            android:background="@color/card_background"
             android:layout_margin="32dp">
 
             <ProgressBar

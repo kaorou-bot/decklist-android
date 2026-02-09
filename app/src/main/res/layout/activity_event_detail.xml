@@ -28,7 +28,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:background="@android:color/white"
+                android:background="@color/card_background"
                 android:elevation="4dp"
                 android:padding="8dp"
                 android:gravity="center_vertical">
@@ -53,7 +53,7 @@
                     android:text="赛事页面"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="#000000"
+                    android:textColor="@color/text_primary"
                     android:gravity="start"
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp" />
@@ -73,7 +73,7 @@
                 android:layout_height="wrap_content"
                 android:text="点击套牌栏进入套牌页面"
                 android:textSize="12sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="16dp" />
 
             <!-- Event Info Card -->
@@ -84,8 +84,8 @@
                 app:cardElevation="0dp"
                 app:cardCornerRadius="4dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#CCCCCC"
-                app:cardBackgroundColor="@android:color/white">
+                app:strokeColor="@color/divider"
+                app:cardBackgroundColor="@color/card_background">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -100,7 +100,7 @@
                         android:layout_height="wrap_content"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="#000000"
+                        android:textColor="@color/text_primary"
                         tools:text="MTGO Challenge 32" />
 
                     <!-- Event Details -->
@@ -115,7 +115,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textSize="14sp"
-                            android:textColor="#666666"
+                            android:textColor="@color/text_secondary"
                             tools:text="Modern" />
 
                     </LinearLayout>
@@ -133,7 +133,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:textSize="14sp"
-                            android:textColor="#666666"
+                            android:textColor="@color/text_secondary"
                             tools:text="2026-01-12" />
 
                         <com.google.android.material.textview.MaterialTextView
@@ -142,7 +142,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:textSize="14sp"
-                            android:textColor="#333333"
+                            android:textColor="@color/text_primary"
                             android:textStyle="bold"
                             tools:text="32 Decks" />
 
@@ -160,7 +160,7 @@
                 android:text="下载所有套牌"
                 android:textSize="14sp"
                 app:backgroundTint="#E0E0E0"
-                android:textColor="#000000"
+                android:textColor="@color/text_primary"
                 app:cornerRadius="8dp"
                 android:padding="12dp"
                 style="@style/Widget.Material3.Button"
@@ -220,8 +220,8 @@
                 app:cardElevation="0dp"
                 app:cardCornerRadius="4dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#000000"
-                app:cardBackgroundColor="@android:color/white">
+                app:strokeColor="@color/text_primary"
+                app:cardBackgroundColor="@color/card_background">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -243,7 +243,7 @@
                             android:text="套牌名称"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            android:textColor="#000000" />
+                            android:textColor="@color/text_primary" />
 
                         <com.google.android.material.textview.MaterialTextView
                             android:layout_width="0dp"
@@ -252,7 +252,7 @@
                             android:text="录制成绩"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            android:textColor="#000000"
+                            android:textColor="@color/text_primary"
                             android:gravity="end" />
 
                     </LinearLayout>
@@ -308,7 +308,7 @@
             android:orientation="vertical"
             android:gravity="center"
             android:padding="24dp"
-            android:background="@android:color/white"
+            android:background="@color/card_background"
             android:layout_margin="32dp">
 
             <ProgressBar

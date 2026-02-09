@@ -14,7 +14,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="#FFFFFF"
+            android:background="@color/card_background"
             app:title="套牌分析"
             app:navigationIcon="?attr/homeAsUpIndicator" />
 
@@ -22,7 +22,7 @@
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#FFFFFF"
+            android:background="@color/card_background"
             app:tabMode="fixed"
             app:tabGravity="fill">
 
@@ -75,7 +75,7 @@
                         android:layout_height="wrap_content"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        android:textColor="#000000"
+                        android:textColor="@color/text_primary"
                         tools:text="Modern Event - MTGO League" />
 
                 </LinearLayout>
@@ -150,7 +150,7 @@
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:text="总卡牌数"
-                            android:textColor="#666666"
+                            android:textColor="@color/text_secondary"
                             android:layout_marginBottom="4dp" />
 
                         <TextView
@@ -159,7 +159,7 @@
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:textStyle="bold"
-                            android:textColor="#000000"
+                            android:textColor="@color/text_primary"
                             android:gravity="end"
                             tools:text="60" />
 
@@ -168,7 +168,7 @@
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:text="地牌数"
-                            android:textColor="#666666"
+                            android:textColor="@color/text_secondary"
                             android:layout_marginBottom="4dp" />
 
                         <TextView
@@ -177,7 +177,7 @@
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:textStyle="bold"
-                            android:textColor="#000000"
+                            android:textColor="@color/text_primary"
                             android:gravity="end"
                             tools:text="24" />
 
@@ -186,7 +186,7 @@
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:text="平均法术力"
-                            android:textColor="#666666"
+                            android:textColor="@color/text_secondary"
                             android:layout_marginBottom="4dp" />
 
                         <TextView
@@ -195,7 +195,7 @@
                             android:layout_height="wrap_content"
                             android:layout_columnWeight="1"
                             android:textStyle="bold"
-                            android:textColor="#000000"
+                            android:textColor="@color/text_primary"
                             android:gravity="end"
                             tools:text="2.3" />
 
