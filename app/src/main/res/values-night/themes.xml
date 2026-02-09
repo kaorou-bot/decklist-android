@@ -1,9 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Dark Theme - Inherits from Base with night-specific overrides -->
+    <!-- Dark Theme - Enhanced Material Design 3 Dark Mode -->
     <style name="Theme.MTGODecklistManager" parent="Base.Theme.MTGODecklistManager">
-        <!-- Dark mode specific overrides -->
-        <item name="android:statusBarColor">@color/md_surface</item>
+        <!-- Status bar - Dark with light icons -->
+        <item name="android:statusBarColor">@color/md_background</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+
+        <!-- Navigation bar -->
+        <item name="android:navigationBarColor">@color/md_background</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+
+        <!-- Ripple effect - More visible in dark mode -->
+        <item name="colorControlHighlight">@color/ripple_alpha</item>
+
+        <!-- Card colors - Darker background -->
+        <item name="cardBackgroundColor">@color/card_background</item>
+
+        <!-- Enhanced contrast for dark mode -->
+        <item name="android:windowBackground">@color/md_background</item>
+    </style>
+
+    <!-- Overlay style for dialogs and bottom sheets -->
+    <style name="ThemeOverlay.MTGODecklistManager.Dark" parent="">
+        <item name="colorPrimary">@color/md_primary</item>
+        <item name="colorSecondary">@color/md_secondary</item>
+        <item name="colorError">@color/md_error</item>
+        <item name="colorSurface">@color/md_surface_variant</item>
+        <item name="colorOnSurface">@color/md_on_surface</item>
     </style>
 </resources>

@@ -88,4 +88,13 @@
     <color name="shadow_level1">#1F000000</color>
     <color name="shadow_level2">#21000000</color>
     <color name="shadow_level3">#26000000</color>
+
+    <!-- Ripple Effect -->
+    <color name="ripple_alpha">#1A000000</color>
+
+    <!-- Additional colors -->
+    <color name="scrim">#60000000</color>
+    <color name="inverse_surface">#313033</color>
+    <color name="inverse_on_surface">#F4EFF4</color>
+    <color name="inverse_primary">#D0BCFF</color>
 </resources>

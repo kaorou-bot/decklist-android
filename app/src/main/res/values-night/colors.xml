@@ -1,44 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Material Design 3 Dark Theme Colors -->
+    <!-- Material Design 3 Dark Theme Colors - Optimized -->
 
-    <!-- Primary Colors - Darker shades for dark mode -->
+    <!-- Primary Colors - Refined purple tones for dark mode -->
     <color name="md_primary">#D0BCFF</color>
     <color name="md_on_primary">#381E72</color>
     <color name="md_primary_container">#4F378B</color>
     <color name="md_on_primary_container">#EADDFF</color>
 
-    <!-- Secondary Colors -->
+    <!-- Secondary Colors - Muted lavender -->
     <color name="md_secondary">#CCC2DC</color>
     <color name="md_on_secondary">#332D41</color>
     <color name="md_secondary_container">#4A4458</color>
     <color name="md_on_secondary_container">#E8DEF8</color>
 
-    <!-- Tertiary Colors -->
+    <!-- Tertiary Colors - Soft pink -->
     <color name="md_tertiary">#EFB8C8</color>
     <color name="md_on_tertiary">#492532</color>
     <color name="md_tertiary_container">#633B48</color>
     <color name="md_on_tertiary_container">#FFD8E4</color>
 
-    <!-- Error Colors -->
+    <!-- Error Colors - Enhanced for dark mode visibility -->
     <color name="md_error">#FFB4AB</color>
     <color name="md_on_error">#690005</color>
     <color name="md_error_container">#93000A</color>
     <color name="md_on_error_container">#FFDAD6</color>
 
-    <!-- Background & Surface - Dark backgrounds -->
-    <color name="md_background">#1C1B1F</color>
+    <!-- Background & Surface - Pure dark backgrounds with better contrast -->
+    <color name="md_background">#121212</color>
     <color name="md_on_background">#E6E1E5</color>
-    <color name="md_surface">#1C1B1F</color>
+    <color name="md_surface">#121212</color>
     <color name="md_on_surface">#E6E1E5</color>
-    <color name="md_surface_variant">#49454F</color>
+    <color name="md_surface_variant">#1E1B1E</color>
     <color name="md_on_surface_variant">#CAC4D0</color>
 
-    <!-- App Specific Colors - Dark mode -->
+    <!-- App Specific Colors - Dark mode optimized -->
     <color name="primary">#D0BCFF</color>
     <color name="primary_dark">#B69DF8</color>
 
-    <!-- Button Colors - Adjusted for dark mode -->
+    <!-- Button Colors - Enhanced for dark mode -->
     <color name="green_button">#81C784</color>
     <color name="blue_button">#64B5F6</color>
     <color name="orange_button">#FFB74D</color>
@@ -47,36 +47,45 @@
     <color name="gray_button">#BDBDBD</color>
     <color name="purple_button">#BA68C8</color>
 
-    <!-- Status Colors - Dark mode variants -->
+    <!-- Status Colors - Better contrast in dark mode -->
     <color name="success">#81C784</color>
-    <color name="success_container">#2E4D33</color>
+    <color name="success_container">#1B3A1D</color>
     <color name="warning">#FFB74D</color>
-    <color name="warning_container">#5D3A1A</color>
+    <color name="warning_container">#4A2E0D</color>
     <color name="error">#E57373</color>
-    <color name="error_container">#5D1F1F</color>
+    <color name="error_container">#4A1616</color>
     <color name="info">#64B5F6</color>
-    <color name="info_container">#1A3A52</color>
+    <color name="info_container">#0D2842</color>
 
-    <!-- Text Colors - Light text for dark backgrounds -->
-    <color name="text_primary">#E6E1E5</color>
-    <color name="text_secondary">#CAC4D0</color>
-    <color name="text_hint">#9E9E9E</color>
-    <color name="text_disabled">#74777F</color>
+    <!-- Text Colors - High contrast for dark backgrounds -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B3B3B3</color>
+    <color name="text_hint">#808080</color>
+    <color name="text_disabled">#6E6E6E</color>
 
-    <!-- Background Colors - Dark backgrounds -->
-    <color name="background">#1C1B1F</color>
-    <color name="background_elevated">#2B2930</color>
-    <color name="card_background">#2B2930</color>
-    <color name="card_background_elevated">#36343C</color>
+    <!-- Background Colors - Pure blacks and dark grays -->
+    <color name="background">#121212</color>
+    <color name="background_elevated">#1E1E1E</color>
+    <color name="card_background">#1E1E1E</color>
+    <color name="card_background_elevated">#2C2C2C</color>
 
-    <!-- Accent & Divider - Dark mode -->
+    <!-- Accent & Divider - Subtle in dark mode -->
     <color name="accent">#D0BCFF</color>
-    <color name="divider">#49454F</color>
-    <color name="outline">#938F99</color>
-    <color name="outline_variant">#49454F</color>
+    <color name="divider">#2C2C2C</color>
+    <color name="outline">#3A3A3A</color>
+    <color name="outline_variant">#2C2C2C</color>
 
-    <!-- Navigation - Dark mode -->
+    <!-- Navigation - Dark mode optimized -->
     <color name="nav_active">#D0BCFF</color>
-    <color name="nav_inactive">#938F99</color>
-    <color name="nav_container">#2B2930</color>
+    <color name="nav_inactive">#808080</color>
+    <color name="nav_container">#1E1E1E</color>
+
+    <!-- Ripple Effect - Subtle white ripple -->
+    <color name="ripple_alpha">#1AFFFFFF</color>
+
+    <!-- Additional dark mode colors -->
+    <color name="scrim">#60000000</color>
+    <color name="inverse_surface">#E6E1E5</color>
+    <color name="inverse_on_surface">#121212</color>
+    <color name="inverse_primary">#6750A4</color>
 </resources>

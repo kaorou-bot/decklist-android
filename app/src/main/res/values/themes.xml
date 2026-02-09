@@ -2,15 +2,43 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme -->
     <style name="Base.Theme.MTGODecklistManager" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary brand colors -->
         <item name="colorPrimary">@color/md_primary</item>
-        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorOnPrimary">@color/md_on_primary</item>
         <item name="colorPrimaryContainer">@color/md_primary_container</item>
         <item name="colorOnPrimaryContainer">@color/md_on_primary_container</item>
+
+        <!-- Secondary brand colors -->
         <item name="colorSecondary">@color/md_secondary</item>
-        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorOnSecondary">@color/md_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/md_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/md_on_secondary_container</item>
+
+        <!-- Tertiary colors -->
+        <item name="colorTertiary">@color/md_tertiary</item>
+        <item name="colorOnTertiary">@color/md_on_tertiary</item>
+
+        <!-- Error colors -->
         <item name="colorError">@color/md_error</item>
-        <item name="colorOnError">@color/white</item>
+        <item name="colorOnError">@color/md_on_error</item>
+        <item name="colorErrorContainer">@color/md_error_container</item>
+        <item name="colorOnErrorContainer">@color/md_on_error_container</item>
+
+        <!-- Background & Surface -->
+        <item name="android:colorBackground">@color/md_background</item>
+        <item name="colorOnBackground">@color/md_on_background</item>
+        <item name="colorSurface">@color/md_surface</item>
+        <item name="colorOnSurface">@color/md_on_surface</item>
+        <item name="colorSurfaceVariant">@color/md_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/md_on_surface_variant</item>
+
+        <!-- Status bar -->
         <item name="android:statusBarColor">@color/md_primary</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+
+        <!-- Ripple effect -->
+        <item name="colorControlHighlight">?attr/colorPrimary</item>
+        <item name="android:colorControlHighlight">?attr/colorPrimary</item>
     </style>
 
     <style name="Theme.MTGODecklistManager" parent="Base.Theme.MTGODecklistManager" />
@@ -20,12 +48,14 @@
         <item name="android:layout_height">48dp</item>
         <item name="android:layout_margin">4dp</item>
         <item name="android:textSize">14sp</item>
+        <item name="cornerRadius">8dp</item>
     </style>
 
     <style name="SecondaryButton" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:layout_height">48dp</item>
         <item name="android:layout_margin">4dp</item>
         <item name="android:textSize">14sp</item>
+        <item name="cornerRadius">8dp</item>
     </style>
 
     <!-- Card Styles -->
@@ -33,21 +63,25 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_margin">8dp</item>
-        <item name="cardCornerRadius">8dp</item>
+        <item name="cardCornerRadius">12dp</item>
         <item name="cardElevation">2dp</item>
+        <item name="cardBackgroundColor">@color/card_background</item>
     </style>
 
     <!-- Text Styles -->
     <style name="TextAppearance.Title" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
     </style>
 
     <style name="TextAppearance.Subtitle" parent="TextAppearance.Material3.TitleMedium">
         <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/text_primary</item>
     </style>
 
     <style name="TextAppearance.Body" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
     </style>
 </resources>
