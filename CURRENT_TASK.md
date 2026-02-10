@@ -6,10 +6,142 @@
 
 ## 📊 任务状态
 
-**状态**: ✅ **已完成 - v4.2.6 发布**
-**最后更新**: 2026-02-09 22:00
-**当前版本**: v4.2.6 (已发布)
-**整体进度**: 93%
+**状态**: 🟡 **开发中 - v4.3.0**
+**最后更新**: 2026-02-10
+**当前版本**: v4.3.0 (开发中)
+**整体进度**: 95%
+
+---
+
+## 🚀 当前任务 (2026-02-10)
+
+### v4.3.0 新功能开发
+
+#### 已完成的模块 ✅
+
+**1. 数据库架构设计**
+- 创建了 5 个新实体：FolderEntity, TagEntity, DecklistNoteEntity, DecklistFolderRelationEntity, DecklistTagRelationEntity
+- 数据库版本从 v10 升级到 v11
+- 完成了数据库迁移脚本
+
+**2. 数据访问层 (DAO)**
+- FolderDao - 文件夹数据访问
+- TagDao - 标签数据访问
+- DecklistNoteDao - 备注数据访问
+- DecklistFolderRelationDao - 文件夹关联
+- DecklistTagRelationDao - 标签关联
+
+**3. 仓库层 (Repository)**
+- FolderRepository - 文件夹业务逻辑
+- TagRepository - 标签业务逻辑
+- DecklistNoteRepository - 备注业务逻辑
+
+**4. 视图模型 (ViewModel)**
+- FolderViewModel
+- TagViewModel
+- DecklistNoteViewModel
+
+**5. UI 组件**
+- FoldersActivity - 文件夹管理页面
+- FolderAdapter - 文件夹列表适配器
+- DecklistTagsBottomSheet - 标签管理弹窗
+
+#### 待完成的模块 📋
+
+**1. 完善 UI 功能**
+- 标签选择对话框
+- 备注编辑对话框
+- 集成到 DeckDetailActivity
+
+**2. 套牌对比功能**
+- 创建 DeckComparisonActivity
+- 实现卡牌差异对比
+- 实现统计信息对比
+
+**3. 卡图组合图片功能**
+- 创建图片组合工具类
+- 实现卡图拼接逻辑
+- 支持导出为图片
+
+**4. 导出增强**
+- PDF 导出格式
+- HTML 导出格式
+- 美化导出样式
+
+**5. 测试与发布**
+- 测试所有新功能
+- 修复 Bug
+- 构建 Release 版本
+- 更新文档
+
+---
+
+## 📁 新增文件清单
+
+### 数据层
+- `data/local/entity/FolderEntity.kt`
+- `data/local/entity/TagEntity.kt`
+- `data/local/entity/DecklistNoteEntity.kt`
+- `data/local/entity/DecklistFolderRelationEntity.kt`
+- `data/local/entity/DecklistTagRelationEntity.kt`
+- `data/local/dao/FolderDao.kt`
+- `data/local/dao/TagDao.kt`
+- `data/local/dao/DecklistNoteDao.kt`
+- `data/local/dao/DecklistFolderRelationDao.kt`
+- `data/local/dao/DecklistTagRelationDao.kt`
+- `data/repository/FolderRepository.kt`
+- `data/repository/TagRepository.kt`
+- `data/repository/DecklistNoteRepository.kt`
+
+### 领域层
+- `domain/model/Folder.kt`
+- `domain/model/Tag.kt`
+- `domain/model/DecklistNote.kt`
+
+### UI 层
+- `ui/folder/FoldersActivity.kt`
+- `ui/folder/FolderViewModel.kt`
+- `ui/folder/FolderAdapter.kt`
+- `ui/tag/TagViewModel.kt`
+- `ui/note/DecklistNoteViewModel.kt`
+- `ui/decklist/DecklistTagsBottomSheet.kt`
+
+### 资源文件
+- `layout/activity_folders.xml`
+- `layout/item_folder.xml`
+- `layout/dialog_create_folder.xml`
+- `layout/bottom_sheet_decklist_tags.xml`
+- `drawable/ic_folder.xml`
+- `drawable/ic_delete.xml`
+- `drawable/ic_close.xml`
+- `drawable/ic_add.xml`
+- `menu/menu_folders.xml`
+
+---
+
+## 🔧 下一步工作
+
+1. **完善标签功能** - 实现标签选择对话框
+2. **实现备注功能** - 创建备注编辑对话框
+3. **集成到 DeckDetailActivity** - 添加标签和备注入口
+4. **套牌对比功能** - 实现两个套牌的对比
+5. **卡图组合功能** - 将套牌卡图拼接成一张图片
+6. **导出增强** - 添加 PDF 和 HTML 导出
+7. **测试发布** - 完整测试并发布 v4.3.0
+
+---
+
+## 📝 技术要点
+
+- 数据库使用 Room 迁移从 v10 到 v11
+- 使用 Hilt 进行依赖注入
+- 使用 ViewModel + Repository 模式
+- 使用 Material Design 3 组件
+- 支持深色模式
+
+---
+
+**最后更新：2026-02-10**
 
 ---
 

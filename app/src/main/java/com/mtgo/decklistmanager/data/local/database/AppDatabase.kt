@@ -7,18 +7,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.mtgo.decklistmanager.data.local.dao.CardDao
-import com.mtgo.decklistmanager.data.local.dao.CardInfoDao
-import com.mtgo.decklistmanager.data.local.dao.DecklistDao
-import com.mtgo.decklistmanager.data.local.dao.EventDao
-import com.mtgo.decklistmanager.data.local.dao.FavoriteDecklistDao
-import com.mtgo.decklistmanager.data.local.dao.SearchHistoryDao
-import com.mtgo.decklistmanager.data.local.entity.CardEntity
-import com.mtgo.decklistmanager.data.local.entity.CardInfoEntity
-import com.mtgo.decklistmanager.data.local.entity.DecklistEntity
-import com.mtgo.decklistmanager.data.local.entity.EventEntity
-import com.mtgo.decklistmanager.data.local.entity.FavoriteDecklistEntity
-import com.mtgo.decklistmanager.data.local.entity.SearchHistoryEntity
+import com.mtgo.decklistmanager.data.local.dao.*
+import com.mtgo.decklistmanager.data.local.entity.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,9 +23,14 @@ import kotlinx.coroutines.launch
         CardInfoEntity::class,
         EventEntity::class,
         FavoriteDecklistEntity::class,
-        SearchHistoryEntity::class  // 搜索历史表
+        SearchHistoryEntity::class,
+        FolderEntity::class,
+        TagEntity::class,
+        DecklistNoteEntity::class,
+        DecklistFolderRelationEntity::class,
+        DecklistTagRelationEntity::class
     ],
-    version = 10,  // 版本升级：9 -> 10 (添加双面牌反面攻防字段)
+    version = 11,  // 版本升级：10 -> 11 (v4.3.0 新功能：文件夹、标签、备注)
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -46,7 +41,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cardInfoDao(): CardInfoDao
     abstract fun eventDao(): EventDao
     abstract fun favoriteDecklistDao(): FavoriteDecklistDao
-    abstract fun searchHistoryDao(): SearchHistoryDao  // 搜索历史 DAO
+    abstract fun searchHistoryDao(): SearchHistoryDao
+    abstract fun folderDao(): FolderDao
+    abstract fun tagDao(): TagDao
+    abstract fun decklistNoteDao(): DecklistNoteDao
+    abstract fun decklistFolderRelationDao(): DecklistFolderRelationDao
+    abstract fun decklistTagRelationDao(): DecklistTagRelationDao
 
     companion object {
         private const val DATABASE_NAME = "decklists.db"
@@ -65,7 +65,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addCallback(DatabaseCallback())
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                     .build()
                 INSTANCE = instance
                 instance
@@ -267,6 +267,77 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE card_info ADD COLUMN back_face_power TEXT")
                 db.execSQL("ALTER TABLE card_info ADD COLUMN back_face_toughness TEXT")
                 db.execSQL("ALTER TABLE card_info ADD COLUMN back_face_loyalty TEXT")
+            }
+        }
+
+        /**
+         * 数据库版本 10 -> 11 迁移
+         * v4.3.0 新功能：文件夹、标签、备注
+         */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 创建 folders 表
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS folders (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        color INTEGER NOT NULL,
+                        icon TEXT NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_folders_name ON folders(name)")
+
+                // 创建 tags 表
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS tags (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        color INTEGER NOT NULL,
+                        created_at INTEGER NOT NULL
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_tags_name ON tags(name)")
+
+                // 创建 decklist_notes 表
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS decklist_notes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        decklist_id INTEGER NOT NULL,
+                        note TEXT NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL,
+                        UNIQUE(decklist_id)
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_decklist_notes_decklist_id ON decklist_notes(decklist_id)")
+
+                // 创建 decklist_folder_relations 表
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS decklist_folder_relations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        decklist_id INTEGER NOT NULL,
+                        folder_id INTEGER NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        FOREIGN KEY(decklist_id) REFERENCES decklists(id) ON DELETE CASCADE,
+                        FOREIGN KEY(folder_id) REFERENCES folders(id) ON DELETE CASCADE
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_dfr_decklist_id ON decklist_folder_relations(decklist_id)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_dfr_folder_id ON decklist_folder_relations(folder_id)")
+
+                // 创建 decklist_tag_relations 表
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS decklist_tag_relations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        decklist_id INTEGER NOT NULL,
+                        tag_id INTEGER NOT NULL,
+                        created_at INTEGER NOT NULL
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_dtr_decklist_id ON decklist_tag_relations(decklist_id)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_dtr_tag_id ON decklist_tag_relations(tag_id)")
             }
         }
     }

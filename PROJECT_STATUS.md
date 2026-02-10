@@ -6,10 +6,57 @@
 
 ## 📊 当前开发状态
 
-**最后更新时间：** 2026-02-09 22:00
-**当前版本：** v4.2.6 (已发布)
+**最后更新时间：** 2026-02-10
+**当前版本：** v4.3.0 (开发中)
 **当前分支：** dev/v4.2.0
-**整体进度：** 93% [█████████▊]
+**整体进度：** 95% [██████████▋]
+
+---
+
+## 🟡 v4.3.0 开发中 (2026-02-10)
+
+### 收藏夹分类、标签、备注功能
+
+**进度：** 60% [██████░░░░] **开发中**
+
+#### 已完成 ✅
+- [x] 数据库架构设计
+  - 创建 FolderEntity 文件夹实体
+  - 创建 TagEntity 标签实体
+  - 创建 DecklistNoteEntity 备注实体
+  - 创建 DecklistFolderRelationEntity 关联实体
+  - 创建 DecklistTagRelationEntity 关联实体
+- [x] 数据库迁移 (v10 → v11)
+- [x] DAO 层实现
+  - FolderDao
+  - TagDao
+  - DecklistNoteDao
+  - DecklistFolderRelationDao
+  - DecklistTagRelationDao
+- [x] Repository 层实现
+  - FolderRepository
+  - TagRepository
+  - DecklistNoteRepository
+- [x] ViewModel 层实现
+  - FolderViewModel
+  - TagViewModel
+  - DecklistNoteViewModel
+- [x] UI 组件基础
+  - FoldersActivity 文件夹管理页面
+  - FolderAdapter 文件夹列表适配器
+  - DecklistTagsBottomSheet 标签管理底部弹窗
+
+#### 待完成 📋
+- [ ] 完善标签选择对话框
+- [ ] 实现备注编辑功能
+- [ ] 集成到 DeckDetailActivity
+- [ ] 添加文件夹入口到 MainActivity
+- [ ] 套牌对比功能
+- [ ] 卡图组合图片功能
+- [ ] 导出增强（PDF、HTML）
+- [ ] 测试与发布
+
+**状态：** 🟡 开发中
 
 ---
 
