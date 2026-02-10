@@ -111,7 +111,20 @@ class DecklistTagsBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun showAddTagDialog() {
-        // TODO: Show dialog to add new or existing tag
+        val tagSelector = com.mtgo.decklistmanager.ui.dialog.TagSelectorBottomSheet.newInstance(decklistId) { selectedIds ->
+            lifecycleScope.launch {
+                // 先移除所有现有标签
+                currentTags.forEach { tag ->
+                    tagViewModel.removeTagFromDecklist(decklistId, tag.id)
+                }
+                // 添加新选择的标签
+                selectedIds.forEach { tagId ->
+                    tagViewModel.addTagToDecklist(decklistId, tagId)
+                }
+                loadTags()
+            }
+        }
+        tagSelector.show(childFragmentManager, "tag_selector")
     }
 
     private fun removeTag(tag: Tag) {

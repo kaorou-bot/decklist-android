@@ -22,14 +22,19 @@ import com.mtgo.decklistmanager.databinding.ActivityDeckDetailBinding
 import com.mtgo.decklistmanager.domain.model.Card
 import com.mtgo.decklistmanager.domain.model.CardLocation
 import com.mtgo.decklistmanager.domain.model.Decklist
+import com.mtgo.decklistmanager.domain.model.Tag
 import com.mtgo.decklistmanager.ui.analysis.DeckAnalysisActivity
 import com.mtgo.decklistmanager.ui.dialog.ExportFormatDialog
+import com.mtgo.decklistmanager.ui.dialog.NoteEditBottomSheet
+import com.mtgo.decklistmanager.ui.dialog.TagSelectorBottomSheet
 import com.mtgo.decklistmanager.util.ManaSymbolRenderer
+import com.google.android.material.chip.Chip
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import android.content.Intent
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.fragment.app.viewModels
 
 /**
  * Deck Detail Activity - 牌组详情页面
@@ -38,6 +43,8 @@ import java.util.*
 class DeckDetailActivity : AppCompatActivity() {
 
     private val viewModel: DeckDetailViewModel by viewModels()
+    private val tagViewModel: com.mtgo.decklistmanager.ui.tag.TagViewModel by viewModels()
+    private val noteViewModel: com.mtgo.decklistmanager.ui.note.DecklistNoteViewModel by viewModels()
     private lateinit var binding: ActivityDeckDetailBinding
 
     private lateinit var llMainDeck: LinearLayout
@@ -48,6 +55,7 @@ class DeckDetailActivity : AppCompatActivity() {
     private var currentDecklist: Decklist? = null
     private var allCards: List<Card> = emptyList()
     private var isFavorite = false
+    private var currentTags: List<Tag> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +64,7 @@ class DeckDetailActivity : AppCompatActivity() {
 
         setupButtons()
         setupCardLists()
+        setupTagsAndNotes()
         setupObservers()
         loadData()
     }
@@ -101,6 +110,16 @@ class DeckDetailActivity : AppCompatActivity() {
         // 分析按钮
         binding.btnAnalysis.setOnClickListener {
             openDeckAnalysis()
+        }
+
+        // 标签管理按钮
+        binding.btnManageTags.setOnClickListener {
+            showTagsBottomSheet()
+        }
+
+        // 备注编辑按钮
+        binding.btnEditNote.setOnClickListener {
+            showNoteEditBottomSheet()
         }
     }
 
@@ -180,6 +199,85 @@ class DeckDetailActivity : AppCompatActivity() {
             linearLayout.visibility = View.VISIBLE
             // 恢复图标原始方向
             button.rotation = 0f
+        }
+    }
+
+    /**
+     * 设置标签和备注
+     */
+    private fun setupTagsAndNotes() {
+        // 初始化时为空，loadTagsAndNotes 会在 loadData 后调用
+    }
+
+    /**
+     * 加载标签和备注
+     */
+    private fun loadTagsAndNotes() {
+        currentDecklist?.let { decklist ->
+            lifecycleScope.launch {
+                // 加载标签
+                currentTags = tagViewModel.getTagsForDecklist(decklist.id)
+                updateTagsChips()
+
+                // 加载备注
+                noteViewModel.loadNote(decklist.id)
+                noteViewModel.currentNote.collect { note ->
+                    binding.tvNotePreview.text = note?.note ?: getString(R.string.no_note)
+                }
+            }
+        }
+    }
+
+    /**
+     * 更新标签 Chips
+     */
+    private fun updateTagsChips() {
+        binding.chipGroupTags.removeAllViews()
+
+        currentTags.forEach { tag ->
+            val chip = Chip(this).apply {
+                text = tag.name
+                isCloseIconVisible = false
+                setChipBackgroundColorResource(android.R.color.holo_blue_light)
+                setTextColor(resources.getColor(android.R.color.white, null))
+            }
+            binding.chipGroupTags.addView(chip)
+        }
+
+        if (currentTags.isEmpty()) {
+            binding.chipGroupTags.visibility = View.GONE
+        } else {
+            binding.chipGroupTags.visibility = View.VISIBLE
+        }
+    }
+
+    /**
+     * 显示标签管理底部弹窗
+     */
+    private fun showTagsBottomSheet() {
+        currentDecklist?.let { decklist ->
+            val bottomSheet = com.mtgo.decklistmanager.ui.decklist.DecklistTagsBottomSheet.newInstance(decklist.id)
+            bottomSheet.show(supportFragmentManager, "tags_bottom_sheet")
+
+            // 监听关闭事件以刷新标签
+            lifecycleScope.launch {
+                // 等待弹窗关闭后刷新
+                kotlinx.coroutines.delay(300)
+                loadTagsAndNotes()
+            }
+        }
+    }
+
+    /**
+     * 显示备注编辑底部弹窗
+     */
+    private fun showNoteEditBottomSheet() {
+        currentDecklist?.let { decklist ->
+            val bottomSheet = NoteEditBottomSheet.newInstance(decklist.id) {
+                // 备注保存后的回调
+                loadTagsAndNotes()
+            }
+            bottomSheet.show(supportFragmentManager, "note_edit_bottom_sheet")
         }
     }
 
@@ -335,6 +433,9 @@ class DeckDetailActivity : AppCompatActivity() {
             tvPlayer.text = decklist.playerName?.let { "Player: $it" } ?: "Player: N/A"
             tvRecord.text = decklist.record ?: "N/A"
         }
+
+        // 加载标签和备注
+        loadTagsAndNotes()
     }
 
     private fun showCardInfo(cardName: String) {

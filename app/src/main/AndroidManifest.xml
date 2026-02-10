@@ -87,6 +87,13 @@
             android:parentActivityName=".ui.decklist.MainActivity"
             android:label="@string/folders" />
 
+        <activity
+            android:name=".ui.comparison.DeckComparisonActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".ui.decklist.MainActivity"
+            android:label="@string/deck_comparison" />
+
         <!-- FileProvider for sharing files -->
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -44,15 +44,10 @@ class TagViewModel @Inject constructor(
     /**
      * 创建新标签
      */
-    fun createTag(name: String, color: Int = 0xFF6200EE.toInt()) {
-        viewModelScope.launch {
-            try {
-                tagRepository.createTag(name, color)
-                loadTags() // 重新加载列表
-            } catch (e: Exception) {
-                _uiState.value = TagUiState.Error(e.message ?: "Failed to create tag")
-            }
-        }
+    suspend fun createTag(name: String, color: Int = 0xFF6200EE.toInt()): Tag {
+        val tag = tagRepository.createTag(name, color)
+        loadTags() // 重新加载列表
+        return tag
     }
 
     /**
@@ -130,6 +125,13 @@ class TagViewModel @Inject constructor(
      */
     suspend fun getTagsForDecklist(decklistId: Long): List<Tag> {
         return tagRepository.getTagsForDecklist(decklistId)
+    }
+
+    /**
+     * 获取所有标签
+     */
+    suspend fun getAllTags(): List<Tag> {
+        return tagRepository.getAllTags()
     }
 }
 
