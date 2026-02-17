@@ -19,8 +19,7 @@ class MtgchApiDebugger @Inject constructor(
 
             val response = mtgchApi.searchCard(
                 query = "!$cardName",
-                pageSize = 1,
-                priorityChinese = true
+                limit = 1
             )
 
             Log.d("MtgchApiDebugger", "Response successful: ${response.isSuccessful}")
@@ -28,7 +27,7 @@ class MtgchApiDebugger @Inject constructor(
 
             if (response.isSuccessful && response.body() != null) {
                 val searchResponse = response.body()!!
-                val results = searchResponse.data  // 使用 data 属性
+                val results = searchResponse.cards  // 使用 cards 属性
                 Log.d("MtgchApiDebugger", "Results is null: ${results == null}")
                 Log.d("MtgchApiDebugger", "Results count: ${results?.size ?: "null"}")
 
@@ -37,12 +36,12 @@ class MtgchApiDebugger @Inject constructor(
                     Log.d("MtgchApiDebugger", "Card found:")
                     Log.d("MtgchApiDebugger", "  - id: ${card.id}")
                     Log.d("MtgchApiDebugger", "  - name: ${card.name}")
-                    Log.d("MtgchApiDebugger", "  - zhs_name: ${card.zhsName}")
+                    Log.d("MtgchApiDebugger", "  - nameZh: ${card.nameZh}")
                     Log.d("MtgchApiDebugger", "  - manaCost: ${card.manaCost}")
                     Log.d("MtgchApiDebugger", "  - typeLine: ${card.typeLine}")
-                    Log.d("MtgchApiDebugger", "  - zhsTypeLine: ${card.zhsTypeLine}")
+                    Log.d("MtgchApiDebugger", "  - typeLineZh: ${card.typeLineZh}")
                     Log.d("MtgchApiDebugger", "  - imageUri: ${card.imageUris?.normal}")
-                    Log.d("MtgchApiDebugger", "  - zhsImage: ${card.zhsImage}")
+                    Log.d("MtgchApiDebugger", "  - oracleId: ${card.oracleId}")
                 } else {
                     Log.w("MtgchApiDebugger", "No results found")
                 }

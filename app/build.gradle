@@ -30,17 +30,18 @@ android {
         applicationId "com.mtgo.decklistmanager"
         minSdk 21
         targetSdk 34
-        versionCode 85
-        versionName "4.3.0"
+        versionCode 86
+        versionName "5.0.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
         }
 
-        // Scryfall API base URL
+        // API Base URLs
         buildConfigField "String", "SCRYFALL_API_BASE", "\"https://api.scryfall.com\""
         buildConfigField "String", "MTGO_BASE_URL", "\"https://www.mtgo.com\""
+        buildConfigField "String", "MTG_CARD_SERVER_BASE_URL", "\"http://182.92.109.160\""
 
         // Room schema export directory
         javaCompileOptions {

@@ -14,6 +14,7 @@ import com.google.android.material.button.MaterialButton
 import com.mtgo.decklistmanager.R
 import com.mtgo.decklistmanager.domain.model.Decklist
 import com.mtgo.decklistmanager.domain.model.Event
+import com.mtgo.decklistmanager.domain.model.Tag
 import com.mtgo.decklistmanager.ui.base.BaseActivity
 import com.mtgo.decklistmanager.util.AppLogger
 import com.mtgo.decklistmanager.util.LanguagePreferenceManager
@@ -32,6 +33,7 @@ class MainActivity : BaseActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     private val languagePreferenceManager: LanguagePreferenceManager by lazy { LanguagePreferenceManager(this) }
+    private val tagViewModel: com.mtgo.decklistmanager.ui.tag.TagViewModel by viewModels()
 
     private lateinit var rvDecklists: RecyclerView
     private lateinit var decklistAdapter: DecklistAdapter
@@ -39,15 +41,18 @@ class MainActivity : BaseActivity() {
     private lateinit var eventSectionAdapter: EventSectionAdapter
     private lateinit var filterBar: View
     private lateinit var formatSelector: View
+    private lateinit var tagSelector: View
     private lateinit var dateSelector: View
     private lateinit var btnDownloadEvent: MaterialButton
     private lateinit var bottomNavigation: com.google.android.material.bottomnavigation.BottomNavigationView
     private lateinit var tvCurrentFormat: android.widget.TextView
+    private lateinit var tvCurrentTag: android.widget.TextView
     private lateinit var tvCurrentDate: android.widget.TextView
 
     private var currentTab = TAB_EVENT_LIST
     private var itemTouchHelper: ItemTouchHelper? = null
     private var isProgrammaticNav = false // Flag to prevent listener loops
+    private var selectedTag: Tag? = null
 
     companion object {
         private const val TAB_EVENT_LIST = 0
@@ -96,11 +101,18 @@ class MainActivity : BaseActivity() {
         progressOverlay = findViewById(R.id.progressOverlay)
         filterBar = findViewById(R.id.filterBar)
         formatSelector = findViewById(R.id.formatSelector)
+        tagSelector = findViewById(R.id.tagSelector)
         dateSelector = findViewById(R.id.dateSelector)
         btnDownloadEvent = findViewById(R.id.btnDownloadEvent)
         bottomNavigation = findViewById(R.id.bottomNavigation)
         tvCurrentFormat = findViewById(R.id.tvCurrentFormat)
+        tvCurrentTag = findViewById(R.id.tvCurrentTag)
         tvCurrentDate = findViewById(R.id.tvCurrentDate)
+
+        // 设置初始筛选器可见性（默认为赛事列表页）
+        formatSelector.visibility = View.VISIBLE
+        tagSelector.visibility = View.GONE
+        dateSelector.visibility = View.VISIBLE
     }
 
     private fun setupBottomNavigation() {
@@ -134,8 +146,12 @@ class MainActivity : BaseActivity() {
 
         when (tab) {
             TAB_EVENT_LIST -> {
-                // Show filter bar
+                // Show filter bar (download button)
                 filterBar.visibility = View.VISIBLE
+                // Show format and date selectors, hide tag selector
+                formatSelector.visibility = View.VISIBLE
+                tagSelector.visibility = View.GONE
+                dateSelector.visibility = View.VISIBLE
                 // Switch to event adapter
                 switchAdapter(true)
                 // Load events
@@ -148,8 +164,12 @@ class MainActivity : BaseActivity() {
                 }
             }
             TAB_FAVORITES -> {
-                // Hide filter bar
+                // Hide filter bar (download button)
                 filterBar.visibility = View.GONE
+                // Show format and tag selectors, hide date selector
+                formatSelector.visibility = View.VISIBLE
+                tagSelector.visibility = View.VISIBLE
+                dateSelector.visibility = View.GONE
                 // Switch to decklist adapter
                 switchAdapter(false)
                 // Load favorites
@@ -168,6 +188,11 @@ class MainActivity : BaseActivity() {
         // Format selector in status bar
         formatSelector.setOnClickListener {
             showFormatFilterDialog()
+        }
+
+        // Tag selector in status bar
+        tagSelector.setOnClickListener {
+            showTagFilterDialog()
         }
 
         // Date selector in status bar
@@ -485,7 +510,48 @@ class MainActivity : BaseActivity() {
             showSingleChoiceDialog("选择赛制", items) { _, selected ->
                 val format = if (selected == "All Formats") null else selected
                 viewModel.applyFormatFilter(format)
+                // 根据当前tab加载相应数据
+                if (currentTab == TAB_FAVORITES) {
+                    viewModel.loadFavoriteDecklists()
+                } else {
+                    viewModel.loadEvents()
+                }
             }
+        }
+    }
+
+    private fun showTagFilterDialog() {
+        lifecycleScope.launch {
+            val allTags = tagViewModel.getAllTags()
+            if (allTags.isEmpty()) {
+                android.app.AlertDialog.Builder(this@MainActivity)
+                    .setTitle("标签")
+                    .setMessage("暂无标签，请先在套牌详情中添加标签")
+                    .setPositiveButton("确定", null)
+                    .show()
+                return@launch
+            }
+
+            val tagNames = arrayOf("全部标签") + allTags.map { it.name }.toTypedArray()
+            val checkedIndex = if (selectedTag == null) 0 else allTags.indexOfFirst { it.id == selectedTag?.id } + 1
+
+            android.app.AlertDialog.Builder(this@MainActivity)
+                .setTitle("选择标签")
+                .setSingleChoiceItems(tagNames, checkedIndex) { dialog, which ->
+                    if (which == 0) {
+                        selectedTag = null
+                        tvCurrentTag.text = "标签: 全部"
+                        viewModel.applyTagFilter(null)
+                    } else {
+                        val tag = allTags[which - 1]
+                        selectedTag = tag
+                        tvCurrentTag.text = "标签: ${tag.name}"
+                        viewModel.applyTagFilter(tag.id)
+                    }
+                    dialog.dismiss()
+                }
+                .setNegativeButton("取消", null)
+                .show()
         }
     }
 

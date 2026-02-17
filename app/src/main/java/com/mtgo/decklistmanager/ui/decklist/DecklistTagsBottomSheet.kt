@@ -4,6 +4,7 @@ import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.fragment.app.viewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -48,13 +49,30 @@ class DecklistTagsBottomSheet : BottomSheetDialogFragment() {
         decklistId = requireArguments().getLong(ARG_DECKLIST_ID)
     }
 
-    override fun setupDialog(dialog: Dialog, style: Int) {
-        super.setupDialog(dialog, style)
-        _binding = BottomSheetDecklistTagsBinding.inflate(LayoutInflater.from(context))
-        dialog.setContentView(binding.root)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = BottomSheetDecklistTagsBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        // 展开到底部
-        dialog.setOnShowListener {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupDialog()
+        setupViews()
+        loadTags()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 每次恢复时重新加载标签，确保显示最新数据
+        loadTags()
+    }
+
+    private fun setupDialog() {
+        dialog?.setOnShowListener {
             val bottomSheet = (dialog as BottomSheetDialog).findViewById<FrameLayout>(
                 com.google.android.material.R.id.design_bottom_sheet
             )
@@ -64,9 +82,6 @@ class DecklistTagsBottomSheet : BottomSheetDialogFragment() {
                 behavior.peekHeight = 0
             }
         }
-
-        setupViews()
-        loadTags()
     }
 
     private fun setupViews() {
@@ -75,62 +90,207 @@ class DecklistTagsBottomSheet : BottomSheetDialogFragment() {
         }
 
         binding.btnClose.setOnClickListener {
+            // 关闭前通知父页面刷新
+            notifyParentRefresh()
             dismiss()
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // 弹窗销毁时也通知父页面刷新
+        notifyParentRefresh()
+    }
+
     private fun loadTags() {
         lifecycleScope.launch {
-            currentTags = tagViewModel.getTagsForDecklist(decklistId)
-            updateTagsChips()
+            val tags = tagViewModel.getTagsForDecklist(decklistId)
+            currentTags = tags
+            updateTagsChips(tags)
         }
     }
 
-    private fun updateTagsChips() {
+    private fun updateTagsChips(tags: List<Tag>) {
         binding.chipGroupTags.removeAllViews()
 
-        currentTags.forEach { tag ->
-            val chip = Chip(requireContext()).apply {
-                text = tag.name
-                isCloseIconVisible = true
-                setChipBackgroundColorResource(android.R.color.holo_blue_light)
-                setTextColor(resources.getColor(android.R.color.white, null))
-
-                setOnCloseIconClickListener {
-                    removeTag(tag)
-                }
-            }
-            binding.chipGroupTags.addView(chip)
-        }
-
-        if (currentTags.isEmpty()) {
+        if (tags.isEmpty()) {
             binding.tvNoTags.visibility = View.VISIBLE
         } else {
             binding.tvNoTags.visibility = View.GONE
+
+            tags.forEach { tag ->
+                val chip = Chip(requireContext()).apply {
+                    text = tag.name
+                    isCloseIconVisible = true
+                    setChipBackgroundColorResource(android.R.color.holo_blue_light)
+                    setTextColor(resources.getColor(android.R.color.white, null))
+                    // 让芯片更小巧 (28dp)
+                    chipMinHeight = 28f * resources.displayMetrics.density
+                    textSize = 12f
+
+                    setOnCloseIconClickListener {
+                        removeTag(tag)
+                    }
+                }
+                binding.chipGroupTags.addView(chip)
+            }
         }
     }
 
     private fun showAddTagDialog() {
-        val tagSelector = com.mtgo.decklistmanager.ui.dialog.TagSelectorBottomSheet.newInstance(decklistId) { selectedIds ->
-            lifecycleScope.launch {
-                // 先移除所有现有标签
-                currentTags.forEach { tag ->
-                    tagViewModel.removeTagFromDecklist(decklistId, tag.id)
+        // 获取所有可用标签
+        lifecycleScope.launch {
+            val allTags = tagViewModel.getAllTags()
+            val currentTagIds = currentTags.map { it.id }.toSet()
+
+            // 构建多选对话框
+            val checkedItems = BooleanArray(allTags.size) { i ->
+                allTags[i].id in currentTagIds
+            }
+
+            val tagNames = allTags.map { it.name }.toTypedArray()
+
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle("选择标签")
+                .setMultiChoiceItems(tagNames, checkedItems) { _, which, isChecked ->
+                    checkedItems[which] = isChecked
                 }
-                // 添加新选择的标签
-                selectedIds.forEach { tagId ->
-                    tagViewModel.addTagToDecklist(decklistId, tagId)
+                .setPositiveButton("确定") { _, _ ->
+                    lifecycleScope.launch {
+                        // 获取选中的标签ID
+                        val selectedIds = mutableSetOf<Long>()
+                        checkedItems.forEachIndexed { index, isChecked ->
+                            if (isChecked) {
+                                selectedIds.add(allTags[index].id)
+                            }
+                        }
+
+                        // 找出需要删除的标签
+                        val toRemove = currentTagIds - selectedIds
+                        // 找出需要添加的标签
+                        val toAdd = selectedIds - currentTagIds
+
+                        // 先执行UI更新（删除）
+                        toRemove.forEach { tagId ->
+                            val tag = currentTags.find { it.id == tagId }
+                            tag?.let { removeTagFromUI(it) }
+                        }
+
+                        // 执行数据库操作
+                        toRemove.forEach { tagId ->
+                            tagViewModel.removeTagFromDecklist(decklistId, tagId)
+                        }
+
+                        // 先添加到UI（即时反馈）
+                        val addedTags = mutableListOf<Tag>()
+                        toAdd.forEach { tagId ->
+                            val tag = allTags.find { it.id == tagId }
+                            tag?.let {
+                                addedTags.add(it)
+                                addTagToUI(it)
+                            }
+                        }
+
+                        // 再执行数据库添加操作
+                        toAdd.forEach { tagId ->
+                            tagViewModel.addTagToDecklist(decklistId, tagId)
+                        }
+
+                        // 更新当前标签列表
+                        currentTags = currentTags.filter { it.id !in toRemove } + addedTags
+
+                        // 最后刷新 DeckDetailActivity
+                        notifyParentRefresh()
+                    }
                 }
-                loadTags()
+                .setNegativeButton("取消", null)
+                .setNeutralButton("新建标签") { _, _ ->
+                    showNewTagDialog()
+                }
+                .show()
+        }
+    }
+
+    private fun showNewTagDialog() {
+        val editText = android.widget.EditText(requireContext())
+        editText.hint = "标签名称"
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("创建新标签")
+            .setView(editText)
+            .setPositiveButton("创建") { _, _ ->
+                val tagName = editText.text.toString().trim()
+                if (tagName.isNotEmpty()) {
+                    lifecycleScope.launch {
+                        val newTag = tagViewModel.createTag(tagName)
+                        // 立即添加到UI
+                        addTagToUI(newTag)
+                        currentTags = currentTags + newTag
+                        // 执行数据库添加操作
+                        tagViewModel.addTagToDecklist(decklistId, newTag.id)
+                        // 通知父页面刷新
+                        notifyParentRefresh()
+                    }
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun addTagToUI(tag: Tag) {
+        binding.tvNoTags.visibility = View.GONE
+
+        val chip = Chip(requireContext()).apply {
+            text = tag.name
+            isCloseIconVisible = true
+            setChipBackgroundColorResource(android.R.color.holo_blue_light)
+            setTextColor(resources.getColor(android.R.color.white, null))
+            // 让芯片更小巧 (28dp)
+            chipMinHeight = 28f * resources.displayMetrics.density
+            textSize = 12f
+
+            setOnCloseIconClickListener {
+                removeTag(tag)
             }
         }
-        tagSelector.show(childFragmentManager, "tag_selector")
+        binding.chipGroupTags.addView(chip)
     }
 
     private fun removeTag(tag: Tag) {
         lifecycleScope.launch {
+            // 先从UI中移除，提供即时反馈
+            removeTagFromUI(tag)
+            // 更新当前标签列表
+            currentTags = currentTags.filter { it.id != tag.id }
+            // 然后执行数据库删除操作
             tagViewModel.removeTagFromDecklist(decklistId, tag.id)
-            loadTags()
+            // 通知父页面刷新
+            notifyParentRefresh()
+        }
+    }
+
+    private fun removeTagFromUI(tag: Tag) {
+        // 遍历查找要删除的 chip
+        for (i in 0 until binding.chipGroupTags.childCount) {
+            val chip = binding.chipGroupTags.getChildAt(i) as? Chip
+            if (chip?.text == tag.name) {
+                binding.chipGroupTags.removeViewAt(i)
+                break
+            }
+        }
+
+        // 检查是否还有标签
+        if (binding.chipGroupTags.childCount == 0) {
+            binding.tvNoTags.visibility = View.VISIBLE
+        }
+    }
+
+    private fun notifyParentRefresh() {
+        // 通知父 Activity 刷新标签显示
+        (activity as? com.mtgo.decklistmanager.ui.decklist.DeckDetailActivity)?.let {
+            it.runOnUiThread {
+                it.refreshTagsAndNotes()
+            }
         }
     }
 
@@ -139,3 +299,4 @@ class DecklistTagsBottomSheet : BottomSheetDialogFragment() {
         _binding = null
     }
 }
+

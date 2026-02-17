@@ -58,8 +58,42 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="赛制: 全部"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:textColor="@color/text_primary"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:drawableEnd="@android:drawable/arrow_down_float"
+                    android:drawablePadding="4dp" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="16dp"
+                android:background="@color/outline" />
+
+            <!-- Tag Selector -->
+            <LinearLayout
+                android:id="@+id/tagSelector"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="?attr/selectableItemBackground"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:id="@+id/tvCurrentTag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="标签: 全部"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_primary"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:drawableEnd="@android:drawable/arrow_down_float"
                     android:drawablePadding="4dp" />
 
@@ -88,8 +122,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="日期: 全部"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:textColor="@color/text_primary"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:drawableEnd="@android:drawable/arrow_down_float"
                     android:drawablePadding="4dp" />
 

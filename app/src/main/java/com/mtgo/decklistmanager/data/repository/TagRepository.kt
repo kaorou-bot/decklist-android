@@ -113,22 +113,22 @@ class TagRepository @Inject constructor(
      * 为套牌添加标签
      */
     suspend fun addTagToDecklist(decklistId: Long, tagId: Long) {
-        val relation = DecklistTagRelationEntity(
-            decklistId = decklistId,
-            tagId = tagId
-        )
-        tagRelationDao.insert(relation)
+        // 先检查是否已存在
+        val exists = tagRelationDao.isDecklistHasTag(decklistId, tagId) > 0
+        if (!exists) {
+            val relation = DecklistTagRelationEntity(
+                decklistId = decklistId,
+                tagId = tagId
+            )
+            tagRelationDao.insert(relation)
+        }
     }
 
     /**
      * 从套牌移除标签
      */
     suspend fun removeTagFromDecklist(decklistId: Long, tagId: Long) {
-        val relation = DecklistTagRelationEntity(
-            decklistId = decklistId,
-            tagId = tagId
-        )
-        tagRelationDao.delete(relation)
+        tagRelationDao.deleteByDecklistAndTag(decklistId, tagId)
     }
 
     /**

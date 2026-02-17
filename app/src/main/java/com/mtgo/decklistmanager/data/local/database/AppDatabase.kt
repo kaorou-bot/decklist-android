@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
         DecklistFolderRelationEntity::class,
         DecklistTagRelationEntity::class
     ],
-    version = 11,  // 版本升级：10 -> 11 (v4.3.0 新功能：文件夹、标签、备注)
+    version = 12,  // 版本升级：11 -> 12 (添加 oracle_id 字段用于印刷版本切换)
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -65,7 +65,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addCallback(DatabaseCallback())
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .build()
                 INSTANCE = instance
                 instance
@@ -338,6 +338,17 @@ abstract class AppDatabase : RoomDatabase() {
                 """)
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_dtr_decklist_id ON decklist_tag_relations(decklist_id)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_dtr_tag_id ON decklist_tag_relations(tag_id)")
+            }
+        }
+
+        /**
+         * 数据库版本 11 -> 12 迁移
+         * 添加 oracle_id 字段到 card_info 表用于印刷版本切换
+         */
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 为 card_info 表添加 oracle_id 列
+                db.execSQL("ALTER TABLE card_info ADD COLUMN oracle_id TEXT")
             }
         }
     }

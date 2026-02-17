@@ -12,7 +12,7 @@ object CardDetailHelper {
     /**
      * 从 MtgchCardDto 构建 CardInfo（用于显示卡牌详情）
      *
-     * @param mtgchCard MTGCH API 返回的完整卡牌数据
+     * @param mtgchCard MTG API 返回的完整卡牌数据
      * @param cardInfoId 卡牌 ID
      * @param displayName 显示名称（可选，默认使用 mtgchCard 的名称）
      * @param manaCost 法术力费用（可选，默认使用 mtgchCard 的法术力）
@@ -34,7 +34,7 @@ object CardDetailHelper {
      */
     fun buildCardInfo(
         mtgchCard: MtgchCardDto,
-        cardInfoId: String = mtgchCard.id ?: mtgchCard.oracleId ?: "",
+        cardInfoId: String = mtgchCard.idString ?: mtgchCard.oracleId ?: "",
         displayName: String? = null,
         manaCost: String? = null,
         cmc: Double? = null,
@@ -51,66 +51,140 @@ object CardDetailHelper {
         collectorNumber: String? = null,
         imageUrl: String? = null
     ): CardInfo {
+        // 优先使用新的 cardFaces 字段，如果没有再尝试 otherFaces
+        val cardFaces = mtgchCard.cardFaces
         val otherFaces = mtgchCard.otherFaces
-        val isDualFaced = (mtgchCard.layout in getDualFaceLayouts())
-            || (otherFaces != null && otherFaces.isNotEmpty())
-            || (mtgchCard.name?.contains(" // ") == true)
 
-        // 正面图片 - 优先使用中文图片
-        val frontImageUri = mtgchCard.zhsImageUris?.normal ?: mtgchCard.imageUris?.normal
+        // 真正的双面牌（需要显示背面和翻转功能）
+        val realDualFaceLayouts = listOf(
+            "transform",           // 标准双面牌（如：狼人）
+            "modal_dfc",           // 模态双面牌（如：札尔琴的地窖）
+            "double_faced_token"   // 双面指示物
+        )
 
-        // 反面图片 - 优先使用中文图片
-        val backImageUri = if (otherFaces != null && otherFaces.isNotEmpty()) {
-            otherFaces[0].zhsImageUris?.normal ?: otherFaces[0].imageUris?.normal
-        } else null
+        // 严格的双面牌判断：优先使用 isDoubleFaced 字段
+        val isDualFaced = (mtgchCard.isDoubleFaced == true) ||
+                         (mtgchCard.layout in realDualFaceLayouts) ||
+                         (cardFaces != null && cardFaces.size >= 2) ||
+                         (otherFaces != null && otherFaces.isNotEmpty())
+
+        // 正面图片 - 优先使用服务器图片
+        val frontImageUri = mtgchCard.imageUris?.normal
+
+        // 反面图片 - 从 cardFaces 获取背面图片
+        val backImageUri = when {
+            // 使用 cardFaces 中的 imageUris
+            cardFaces != null && cardFaces.size >= 2 -> {
+                AppLogger.d("CardDetailHelper", "Using cardFaces[1].imageUris for back image")
+                AppLogger.d("CardDetailHelper", "cardFaces[1].name: ${cardFaces[1].name}")
+                AppLogger.d("CardDetailHelper", "cardFaces[1].zhName: ${cardFaces[1].zhName}")
+                AppLogger.d("CardDetailHelper", "cardFaces[1].imageUris: ${cardFaces[1].imageUris}")
+                AppLogger.d("CardDetailHelper", "cardFaces[1].imageUris?.normal: ${cardFaces[1].imageUris?.normal}")
+                cardFaces[1].imageUris?.normal
+            }
+            // 兼容旧的 otherFaces 字段
+            otherFaces != null && otherFaces.isNotEmpty() -> {
+                AppLogger.d("CardDetailHelper", "Using otherFaces[0] for back image")
+                otherFaces[0].zhsImageUris?.normal ?: otherFaces[0].imageUris?.normal
+            }
+            else -> {
+                AppLogger.d("CardDetailHelper", "No back image source available")
+                null
+            }
+        }
+
+        AppLogger.d("CardDetailHelper", "Card ${mtgchCard.name} - isDualFaced: $isDualFaced")
+        AppLogger.d("CardDetailHelper", "cardFaces size: ${cardFaces?.size}, otherFaces size: ${otherFaces?.size}")
+        AppLogger.d("CardDetailHelper", "Final backImageUri: $backImageUri")
 
         // 正面名称
         val frontFaceName = if (isDualFaced) {
             mtgchCard.faceName ?: mtgchCard.zhsFaceName ?: mtgchCard.name
         } else null
 
-        // 反面名称
-        val backFaceName = if (otherFaces != null && otherFaces.isNotEmpty()) {
-            otherFaces[0].faceName ?: otherFaces[0].zhsFaceName ?: otherFaces[0].name
-        } else null
+        // 反面名称 - 优先使用 cardFaces
+        val backFaceName = when {
+            cardFaces != null && cardFaces.size >= 2 -> {
+                AppLogger.d("CardDetailHelper", "cardFaces[1].zhName: ${cardFaces[1].zhName}")
+                AppLogger.d("CardDetailHelper", "cardFaces[1].name: ${cardFaces[1].name}")
+                cardFaces[1].zhName ?: cardFaces[1].name
+            }
+            otherFaces != null && otherFaces.isNotEmpty() -> {
+                otherFaces[0].faceName ?: otherFaces[0].nameZh ?: otherFaces[0].name
+            }
+            else -> null
+        }
 
-        // 反面法术力
-        val backFaceManaCost = if (otherFaces != null && otherFaces.isNotEmpty()) {
-            otherFaces[0].manaCost
-        } else null
+        // 反面法术力 - 优先使用 cardFaces
+        val backFaceManaCost = when {
+            cardFaces != null && cardFaces.size >= 2 -> {
+                AppLogger.d("CardDetailHelper", "cardFaces[1].manaCost: ${cardFaces[1].manaCost}")
+                cardFaces[1].manaCost
+            }
+            otherFaces != null && otherFaces.isNotEmpty() -> otherFaces[0].manaCost
+            else -> null
+        }
 
-        // 反面类型
-        val backFaceTypeLine = if (otherFaces != null && otherFaces.isNotEmpty()) {
-            otherFaces[0].zhsTypeLine ?: otherFaces[0].typeLine
-        } else null
+        // 反面类型 - 优先使用 cardFaces
+        val backFaceTypeLine = when {
+            cardFaces != null && cardFaces.size >= 2 -> {
+                AppLogger.d("CardDetailHelper", "cardFaces[1].zhTypeLine: ${cardFaces[1].zhTypeLine}")
+                AppLogger.d("CardDetailHelper", "cardFaces[1].typeLine: ${cardFaces[1].typeLine}")
+                cardFaces[1].zhTypeLine ?: cardFaces[1].typeLine
+            }
+            otherFaces != null && otherFaces.isNotEmpty() -> otherFaces[0].typeLineZh ?: otherFaces[0].typeLine
+            else -> null
+        }
 
-        // 反面规则文本
-        val backFaceOracleText = if (otherFaces != null && otherFaces.isNotEmpty()) {
-            otherFaces[0].zhsText ?: otherFaces[0].oracleText
-        } else null
+        // 反面规则文本 - 优先使用 cardFaces
+        val backFaceOracleText = when {
+            cardFaces != null && cardFaces.size >= 2 -> {
+                AppLogger.d("CardDetailHelper", "cardFaces[1].zhText: ${cardFaces[1].zhText}")
+                AppLogger.d("CardDetailHelper", "cardFaces[1].oracleText: ${cardFaces[1].oracleText}")
+                cardFaces[1].zhText ?: cardFaces[1].oracleText
+            }
+            otherFaces != null && otherFaces.isNotEmpty() -> otherFaces[0].oracleTextZh ?: otherFaces[0].oracleText
+            else -> null
+        }
 
-        // 反面力量
-        val backFacePower = if (otherFaces != null && otherFaces.isNotEmpty()) {
-            otherFaces[0].power
-        } else null
+        // 反面力量 - 优先使用 cardFaces
+        val backFacePower = when {
+            cardFaces != null && cardFaces.size >= 2 -> cardFaces[1].power
+            otherFaces != null && otherFaces.isNotEmpty() -> otherFaces[0].power
+            else -> null
+        }
 
-        // 反面防御力
-        val backFaceToughness = if (otherFaces != null && otherFaces.isNotEmpty()) {
-            otherFaces[0].toughness
-        } else null
+        // 反面防御力 - 优先使用 cardFaces
+        val backFaceToughness = when {
+            cardFaces != null && cardFaces.size >= 2 -> cardFaces[1].toughness
+            otherFaces != null && otherFaces.isNotEmpty() -> otherFaces[0].toughness
+            else -> null
+        }
 
-        // 反面忠诚度
-        val backFaceLoyalty = if (otherFaces != null && otherFaces.isNotEmpty()) {
-            otherFaces[0].loyalty
-        } else null
+        // 反面忠诚度 - 优先使用 cardFaces
+        val backFaceLoyalty = when {
+            cardFaces != null && cardFaces.size >= 2 -> cardFaces[1].loyalty
+            otherFaces != null && otherFaces.isNotEmpty() -> otherFaces[0].loyalty
+            else -> null
+        }
+
+        // 获取中文名称（优先使用新字段 nameZh）
+        val getZhsName = mtgchCard.nameZh ?: mtgchCard.atomicTranslatedName
+
+        // 获取中文类型行（优先使用新字段 typeLineZh）
+        val getTypeLineZh = mtgchCard.typeLineZh ?: mtgchCard.atomicTranslatedType
+
+        // 获取中文规则文本（优先使用新字段 oracleTextZh）
+        val getOracleTextZh = mtgchCard.oracleTextZh ?: mtgchCard.atomicTranslatedText
 
         return CardInfo(
             id = cardInfoId,
-            name = displayName ?: (mtgchCard.zhsName ?: mtgchCard.atomicTranslatedName ?: mtgchCard.name ?: ""),
+            oracleId = mtgchCard.oracleId, // 设置 Oracle ID
+            name = displayName ?: (getZhsName ?: mtgchCard.name ?: ""),
             manaCost = manaCost ?: mtgchCard.manaCost,
             cmc = cmc ?: mtgchCard.cmc?.toDouble(),
-            typeLine = typeLine ?: (mtgchCard.zhsTypeLine ?: mtgchCard.atomicTranslatedType ?: mtgchCard.typeLine),
-            oracleText = oracleText ?: (mtgchCard.zhsText ?: mtgchCard.atomicTranslatedText ?: mtgchCard.oracleText),
+            typeLine = typeLine ?: (getTypeLineZh ?: mtgchCard.typeLine),
+            oracleText = oracleText ?: (getOracleTextZh ?: mtgchCard.oracleText),
             colors = colors ?: mtgchCard.colors,
             colorIdentity = mtgchCard.colorIdentity,
             power = power ?: mtgchCard.power,
@@ -118,7 +192,7 @@ object CardDetailHelper {
             loyalty = loyalty ?: mtgchCard.loyalty,
             rarity = rarity ?: mtgchCard.rarity,
             setCode = setCode ?: mtgchCard.setCode,
-            setName = setName ?: (mtgchCard.setTranslatedName ?: mtgchCard.setName),
+            setName = setName ?: (mtgchCard.setNameZh ?: mtgchCard.setTranslatedName ?: mtgchCard.setName),
             artist = artist ?: mtgchCard.artist,
             cardNumber = collectorNumber ?: mtgchCard.collectorNumber,
             legalStandard = mtgchCard.legalities?.get("standard"),

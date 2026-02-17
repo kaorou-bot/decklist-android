@@ -138,8 +138,8 @@ class SearchActivity : AppCompatActivity() {
             imageUrl = result.imageUrl
         )
 
-        // 显示 CardInfoFragment
-        val fragment = CardInfoFragment.newInstance(cardInfo)
+        // 显示 CardInfoFragment，传递 oracleId 用于加载印刷版本
+        val fragment = CardInfoFragment.newInstance(cardInfo, mtgchCard.oracleId)
         fragment.show(supportFragmentManager, "card_detail")
 
         currentDetailDialog = null

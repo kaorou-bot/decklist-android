@@ -9,6 +9,7 @@ import com.mtgo.decklistmanager.data.local.dao.DecklistDao
 import com.mtgo.decklistmanager.data.local.dao.EventDao
 import com.mtgo.decklistmanager.domain.model.*
 import com.mtgo.decklistmanager.data.repository.DecklistRepository
+import com.mtgo.decklistmanager.data.repository.TagRepository
 import com.mtgo.decklistmanager.util.AppLogger
 import com.mtgo.decklistmanager.util.FormatMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +26,8 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val repository: DecklistRepository,
     private val eventDao: EventDao,
-    private val decklistDao: DecklistDao
+    private val decklistDao: DecklistDao,
+    private val tagRepository: TagRepository
 ) : ViewModel() {
 
     // UI State
@@ -46,6 +48,9 @@ class MainViewModel @Inject constructor(
 
     private val _selectedFormatName = MutableStateFlow<String?>("All Formats")
     val selectedFormatName: StateFlow<String?> = _selectedFormatName.asStateFlow()
+
+    private val _selectedTag = MutableStateFlow<Long?>(null)
+    val selectedTag: StateFlow<Long?> = _selectedTag.asStateFlow()
 
     private val _selectedDate = MutableStateFlow<String?>(null)
     val selectedDate: StateFlow<String?> = _selectedDate.asStateFlow()
@@ -192,8 +197,7 @@ class MainViewModel @Inject constructor(
             FormatMapper.nameToCode(formatName)
         }
         _selectedFormat.value = formatCode
-        // 筛选赛制时加载赛事列表（不是decklists）
-        loadEvents()
+        // 不在这里调用load方法，由MainActivity根据当前tab调用相应的load方法
     }
 
     /**
@@ -201,8 +205,17 @@ class MainViewModel @Inject constructor(
      */
     fun applyDateFilter(date: String?) {
         _selectedDate.value = if (date == "All Dates") null else date
-        // 筛选日期时加载赛事列表（不是decklists）
+        // 日期筛选只用于赛事列表
         loadEvents()
+    }
+
+    /**
+     * 应用标签筛选
+     */
+    fun applyTagFilter(tagId: Long?) {
+        _selectedTag.value = tagId
+        // 标签筛选只用于收藏夹
+        loadFavoriteDecklists()
     }
 
     /**
@@ -401,7 +414,20 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
-                val decklistEntities = repository.getFavoriteDecklists()
+                val format = _selectedFormat.value
+                val tagId = _selectedTag.value
+                var decklistEntities = repository.getFavoriteDecklists()
+
+                // 如果有赛制筛选，过滤
+                if (format != null) {
+                    decklistEntities = decklistEntities.filter { it.format == format }
+                }
+
+                // 如果有标签筛选，过滤出带该标签的套牌
+                if (tagId != null) {
+                    val taggedDecklistIds = tagRepository.getDecklistIdsByTag(tagId)
+                    decklistEntities = decklistEntities.filter { it.id in taggedDecklistIds }
+                }
 
                 val items = decklistEntities.map { entity ->
                     DecklistItem(

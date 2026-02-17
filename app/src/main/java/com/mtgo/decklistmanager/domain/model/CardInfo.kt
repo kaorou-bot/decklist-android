@@ -10,6 +10,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class CardInfo(
     val id: String, // Scryfall ID
+    val oracleId: String? = null, // Oracle ID (用于获取印刷版本)
     val name: String,
     val manaCost: String?,
     val cmc: Double?,
@@ -59,6 +60,7 @@ data class CardInfo(
      */
     fun toEntity() = CardInfoEntity(
         id = id,
+        oracleId = oracleId,
         name = name,
         enName = null, // CardInfo 没有区分中英文名，使用 name
         manaCost = manaCost,

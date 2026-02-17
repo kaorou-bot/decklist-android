@@ -64,6 +64,19 @@
                         app:cornerRadius="8dp"
                         style="@style/Widget.Material3.Button.OutlinedButton" />
 
+                    <!-- 印刷版本切换按钮 -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnChangeVersion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="切换印刷版本"
+                        android:visibility="gone"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginBottom="8dp"
+                        app:cornerRadius="8dp"
+                        style="@style/Widget.Material3.Button.TextButton" />
+
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
@@ -212,21 +225,38 @@
                     android:orientation="vertical"
                     android:padding="@dimen/padding_medium">
 
-                    <com.google.android.material.textview.MaterialTextView
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/set_info"
-                        android:textSize="@dimen/text_size_medium"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="@dimen/margin_small" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
+                        <com.google.android.material.textview.MaterialTextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/set_info"
+                            android:textSize="@dimen/text_size_medium"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSelectVersion"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="选择版本"
+                            android:textSize="12sp"
+                            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                    </LinearLayout>
+
+                    <!-- 当前版本显示 -->
                     <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/tvSetInfo"
+                        android:id="@+id/tvCurrentVersion"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="@dimen/text_size_normal"
-                        android:textColor="@color/text_secondary"
-                        tools:text="LEA (Limited Edition Alpha) — 1/250" />
+                        android:textColor="@color/text_primary"
+                        tools:text="LEA (Limited Edition Alpha) — #1" />
 
                     <com.google.android.material.textview.MaterialTextView
                         android:id="@+id/tvArtist"

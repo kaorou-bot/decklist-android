@@ -27,17 +27,15 @@ class NoteEditBottomSheet : BottomSheetDialogFragment() {
     private val noteViewModel: com.mtgo.decklistmanager.ui.note.DecklistNoteViewModel by viewModels()
 
     private var decklistId: Long = 0
-    private var onNoteSaved: ((String) -> Unit)? = null
 
     companion object {
         const val ARG_DECKLIST_ID = "decklist_id"
 
-        fun newInstance(decklistId: Long, onNoteSaved: (String) -> Unit): NoteEditBottomSheet {
+        fun newInstance(decklistId: Long): NoteEditBottomSheet {
             return NoteEditBottomSheet().apply {
                 arguments = Bundle().apply {
                     putLong(ARG_DECKLIST_ID, decklistId)
                 }
-                this.onNoteSaved = onNoteSaved
             }
         }
     }
@@ -78,7 +76,9 @@ class NoteEditBottomSheet : BottomSheetDialogFragment() {
 
     private fun setupViews() {
         binding.btnSave.setOnClickListener {
-            saveNote()
+            lifecycleScope.launch {
+                saveNote()
+            }
         }
 
         binding.btnDelete.setOnClickListener {
@@ -90,22 +90,29 @@ class NoteEditBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // 弹窗关闭时通知父页面刷新（即使没有保存也刷新，保持同步）
+        (activity as? com.mtgo.decklistmanager.ui.decklist.DeckDetailActivity)?.refreshTagsAndNotes()
+    }
+
     private fun loadNote() {
         lifecycleScope.launch {
             noteViewModel.loadNote(decklistId)
-            noteViewModel.currentNote.collect { note ->
-                binding.etNote.setText(note?.note ?: "")
+            // 等待加载完成后获取值
+            kotlinx.coroutines.delay(50)
+            noteViewModel.currentNote.value?.let { note ->
+                binding.etNote.setText(note.note ?: "")
             }
         }
     }
 
-    private fun saveNote() {
+    private suspend fun saveNote() {
         val noteText = binding.etNote.text.toString().trim()
-        lifecycleScope.launch {
-            noteViewModel.saveNote(decklistId, noteText)
-            onNoteSaved?.invoke(noteText)
-            dismiss()
-        }
+        noteViewModel.saveNote(decklistId, noteText)
+        // 通知父页面刷新
+        (activity as? com.mtgo.decklistmanager.ui.decklist.DeckDetailActivity)?.refreshTagsAndNotes()
+        dismiss()
     }
 
     private fun deleteNote() {
@@ -120,7 +127,8 @@ class NoteEditBottomSheet : BottomSheetDialogFragment() {
             .setPositiveButton("删除") { _, _ ->
                 lifecycleScope.launch {
                     noteViewModel.deleteNote(decklistId)
-                    onNoteSaved?.invoke("")
+                    // 通知父页面刷新
+                    (activity as? com.mtgo.decklistmanager.ui.decklist.DeckDetailActivity)?.refreshTagsAndNotes()
                     dismiss()
                 }
             }

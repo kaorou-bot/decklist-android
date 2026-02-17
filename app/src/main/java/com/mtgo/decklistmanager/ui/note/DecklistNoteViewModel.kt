@@ -44,32 +44,31 @@ class DecklistNoteViewModel @Inject constructor(
     /**
      * 保存备注
      */
-    fun saveNote(decklistId: Long, noteText: String) {
-        viewModelScope.launch {
-            _uiState.value = NoteUiState.Saving
-            try {
-                val note = noteRepository.saveNote(decklistId, noteText)
-                _currentNote.value = note
-                _uiState.value = NoteUiState.Success(note)
-            } catch (e: Exception) {
-                _uiState.value = NoteUiState.Error(e.message ?: "Failed to save note")
-            }
+    suspend fun saveNote(decklistId: Long, noteText: String): DecklistNote {
+        _uiState.value = NoteUiState.Saving
+        return try {
+            val note = noteRepository.saveNote(decklistId, noteText)
+            _currentNote.value = note
+            _uiState.value = NoteUiState.Success(note)
+            note
+        } catch (e: Exception) {
+            _uiState.value = NoteUiState.Error(e.message ?: "Failed to save note")
+            throw e
         }
     }
 
     /**
      * 删除备注
      */
-    fun deleteNote(decklistId: Long) {
-        viewModelScope.launch {
-            _uiState.value = NoteUiState.Saving
-            try {
-                noteRepository.deleteNote(decklistId)
-                _currentNote.value = null
-                _uiState.value = NoteUiState.Success(null)
-            } catch (e: Exception) {
-                _uiState.value = NoteUiState.Error(e.message ?: "Failed to delete note")
-            }
+    suspend fun deleteNote(decklistId: Long) {
+        _uiState.value = NoteUiState.Saving
+        try {
+            noteRepository.deleteNote(decklistId)
+            _currentNote.value = null
+            _uiState.value = NoteUiState.Success(null)
+        } catch (e: Exception) {
+            _uiState.value = NoteUiState.Error(e.message ?: "Failed to delete note")
+            throw e
         }
     }
 

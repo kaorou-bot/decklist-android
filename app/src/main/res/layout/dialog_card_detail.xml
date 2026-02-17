@@ -26,17 +26,6 @@
         style="@style/Widget.Material3.Button.OutlinedButton"
         android:visibility="gone" />
 
-    <!-- 版本切换按钮 -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnChangeVersion"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="4dp"
-        android:text="切换版本"
-        style="@style/Widget.Material3.Button.TextButton"
-        android:visibility="gone" />
-
     <!-- 滚动文本区域 -->
     <ScrollView
         android:layout_width="match_parent"
@@ -48,10 +37,45 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <!-- 版本选择 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/textViewSetLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="系列："
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/textViewSetName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="14sp"
+                    android:layout_marginStart="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSelectVersion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="选择版本"
+                    android:textSize="12sp"
+                    style="@style/Widget.Material3.Button.OutlinedButton" />
+
+            </LinearLayout>
+
             <TextView
                 android:id="@+id/textViewCardDetails"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:textSize="14sp"
                 android:lineSpacingExtra="4dp" />
         </LinearLayout>

@@ -66,6 +66,7 @@ class DeckDetailActivity : AppCompatActivity() {
         setupCardLists()
         setupTagsAndNotes()
         setupObservers()
+        setupNoteObserver()
         loadData()
     }
 
@@ -79,6 +80,8 @@ class DeckDetailActivity : AppCompatActivity() {
         super.onResume()
         // 重新检查收藏状态（因为用户可能在MainActivity中改变了收藏状态）
         refreshFavoriteStatus()
+        // 刷新标签和备注（从弹窗返回时会自动调用）
+        loadTagsAndNotes()
     }
 
     private fun refreshFavoriteStatus() {
@@ -221,9 +224,22 @@ class DeckDetailActivity : AppCompatActivity() {
 
                 // 加载备注
                 noteViewModel.loadNote(decklist.id)
-                noteViewModel.currentNote.collect { note ->
-                    binding.tvNotePreview.text = note?.note ?: getString(R.string.no_note)
-                }
+            }
+        }
+    }
+
+    /**
+     * 公共方法：刷新标签和备注显示（供弹窗调用）
+     */
+    fun refreshTagsAndNotes() {
+        currentDecklist?.let { decklist ->
+            lifecycleScope.launch {
+                // 加载标签
+                currentTags = tagViewModel.getTagsForDecklist(decklist.id)
+                updateTagsChips()
+
+                // 加载备注（observer会自动更新UI）
+                noteViewModel.loadNote(decklist.id)
             }
         }
     }
@@ -240,6 +256,9 @@ class DeckDetailActivity : AppCompatActivity() {
                 isCloseIconVisible = false
                 setChipBackgroundColorResource(android.R.color.holo_blue_light)
                 setTextColor(resources.getColor(android.R.color.white, null))
+                // 让芯片更小巧 (24dp)
+                chipMinHeight = 24f * resources.displayMetrics.density
+                textSize = 11f
             }
             binding.chipGroupTags.addView(chip)
         }
@@ -273,10 +292,7 @@ class DeckDetailActivity : AppCompatActivity() {
      */
     private fun showNoteEditBottomSheet() {
         currentDecklist?.let { decklist ->
-            val bottomSheet = NoteEditBottomSheet.newInstance(decklist.id) {
-                // 备注保存后的回调
-                loadTagsAndNotes()
-            }
+            val bottomSheet = NoteEditBottomSheet.newInstance(decklist.id)
             bottomSheet.show(supportFragmentManager, "note_edit_bottom_sheet")
         }
     }
@@ -404,6 +420,18 @@ class DeckDetailActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupNoteObserver() {
+        lifecycleScope.launch {
+            noteViewModel.currentNote.collect { note ->
+                if (note != null && note.note.isNotEmpty()) {
+                    binding.tvNotePreview.text = note.note
+                } else {
+                    binding.tvNotePreview.text = getString(R.string.no_note)
+                }
+            }
+        }
+    }
+
     private fun loadData() {
         // Get decklist ID from intent
         val decklistId = intent.getLongExtra("decklistId", -1)
@@ -443,8 +471,8 @@ class DeckDetailActivity : AppCompatActivity() {
     }
 
     private fun showCardInfoDialog(cardInfo: com.mtgo.decklistmanager.domain.model.CardInfo) {
-        // Show card info popup
-        CardInfoFragment.newInstance(cardInfo).show(
+        // Show card info popup，传递 oracleId 用于加载印刷版本
+        CardInfoFragment.newInstance(cardInfo, cardInfo.oracleId).show(
             supportFragmentManager,
             "card_info"
         )

@@ -20,6 +20,10 @@ data class CardInfoEntity(
     @PrimaryKey
     val id: String, // Scryfall ID
 
+    @ColumnInfo(name = "oracle_id")
+    @SerializedName("oracle_id")
+    val oracleId: String? = null, // Oracle ID (用于获取印刷版本)
+
     val name: String,  // 中文名称（优先）或英文名称
 
     @ColumnInfo(name = "en_name")
@@ -177,6 +181,7 @@ data class CardInfoEntity(
 fun CardInfoEntity.toDomainModel(): com.mtgo.decklistmanager.domain.model.CardInfo {
     return com.mtgo.decklistmanager.domain.model.CardInfo(
     id = id,
+    oracleId = oracleId,
     name = name,
     manaCost = manaCost,
     cmc = cmc,

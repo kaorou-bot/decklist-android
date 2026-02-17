@@ -28,6 +28,12 @@ interface DecklistTagRelationDao {
     suspend fun delete(relation: DecklistTagRelationEntity)
 
     /**
+     * 根据套牌和标签删除关联
+     */
+    @Query("DELETE FROM decklist_tag_relations WHERE decklist_id = :decklistId AND tag_id = :tagId")
+    suspend fun deleteByDecklistAndTag(decklistId: Long, tagId: Long)
+
+    /**
      * 根据套牌 ID 删除所有关联
      */
     @Query("DELETE FROM decklist_tag_relations WHERE decklist_id = :decklistId")

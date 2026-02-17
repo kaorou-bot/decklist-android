@@ -4,32 +4,49 @@ import com.mtgo.decklistmanager.data.local.entity.CardInfoEntity
 import com.google.gson.Gson
 
 /**
- * 将 MTGCH API 卡牌 DTO 转换为 CardInfoEntity
+ * 将 MTG API 卡牌 DTO 转换为 CardInfoEntity
+ *
+ * 新版 API 字段映射:
+ * - 中文名称: nameZh (旧: zhs_name)
+ * - 中文类型: typeLineZh (旧: zhs_type_line)
+ * - 中文规则: oracleTextZh (旧: zhs_text)
+ * - 系列代码: setCode (旧: set)
+ * - 系列名称: setName (旧: set_name)
  */
 fun MtgchCardDto.toEntity(): CardInfoEntity {
-    // 检测双面牌 - 包含更多布局类型
-    val dualFaceLayouts = listOf(
-        "transform",       // 变身牌
-        "modal_dfc",       // 模态双面牌
-        "reversible_card", // 可翻转卡牌
-        "double_faced_token", // 双面衍生物
-        "art_series",      // 艺术系列
-        "double_sided",    // 双面卡（通用）
-        "flip",            // 翻转牌
-        "adventure",       // 冒险牌（双面）
-        "split",           // 分割牌
-        "aftermath",       // 战后牌
-        "classify",        // 类别牌
-        "prototype",       // 原型牌
-        "saga"             // 传说牌（双面）
+    // 检测双面牌类型
+    // 真正的双面牌（需要显示背面）
+    val realDualFaceLayouts = listOf(
+        "transform",           // 标准双面牌（如：狼人）
+        "modal_dfc",           // 模态双面牌（如：札尔琴的地窖）
+        "double_faced_token"   // 双面指示物
     )
 
-    val isDualFaced = (layout != null && layout in dualFaceLayouts)
-            || (otherFaces != null && otherFaces.isNotEmpty())
-            || (cardFaces != null && cardFaces.isNotEmpty())
-            || (imageUris == null && zhsImageUris == null) // 双面牌通常没有单一的 imageUris
-            || (name?.contains(" // ") == true)  // 冒险牌特征：Name // Adventure Name
-            || (zhsName?.contains("//") == true)  // 中文名称可能也包含
+    // 伪双面牌（名字包含"//"但是单张牌）
+    val pseudoDualFaceLayouts = listOf(
+        "split",               // 分面牌（如：Consecrate // Consume）
+        "adventure",           // 冒险牌
+        "flip"                // 翻转牌
+    )
+
+    // 优先使用 isDoubleFaced 字段，如果没有则根据 layout 判断
+    val isDoubleFacedFlag = isDoubleFaced ?: (layout in realDualFaceLayouts)
+    val isPseudoDoubleFaced = layout in pseudoDualFaceLayouts
+
+    // 判断是否为任何类型的双面牌（包括真正和伪双面牌）
+    val isAnyDualFaced = isDoubleFacedFlag || isPseudoDoubleFaced
+        || (cardFaces != null && cardFaces.isNotEmpty())
+        || (otherFaces != null && otherFaces.isNotEmpty())
+        || (imageUris == null && zhsImageUris == null)
+        || (name?.contains(" // ") == true)
+        || (nameZh?.contains("//") == true)
+
+    // isDualFaced 用于标识需要显示背面和翻转功能的真双面牌
+    // 对于 split/adventure/flip 等伪双面牌，isDualFaced 应该为 false
+    val isDualFaced = isDoubleFacedFlag
+
+    // 获取中文名称（优先使用新字段 nameZh，其次使用旧字段）
+    val getZhsName = nameZh ?: atomicTranslatedName
 
     // 对于双面牌，需要从 cardFaces 或 otherFaces 中提取中文名称
     val displayName = if (isDualFaced) {
@@ -41,28 +58,28 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
             when {
                 frontZhName != null && backZhName != null -> "$frontZhName // $backZhName"
                 frontZhName != null -> frontZhName
-                else -> zhsName ?: atomicTranslatedName ?: name ?: ""
+                else -> getZhsName ?: name ?: ""
             }
         }
         // 其次从 otherFaces 获取（需要解析名称）
         else if (otherFaces != null && otherFaces.isNotEmpty()) {
             val otherFace = otherFaces[0]
-            val otherFaceName = otherFace.zhsFaceName ?: otherFace.faceName ?: otherFace.name
+            val otherFaceName = otherFace.nameZh ?: otherFace.faceName ?: otherFace.name
 
             // 如果名称包含 " // "，则分割它
             if (otherFaceName != null && otherFaceName.contains(" // ")) {
                 otherFaceName  // 已经是 "Front // Back" 格式
             } else {
-                zhsName ?: atomicTranslatedName ?: name ?: ""
+                getZhsName ?: name ?: ""
             }
         }
-        // 最后使用 zhsName 或 name
+        // 最后使用中文名或英文名
         else {
-            zhsName ?: atomicTranslatedName ?: name ?: ""
+            getZhsName ?: name ?: ""
         }
     } else {
-        // v4.0.0: 优先官方中文，其次机器翻译，最后英文
-        zhsName ?: atomicTranslatedName ?: name ?: ""
+        // 优先官方中文，其次机器翻译，最后英文
+        getZhsName ?: name ?: ""
     }
 
     // 提取双面牌信息
@@ -91,7 +108,7 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
             otherFaces != null && otherFaces.isNotEmpty() -> {
                 // otherFaces[0] 包含反面数据
                 // 优先级：官方中文面名 > 机器翻译面名 > 英文面名
-                otherFaces[0].zhsFaceName ?: otherFaces[0].atomicTranslatedName ?: otherFaces[0].faceName ?: otherFaces[0].name
+                otherFaces[0].nameZh ?: otherFaces[0].atomicTranslatedName ?: otherFaces[0].faceName ?: otherFaces[0].name
             }
             else -> null
         }
@@ -119,8 +136,8 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         }
     } else null
 
-    // 提取反面详细信息
-    val backFaceManaCost = if (isDualFaced) {
+    // 提取反面详细信息（仅针对真正的双面牌）
+    val backFaceManaCost = if (isDoubleFacedFlag) {
         when {
             cardFaces != null && cardFaces.size > 1 -> {
                 cardFaces.getOrNull(1)?.manaCost
@@ -132,34 +149,34 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         }
     } else null
 
-    val backFaceTypeLine = if (isDualFaced) {
+    val backFaceTypeLine = if (isDoubleFacedFlag) {
         when {
             cardFaces != null && cardFaces.size > 1 -> {
                 cardFaces.getOrNull(1)?.zhTypeLine ?: cardFaces.getOrNull(1)?.typeLine
             }
             otherFaces != null && otherFaces.isNotEmpty() -> {
-                // 优先使用官方中文，其次机器翻译，最后英文原文
-                otherFaces[0].zhsTypeLine ?: otherFaces[0].atomicTranslatedType ?: otherFaces[0].typeLine
+                otherFaces[0].typeLineZh ?: otherFaces[0].atomicTranslatedType ?: otherFaces[0].typeLine
             }
             else -> null
         }
     } else null
 
-    val backFaceOracleText = if (isDualFaced) {
+    val backFaceOracleText = if (isDoubleFacedFlag) {
         when {
             cardFaces != null && cardFaces.size > 1 -> {
+                // 优先使用中文规则文本
                 cardFaces.getOrNull(1)?.zhText ?: cardFaces.getOrNull(1)?.oracleText
             }
             otherFaces != null && otherFaces.isNotEmpty() -> {
                 // 优先使用官方中文，其次机器翻译，最后英文原文
-                otherFaces[0].zhsText ?: otherFaces[0].atomicTranslatedText ?: otherFaces[0].oracleText
+                otherFaces[0].oracleTextZh ?: otherFaces[0].atomicTranslatedText ?: otherFaces[0].oracleText
             }
             else -> null
         }
     } else null
 
-    // 提取反面攻防数据
-    val backFacePower = if (isDualFaced) {
+    // 提取反面攻防数据（仅针对真正的双面牌）
+    val backFacePower = if (isDoubleFacedFlag) {
         when {
             cardFaces != null && cardFaces.size > 1 -> {
                 cardFaces.getOrNull(1)?.power
@@ -171,7 +188,7 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         }
     } else null
 
-    val backFaceToughness = if (isDualFaced) {
+    val backFaceToughness = if (isDoubleFacedFlag) {
         when {
             cardFaces != null && cardFaces.size > 1 -> {
                 cardFaces.getOrNull(1)?.toughness
@@ -183,7 +200,7 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         }
     } else null
 
-    val backFaceLoyalty = if (isDualFaced) {
+    val backFaceLoyalty = if (isDoubleFacedFlag) {
         when {
             cardFaces != null && cardFaces.size > 1 -> {
                 cardFaces.getOrNull(1)?.loyalty
@@ -201,26 +218,65 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         gson.toJson(cardFaces)
     } else null
 
-    // 使用 id 或生成一个唯一 ID
-    val entityId = id ?: oracleId ?: "${name}_${setCode}_${collectorNumber}"
+    // 使用 idString 或生成一个唯一 ID
+    val entityId = idString ?: oracleId ?: "${name}_${setCode}_${collectorNumber}"
+
+    // 对于双面牌，从 card_faces[0] 获取正面的法术力值、攻防、忠诚度和规则文本
+    val finalManaCost = if (isDoubleFacedFlag && cardFaces != null && cardFaces.isNotEmpty()) {
+        cardFaces[0].manaCost  // 使用正面的法术力值
+    } else {
+        manaCost  // 单面牌或伪双面牌使用顶层法术力值
+    }
+
+    val finalPower = if (isDoubleFacedFlag && cardFaces != null && cardFaces.isNotEmpty() && cardFaces[0].power != null) {
+        cardFaces[0].power
+    } else {
+        power
+    }
+
+    val finalToughness = if (isDoubleFacedFlag && cardFaces != null && cardFaces.isNotEmpty() && cardFaces[0].toughness != null) {
+        cardFaces[0].toughness
+    } else {
+        toughness
+    }
+
+    val finalLoyalty = if (isDoubleFacedFlag && cardFaces != null && cardFaces.isNotEmpty() && cardFaces[0].loyalty != null) {
+        cardFaces[0].loyalty
+    } else {
+        loyalty
+    }
+
+    // 获取中文类型行
+    val getTypeLineZh = typeLineZh ?: atomicTranslatedType
+
+    // 获取中文规则文本
+    val getOracleTextZh = oracleTextZh ?: atomicTranslatedText
+
+    val finalOracleText = if (isDoubleFacedFlag && cardFaces != null && cardFaces.isNotEmpty()) {
+        // 优先使用中文规则文本，其次英文
+        cardFaces[0].zhText ?: cardFaces[0].oracleText
+    } else {
+        getOracleTextZh ?: oracleText
+    }
 
     return CardInfoEntity(
         id = entityId,
+        oracleId = oracleId, // 保存 Oracle ID
         name = displayName,  // 使用处理后的显示名称
         enName = name,  // 保存原始英文名
-        manaCost = manaCost,
+        manaCost = finalManaCost,
         cmc = cmc?.toDouble(),
-        // v4.0.0: 优先使用官方中文，其次机器翻译，最后英文原文
-        typeLine = zhsTypeLine ?: atomicTranslatedType ?: typeLine,
-        oracleText = zhsText ?: atomicTranslatedText ?: oracleText,
+        // 优先使用官方中文，其次机器翻译，最后英文原文
+        typeLine = getTypeLineZh ?: typeLine,
+        oracleText = finalOracleText,
         colors = colors?.joinToString(","),
         colorIdentity = colorIdentity?.joinToString(","),
-        power = power,
-        toughness = toughness,
-        loyalty = loyalty,
+        power = finalPower,
+        toughness = finalToughness,
+        loyalty = finalLoyalty,
         rarity = rarity,
         setCode = setCode,
-        setName = setTranslatedName ?: setName,
+        setName = setNameZh ?: setTranslatedName ?: setName,
         artist = artist,
         cardNumber = collectorNumber,
         legalStandard = legalities?.get("standard"),

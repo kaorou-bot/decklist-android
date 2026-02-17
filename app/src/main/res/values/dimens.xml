@@ -18,4 +18,6 @@
     <dimen name="button_height">48dp</dimen>
     <dimen name="card_min_height">70dp</dimen>
     <dimen name="image_height">300dp</dimen>
+    <dimen name="chip_min_height_compact">24dp</dimen>
+    <dimen name="chip_min_height_small">28dp</dimen>
 </resources>
