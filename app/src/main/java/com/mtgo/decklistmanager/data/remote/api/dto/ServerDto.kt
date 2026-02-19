@@ -188,7 +188,7 @@ data class CardInfoDto(
 )
 
 /**
- * 图片 URIs
+ * 图片 URIs（含 Scryfall 备用）
  */
 data class ImageUris(
     val small: String?,
@@ -196,7 +196,12 @@ data class ImageUris(
     val large: String?,
     val png: String?,
     val artCrop: String?,
-    val borderCrop: String?
+    val borderCrop: String?,
+    // Scryfall 备用图片（当 MTGCH 图片不可用时）
+    val scryfallSmall: String? = null,
+    val scryfallNormal: String? = null,
+    val scryfallLarge: String? = null,
+    val scryfallPng: String? = null
 )
 
 /**

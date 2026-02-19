@@ -18,6 +18,8 @@ import com.mtgo.decklistmanager.util.AppLogger
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 /**
  * Card Info Dialog - 卡牌信息弹窗
@@ -74,18 +76,16 @@ class CardInfoFragment : DialogFragment() {
         AppLogger.d("CardInfoFragment", "Received oracleId: $receivedOracleId")
         AppLogger.d("CardInfoFragment", "Card info oracleId: ${cardInfo?.oracleId}")
 
+        // 只有当有 oracleId 时才自动加载印刷版本
+        // 避免对没有 oracleId 的卡牌进行耗时的搜索
         if (receivedOracleId != null) {
             AppLogger.d("CardInfoFragment", "Loading printings for oracleId: $receivedOracleId")
             loadPrintings(receivedOracleId)
         } else {
-            // 没有 oracleId 时，尝试使用卡牌名称搜索获取印刷版本
-            AppLogger.w("CardInfoFragment", "No oracleId available, trying to load printings by card name")
-            val cardName = cardInfo?.name
-            if (!cardName.isNullOrEmpty()) {
-                loadPrintingsByName(cardName)
-            } else {
-                AppLogger.w("CardInfoFragment", "No card name available, cannot load printings")
-            }
+            // 没有 oracleId 时不加载印刷版本，避免性能问题
+            // 用户可以手动点击"选择版本"按钮（如果将来需要的话）
+            AppLogger.d("CardInfoFragment", "No oracleId available, skipping printings load")
+            binding.btnSelectVersion.visibility = View.GONE
         }
 
         val title = cardInfo?.name ?: "卡牌详情"
@@ -185,64 +185,74 @@ class CardInfoFragment : DialogFragment() {
                     AppLogger.d("CardInfoFragment", "oracleId is null, fetching from API")
 
                     try {
-                        // 尝试多个搜索词
-                        val searchTerms = mutableListOf<String>()
+                        // 添加超时控制，避免长时间卡住
+                        withTimeout(5000) {
+                            // 尝试多个搜索词
+                            val searchTerms = mutableListOf<String>()
 
-                        // 1. 优先使用英文名（如果存在）
-                        if (!englishName.isNullOrEmpty()) {
-                            searchTerms.add(englishName)
-                        }
+                            // 1. 优先使用英文名（如果存在）
+                            val engName = englishName
+                            if (engName != null) {
+                                searchTerms.add(engName)
+                            }
 
-                        // 2. 对于双面牌（名称包含 //），只使用第一部分搜索
-                        val firstHalfName = if (cardName.contains(" // ")) {
-                            cardName.split(" // ")[0].trim()
-                        } else null
-                        if (firstHalfName != null) {
-                            searchTerms.add(firstHalfName)
-                        }
+                            // 2. 对于双面牌（名称包含 //），只使用第一部分搜索
+                            val firstHalfName = if (cardName.contains(" // ")) {
+                                cardName.split(" // ")[0].trim()
+                            } else null
+                            if (firstHalfName != null) {
+                                searchTerms.add(firstHalfName)
+                            }
 
-                        // 3. 使用原始卡名
-                        searchTerms.add(cardName)
+                            // 3. 使用原始卡名
+                            searchTerms.add(cardName)
 
-                        AppLogger.d("CardInfoFragment", "Will try searching with: ${searchTerms.joinToString(", ")}")
+                            AppLogger.d("CardInfoFragment", "Will try searching with: ${searchTerms.joinToString(", ")}")
 
-                        // 依次尝试每个搜索词，直到找到结果
-                        for (searchTerm in searchTerms) {
-                            val cards = searchViewModel.searchCardPrintingsByName(searchTerm, limit = 5)
-                            if (cards.isNotEmpty()) {
-                                // 找到匹配的卡牌，获取其 oracleId
-                                val matchedCard = cards.find { card ->
-                                    val nameMatch = card.name.equals(searchTerm, ignoreCase = true)
-                                    val zhNameMatch = card.nameZh?.equals(cardName, ignoreCase = true) == true ||
-                                                    card.nameZh?.equals(firstHalfName, ignoreCase = true) == true
-                                    nameMatch || zhNameMatch
-                                } ?: cards.firstOrNull()
+                            // 依次尝试每个搜索词，直到找到结果
+                            for (searchTerm in searchTerms) {
+                                val cards = searchViewModel.searchCardPrintingsByName(searchTerm, limit = 5)
+                                if (cards.isNotEmpty()) {
+                                    // 找到匹配的卡牌，获取其 oracleId
+                                    val matchedCard = cards.find { card ->
+                                        val nameMatch = card.name.equals(searchTerm, ignoreCase = true)
+                                        val zhNameMatch = card.nameZh?.equals(cardName, ignoreCase = true) == true ||
+                                                        card.nameZh?.equals(firstHalfName, ignoreCase = true) == true
+                                        nameMatch || zhNameMatch
+                                    } ?: cards.firstOrNull()
 
-                                if (matchedCard != null) {
-                                    oracleId = matchedCard.oracleId
-                                    englishName = matchedCard.name
+                                    if (matchedCard != null) {
+                                        oracleId = matchedCard.oracleId
+                                        englishName = matchedCard.name
 
-                                    AppLogger.d("CardInfoFragment", "Found oracleId: $oracleId, English name: $englishName")
+                                        AppLogger.d("CardInfoFragment", "Found oracleId: $oracleId, English name: $englishName")
 
-                                    // 更新 currentCardInfo
-                                    currentCardInfo = currentCardInfo?.copy(
-                                        oracleId = oracleId,
-                                        enName = englishName
-                                    )
+                                        // 更新 currentCardInfo
+                                        currentCardInfo = currentCardInfo?.copy(
+                                            oracleId = oracleId,
+                                            enName = englishName
+                                        )
 
-                                    break
+                                        break
+                                    }
                                 }
                             }
                         }
+                    } catch (e: TimeoutCancellationException) {
+                        AppLogger.w("CardInfoFragment", "Search oracleId timeout after 5 seconds")
+                        // 超时后不再继续查询印刷版本
+                        return@launch
                     } catch (e: Exception) {
                         AppLogger.e("CardInfoFragment", "Failed to fetch oracleId", e)
+                        return@launch
                     }
                 }
 
                 // 现在使用 oracleId 获取所有印刷版本
-                if (!oracleId.isNullOrEmpty()) {
-                    AppLogger.d("CardInfoFragment", "Loading printings using oracleId: $oracleId")
-                    val result = searchViewModel.getCardPrintings(oracleId, limit = 100)
+                val oId = oracleId
+                if (oId != null) {
+                    AppLogger.d("CardInfoFragment", "Loading printings using oracleId: $oId")
+                    val result = searchViewModel.getCardPrintings(oId, limit = 100)
                     result?.let { (cards, total) ->
                         printings = cards
                         AppLogger.d("CardInfoFragment", "Loaded ${cards.size} printings using oracleId")
@@ -256,13 +266,19 @@ class CardInfoFragment : DialogFragment() {
                 }
 
                 // 如果没有 oracleId，回退到直接搜索（可能只有1个结果）
-                AppLogger.w("CardInfoFragment", "No oracleId found, falling back to direct search")
-                val cards = searchViewModel.searchCardPrintingsByName(cardName)
-                printings = cards
-                if (_binding != null) {
-                    updateVersionSelectorItems()
+                // 只有在英文名的情况下才回退，中文名搜索通常会失败
+                val engName = englishName
+                if (engName != null && oracleId == null) {
+                    AppLogger.w("CardInfoFragment", "No oracleId found, falling back to direct search")
+                    val cards = searchViewModel.searchCardPrintingsByName(engName)
+                    printings = cards
+                    if (_binding != null) {
+                        updateVersionSelectorItems()
+                    } else {
+                        AppLogger.e("CardInfoFragment", "_binding is null, cannot update button")
+                    }
                 } else {
-                    AppLogger.e("CardInfoFragment", "_binding is null, cannot update button")
+                    AppLogger.d("CardInfoFragment", "Skipping printings load - no english name available")
                 }
             } catch (e: Exception) {
                 AppLogger.e("CardInfoFragment", "Error loading printings by name", e)
@@ -394,6 +410,7 @@ class CardInfoFragment : DialogFragment() {
                 cardInfo.imageUriNormal
             }
 
+            // 使用 Glide 加载图片，带错误处理
             if (!imageUrl.isNullOrEmpty()) {
                 Glide.with(this@CardInfoFragment)
                     .load(imageUrl)
