@@ -12,6 +12,7 @@ data class CardInfo(
     val id: String, // Scryfall ID
     val oracleId: String? = null, // Oracle ID (用于获取印刷版本)
     val name: String,
+    val enName: String? = null, // 英文名称（用于API搜索）
     val manaCost: String?,
     val cmc: Double?,
     val typeLine: String?,
@@ -62,7 +63,7 @@ data class CardInfo(
         id = id,
         oracleId = oracleId,
         name = name,
-        enName = null, // CardInfo 没有区分中英文名，使用 name
+        enName = enName, // 保存英文名用于搜索
         manaCost = manaCost,
         cmc = cmc,
         typeLine = typeLine,

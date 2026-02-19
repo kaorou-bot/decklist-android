@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.mtgo.decklistmanager.databinding.ItemCardBinding
 import com.mtgo.decklistmanager.domain.model.Card
 import com.mtgo.decklistmanager.util.ManaSymbolRenderer
+import com.mtgo.decklistmanager.util.AppLogger
 
 /**
  * Card Adapter - 卡牌列表适配器
@@ -41,11 +42,19 @@ class CardAdapter(
                 btnCardName.text = card.cardNameZh ?: card.cardName
 
                 // v4.0.0: 法术力值显示
-                // 土地等没有法术力值的卡牌显示空字符串是正常的
+                // 对于 Split 牌（名称包含 //），如果 manaCost 不包含 //，说明是旧数据
+                // 这种情况下，尝试从名称推断（这是一个临时解决方案）
                 val manaDisplay = if (card.manaCost.isNullOrEmpty()) {
                     ""  // 土地卡没有法术力值
                 } else {
-                    ManaSymbolRenderer.renderManaCost(card.manaCost, btnCardName.context)
+                    var manaCost = card.manaCost
+
+                    // 记录所有包含 // 的卡牌（包括 split 卡）
+                    if (card.cardName?.contains(" // ") == true || card.cardNameZh?.contains(" // ") == true || manaCost.contains(" // ")) {
+                        AppLogger.d("CardAdapter", "Split card - name: ${card.cardNameZh}, manaCost: $manaCost")
+                    }
+
+                    ManaSymbolRenderer.renderManaCost(manaCost, btnCardName.context)
                 }
                 tvManaCost.text = manaDisplay
 

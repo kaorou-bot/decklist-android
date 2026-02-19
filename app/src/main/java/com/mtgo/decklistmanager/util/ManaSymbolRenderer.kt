@@ -20,13 +20,23 @@ object ManaSymbolRenderer {
     fun renderManaCost(manaCost: String?, context: Context): CharSequence {
         if (manaCost.isNullOrEmpty()) return ""
 
+        // 添加日志来调试 split card
+        if (manaCost.contains(" // ")) {
+            android.util.Log.d("ManaSymbolRenderer", "Rendering split card manaCost: $manaCost")
+        }
+
         val builder = SpannableStringBuilder()
 
         // 查找所有 {} 包围的符号
         val pattern = Regex("\\{([^}]+)\\}")
         var lastIndex = 0
 
-        pattern.findAll(manaCost).forEach { match ->
+        val matches = pattern.findAll(manaCost).toList()
+        if (manaCost.contains(" // ")) {
+            android.util.Log.d("ManaSymbolRenderer", "Found ${matches.size} matches")
+        }
+
+        matches.forEach { match ->
             // 添加符号之前的文本（如果有）
             if (match.range.first > lastIndex) {
                 builder.append(manaCost.substring(lastIndex, match.range.first))
@@ -101,7 +111,16 @@ object ManaSymbolRenderer {
 
         // 添加剩余文本
         if (lastIndex < manaCost.length) {
-            builder.append(manaCost.substring(lastIndex))
+            val remaining = manaCost.substring(lastIndex)
+            if (manaCost.contains(" // ")) {
+                android.util.Log.d("ManaSymbolRenderer", "Remaining text: '$remaining'")
+            }
+            builder.append(remaining)
+        }
+
+        val result = builder.toString()
+        if (manaCost.contains(" // ")) {
+            android.util.Log.d("ManaSymbolRenderer", "Final result: '$result'")
         }
 
         return builder
@@ -109,12 +128,13 @@ object ManaSymbolRenderer {
 
     /**
      * 根据法术力符号获取对应颜色
+     * 优化深色模式下的可见性
      */
     private fun getManaColor(symbol: String): Int {
         return when (symbol.uppercase()) {
             "W" -> Color.parseColor("#E8D8A0")  // 白色 - 加深，更易读
             "U" -> Color.parseColor("#0E68AB")  // 蓝色
-            "B" -> Color.parseColor("#150B00")  // 黑色
+            "B" -> Color.parseColor("#6B6B6B")  // 黑色 - 改为灰色，在深色模式下可见
             "R" -> Color.parseColor("#D3202A")  // 红色
             "G" -> Color.parseColor("#00733E")  // 绿色
             "C" -> Color.parseColor("#9E9E9E")  // 无色

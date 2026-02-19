@@ -4,9 +4,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mtgo.decklistmanager.data.local.dao.DecklistDao
+import com.mtgo.decklistmanager.data.local.dao.EventDao
+import com.mtgo.decklistmanager.data.local.entity.DecklistEntity
+import com.mtgo.decklistmanager.data.remote.api.ServerApi
 import com.mtgo.decklistmanager.domain.model.Decklist
 import com.mtgo.decklistmanager.domain.model.Event
-import com.mtgo.decklistmanager.data.repository.DecklistRepository
 import com.mtgo.decklistmanager.util.AppLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,10 +20,13 @@ import javax.inject.Inject
 
 /**
  * Event Detail ViewModel - 赛事详情 ViewModel
+ * v4.2.0: 支持从服务端 API 获取赛事套牌列表
  */
 @HiltViewModel
 class EventDetailViewModel @Inject constructor(
-    private val repository: DecklistRepository
+    private val eventDao: EventDao,
+    private val decklistDao: DecklistDao,
+    private val serverApi: ServerApi
 ) : ViewModel() {
 
     // UI State
@@ -68,46 +74,25 @@ class EventDetailViewModel @Inject constructor(
 
     /**
      * 加载赛事详情
+     * @param fromServer 是否从服务器加载（默认 true）
      */
-    fun loadEventDetail(eventId: Long) {
+    fun loadEventDetail(eventId: Long, fromServer: Boolean = true) {
         // 重置标志，每次加载新赛事时重新评估
         hasShownDownloadDialog = false
-        AppLogger.d("EventDetailViewModel", "loadEventDetail called for eventId: $eventId, hasShownDownloadDialog reset to false")
+        AppLogger.d("EventDetailViewModel", "loadEventDetail called for eventId: $eventId, fromServer: $fromServer")
 
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
-                // 获取赛事信息
-                val eventEntity = repository.getEventById(eventId)
-
-                // 获取该赛事下的所有卡组
-                val decklistEntities = repository.getDecklistsByEventId(eventId)
-
-                // 转换为 DecklistItem
-                val items = decklistEntities.map { entity ->
-                    DecklistItem(
-                        id = entity.id,
-                        eventName = entity.eventName,
-                        deckName = entity.deckName,
-                        format = entity.format,
-                        date = entity.date,
-                        playerName = entity.playerName,
-                        record = entity.record
-                    )
-                }
-
-                // 使用 setValue 而不是 postValue，确保立即更新
-                // 这样在 shouldAutoDownload() 检查时能获取到正确的值
-                _decklists.value = items
-                _event.value = eventEntity
-                _uiState.value = UiState.Success("Loaded ${items.size} decklists")
-
-                AppLogger.d("EventDetailViewModel", "Loaded ${items.size} decklists for event $eventId")
-
-                if (items.isEmpty()) {
-                    _statusMessage.value = "No decklists found in this event"
+                if (fromServer) {
+                    // 从服务器 API 加载
+                    loadEventDetailFromServer(eventId)
+                } else {
+                    // 从本地数据库加载
+                    loadEventDetailFromLocal(eventId)
                 }
             } catch (e: Exception) {
+                AppLogger.e("EventDetailViewModel", "Error loading event: ${e.message}", e)
                 _uiState.value = UiState.Error("Error loading event: ${e.message}")
                 _statusMessage.value = "Error: ${e.message}"
             }
@@ -115,54 +100,156 @@ class EventDetailViewModel @Inject constructor(
     }
 
     /**
-     * 下载该赛事的所有卡组
+     * 从服务器 API 加载赛事详情
+     */
+    private suspend fun loadEventDetailFromServer(eventId: Long) {
+        AppLogger.d("EventDetailViewModel", "Loading event from server: $eventId")
+
+        // 1. 获取赛事信息
+        val eventResponse = serverApi.getEventDetail(eventId)
+        if (!eventResponse.isSuccessful || eventResponse.body()?.success != true) {
+            _uiState.value = UiState.Error("Failed to load event: ${eventResponse.code()}")
+            _statusMessage.value = "Failed to load event"
+            return
+        }
+
+        val eventDto = eventResponse.body()!!.data!!
+        val eventEntity = com.mtgo.decklistmanager.data.local.entity.EventEntity(
+            id = eventDto.id,
+            eventName = eventDto.eventName,
+            eventType = eventDto.eventType,
+            format = eventDto.format,
+            date = eventDto.date,
+            sourceUrl = eventDto.sourceUrl,
+            source = eventDto.source,
+            deckCount = eventDto.deckCount,
+            createdAt = System.currentTimeMillis()
+        )
+
+        // 保存赛事信息到本地
+        eventDao.insert(eventEntity)
+
+        // 2. 获取该赛事下的套牌列表（从服务器）
+        val decklistsResponse = serverApi.getEventDecklists(eventId, limit = 200, offset = 0)
+        if (!decklistsResponse.isSuccessful || decklistsResponse.body()?.success != true) {
+            _uiState.value = UiState.Error("Failed to load decklists")
+            _statusMessage.value = "Failed to load decklists"
+            // 仍然显示赛事信息，但没有套牌
+            _event.value = eventEntity.toDomainModel()
+            _decklists.value = emptyList()
+            return
+        }
+
+        val decklistDtos = decklistsResponse.body()!!.data!!.decklists
+        AppLogger.d("EventDetailViewModel", "Server returned ${decklistDtos.size} decklists")
+
+        // Log first decklist for debugging
+        if (decklistDtos.isNotEmpty()) {
+            val first = decklistDtos[0]
+            AppLogger.d("EventDetailViewModel", "First decklist: id=${first.id}, deckName=${first.deckName}, playerName=${first.playerName}")
+        }
+
+        // 3. 转换并保存套牌到本地数据库
+        val decklistEntities = decklistDtos.map { dto ->
+            DecklistEntity(
+                id = dto.id,
+                eventId = dto.eventId,
+                eventName = dto.eventName,
+                deckName = dto.deckName,
+                format = dto.format,
+                date = dto.date,
+                url = dto.url ?: "",
+                playerName = dto.playerName,
+                playerId = null,
+                record = dto.record,
+                eventType = null,
+                createdAt = System.currentTimeMillis()
+            )
+        }
+
+        // 先删除该赛事下的所有套牌（如果存在），然后插入新的
+        // 这样可以确保数据是最新的
+        eventDao.deleteDecklistsByEventId(eventId)
+        decklistDao.insertAll(decklistEntities)
+
+        // 4. 转换为 DecklistItem 并显示
+        val items = decklistEntities.map { entity ->
+            DecklistItem(
+                id = entity.id,
+                eventName = entity.eventName,
+                deckName = entity.deckName,
+                format = entity.format,
+                date = entity.date,
+                playerName = entity.playerName,
+                record = entity.record
+            )
+        }
+
+        _decklists.value = items
+        _event.value = eventEntity.toDomainModel()
+        _uiState.value = UiState.Success("Loaded ${items.size} decklists")
+
+        AppLogger.d("EventDetailViewModel", "Loaded ${items.size} decklists for event $eventId")
+        AppLogger.d("EventDetailViewModel", "_decklists.value.size = ${_decklists.value?.size}")
+
+        if (items.isEmpty()) {
+            _statusMessage.value = "No decklists found in this event"
+        }
+    }
+
+    /**
+     * 从本地数据库加载赛事详情（后备方案）
+     */
+    private suspend fun loadEventDetailFromLocal(eventId: Long) {
+        AppLogger.d("EventDetailViewModel", "Loading event from local database: $eventId")
+
+        // 获取赛事信息
+        val eventEntity = eventDao.getEventById(eventId)
+        if (eventEntity == null) {
+            _uiState.value = UiState.Error("Event not found")
+            _statusMessage.value = "Event not found in local database"
+            return
+        }
+
+        // 获取该赛事下的所有卡组
+        val decklistEntities = decklistDao.getDecklistsByEventId(eventId)
+
+        // 转换为 DecklistItem
+        val items = decklistEntities.map { entity ->
+            DecklistItem(
+                id = entity.id,
+                eventName = entity.eventName,
+                deckName = entity.deckName,
+                format = entity.format,
+                date = entity.date,
+                playerName = entity.playerName,
+                record = entity.record
+            )
+        }
+
+        _decklists.value = items
+        _event.value = eventEntity.toDomainModel()
+        _uiState.value = UiState.Success("Loaded ${items.size} decklists (local)")
+
+        AppLogger.d("EventDetailViewModel", "Loaded ${items.size} decklists for event $eventId (local)")
+
+        if (items.isEmpty()) {
+            _statusMessage.value = "No decklists found in this event"
+        }
+    }
+
+    /**
+     * 下载该赛事的所有卡组（已废弃，现在通过 loadEventDetail 自动从服务器获取）
      * @param sourceUrl 赛事的源 URL
      * @param format 赛制代码 (ST, MO, PI, etc.)
      */
+    @Deprecated("Use loadEventDetail(eventId, fromServer=true) instead")
     fun downloadEventDecklists(sourceUrl: String, format: String) {
-        viewModelScope.launch {
-            _uiState.value = UiState.Downloading
-            try {
-                // 直接使用 MtgTop8Scraper 下载卡组
-                val result = repository.scrapeSingleEvent(sourceUrl, format)
-
-                result.fold(
-                    onSuccess = { count ->
-                        _statusMessage.value = "Successfully downloaded $count decklists"
-                        _uiState.value = UiState.Success("Downloaded $count decklists")
-
-                        // 重新加载赛事详情
-                        val eventEntity = repository.getEventById(
-                            _event.value?.id ?: 0L
-                        )
-                        _event.postValue(eventEntity)
-
-                        // 重新加载卡组列表
-                        eventEntity?.let {
-                            val decklistEntities = repository.getDecklistsByEventId(it.id)
-                            val items = decklistEntities.map { entity ->
-                                DecklistItem(
-                                    id = entity.id,
-                                    eventName = entity.eventName,
-                                    deckName = entity.deckName,
-                                    format = entity.format,
-                                    date = entity.date,
-                                    playerName = entity.playerName,
-                                    record = entity.record
-                                )
-                            }
-                            _decklists.postValue(items)
-                        }
-                    },
-                    onFailure = { error ->
-                        _statusMessage.value = "Download failed: ${error.message}"
-                        _uiState.value = UiState.Error("Download failed: ${error.message}")
-                    }
-                )
-            } catch (e: Exception) {
-                _statusMessage.value = "Download error: ${e.message}"
-                _uiState.value = UiState.Error("Download error: ${e.message}")
-            }
+        AppLogger.w("EventDetailViewModel", "downloadEventDecklists is deprecated, use loadEventDetail instead")
+        // 重新从服务器加载
+        val currentEvent = _event.value
+        if (currentEvent != null) {
+            loadEventDetail(currentEvent.id, fromServer = true)
         }
     }
 
@@ -196,5 +283,22 @@ class EventDetailViewModel @Inject constructor(
         val playerName: String?,
         val record: String?,
         val isLoading: Boolean = false
+    )
+}
+
+/**
+ * Extension function to convert EventEntity to Event domain model
+ */
+private fun com.mtgo.decklistmanager.data.local.entity.EventEntity.toDomainModel(): Event {
+    return Event(
+        id = id,
+        eventName = eventName,
+        eventType = eventType,
+        format = format,
+        date = date,
+        sourceUrl = sourceUrl,
+        source = source,
+        deckCount = deckCount,
+        createdAt = createdAt
     )
 }

@@ -62,11 +62,46 @@ object CardDetailHelper {
             "double_faced_token"   // 双面指示物
         )
 
+        // 伪双面牌（split、adventure等，不需要翻转按钮）
+        val pseudoDualFaceLayouts = listOf(
+            "split",               // 分面牌（如：Wear // Tear）
+            "adventure",           // 冒险牌
+            "flip"                // 翻转牌
+        )
+
         // 严格的双面牌判断：优先使用 isDoubleFaced 字段
-        val isDualFaced = (mtgchCard.isDoubleFaced == true) ||
-                         (mtgchCard.layout in realDualFaceLayouts) ||
-                         (cardFaces != null && cardFaces.size >= 2) ||
-                         (otherFaces != null && otherFaces.isNotEmpty())
+        // split、adventure、flip 等伪双面牌虽然名称包含 "://"，但不需要显示背面按钮
+        val isDualFaced = (mtgchCard.isDoubleFaced == true) || (mtgchCard.layout in realDualFaceLayouts)
+
+        // 是否有多个面（包括伪双面牌）
+        val hasMultipleFaces = (mtgchCard.layout in realDualFaceLayouts) ||
+                               (mtgchCard.layout in pseudoDualFaceLayouts) ||
+                               (cardFaces != null && cardFaces.size >= 2) ||
+                               (otherFaces != null && otherFaces.isNotEmpty())
+
+        // 对于 Split/Adventure/Flip 牌，服务器已将完整信息放在主对象，不需要保存背面信息
+        val shouldSaveBothFaces = hasMultipleFaces && !isDualFaced &&
+                                  (mtgchCard.layout !in pseudoDualFaceLayouts)
+
+        // 处理 Split 牌的法术力：如果主对象不包含 //，就从 cardFaces 组合
+        val processedManaCost = if (mtgchCard.layout in pseudoDualFaceLayouts &&
+                                   cardFaces != null && cardFaces.size >= 2) {
+            val mainManaCost = manaCost ?: mtgchCard.manaCost
+            if (mainManaCost != null && !mainManaCost.contains(" // ")) {
+                // 组合两半的法术力
+                val face0Mana = cardFaces[0].manaCost
+                val face1Mana = cardFaces[1].manaCost
+                if (face0Mana != null && face1Mana != null) {
+                    "$face0Mana // $face1Mana"
+                } else {
+                    mainManaCost
+                }
+            } else {
+                mainManaCost
+            }
+        } else {
+            manaCost ?: mtgchCard.manaCost
+        }
 
         // 正面图片 - 优先使用服务器图片
         val frontImageUri = mtgchCard.imageUris?.normal
@@ -181,7 +216,8 @@ object CardDetailHelper {
             id = cardInfoId,
             oracleId = mtgchCard.oracleId, // 设置 Oracle ID
             name = displayName ?: (getZhsName ?: mtgchCard.name ?: ""),
-            manaCost = manaCost ?: mtgchCard.manaCost,
+            enName = mtgchCard.name, // 保存原始英文名用于API搜索
+            manaCost = processedManaCost,
             cmc = cmc ?: mtgchCard.cmc?.toDouble(),
             typeLine = typeLine ?: (getTypeLineZh ?: mtgchCard.typeLine),
             oracleText = oracleText ?: (getOracleTextZh ?: mtgchCard.oracleText),
@@ -209,16 +245,16 @@ object CardDetailHelper {
             imageUriNormal = imageUrl ?: frontImageUri,
             imageUriLarge = mtgchCard.zhsImageUris?.large ?: mtgchCard.imageUris?.large,
             isDualFaced = isDualFaced,
-            frontFaceName = frontFaceName,
-            backFaceName = backFaceName,
-            frontImageUri = frontImageUri,
-            backImageUri = backImageUri,
-            backFaceManaCost = backFaceManaCost,
-            backFaceTypeLine = backFaceTypeLine,
-            backFaceOracleText = backFaceOracleText,
-            backFacePower = backFacePower,
-            backFaceToughness = backFaceToughness,
-            backFaceLoyalty = backFaceLoyalty
+            frontFaceName = if (shouldSaveBothFaces) frontFaceName else null,
+            backFaceName = if (shouldSaveBothFaces) backFaceName else null,
+            frontImageUri = if (shouldSaveBothFaces) frontImageUri else null,
+            backImageUri = if (shouldSaveBothFaces) backImageUri else null,
+            backFaceManaCost = if (shouldSaveBothFaces) backFaceManaCost else null,
+            backFaceTypeLine = if (shouldSaveBothFaces) backFaceTypeLine else null,
+            backFaceOracleText = if (shouldSaveBothFaces) backFaceOracleText else null,
+            backFacePower = if (shouldSaveBothFaces) backFacePower else null,
+            backFaceToughness = if (shouldSaveBothFaces) backFaceToughness else null,
+            backFaceLoyalty = if (shouldSaveBothFaces) backFaceLoyalty else null
         )
     }
 

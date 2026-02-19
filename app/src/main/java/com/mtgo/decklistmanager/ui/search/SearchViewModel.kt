@@ -22,7 +22,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val mtgchApi: MtgchApi,
+    val mtgchApi: MtgchApi,
     private val searchHistoryDao: SearchHistoryDao
 ) : ViewModel() {
 
@@ -355,6 +355,7 @@ class SearchViewModel @Inject constructor(
             cardInfoId = oracleId?.hashCode()?.toLong() ?: id?.hashCode()?.toLong() ?: 0L,
             name = getZhsName ?: name ?: "",
             displayName = getZhsName,
+            enName = name, // 保存原始英文名
             manaCost = manaCost,
             typeLine = getTypeLineZh ?: typeLine,
             colors = colors ?: emptyList(),
@@ -444,6 +445,34 @@ class SearchViewModel @Inject constructor(
             null
         }
     }
+
+    /**
+     * 按卡牌名称搜索印刷版本
+     *
+     * @param cardName 卡牌名称
+     * @param limit 每页数量
+     * @return 印刷版本列表
+     */
+    suspend fun searchCardPrintingsByName(
+        cardName: String,
+        limit: Int = 100
+    ): List<MtgchCardDto> {
+        return try {
+            AppLogger.d("SearchViewModel", "按名称搜索印刷版本: $cardName")
+            val response = mtgchApi.searchCard(query = cardName, offset = 0, limit = limit)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val cards = response.body()?.cards ?: emptyList()
+                AppLogger.d("SearchViewModel", "找到 ${cards.size} 个印刷版本")
+                cards
+            } else {
+                AppLogger.e("SearchViewModel", "按名称搜索失败: ${response.code()}")
+                emptyList()
+            }
+        } catch (e: Exception) {
+            AppLogger.e("SearchViewModel", "按名称搜索异常", e)
+            emptyList()
+        }
+    }
 }
 
 /**
@@ -453,6 +482,7 @@ data class SearchResultItem(
     val cardInfoId: Long,
     val name: String,
     val displayName: String?,
+    val enName: String? = null, // 英文名（用于API搜索）
     val manaCost: String?,
     val typeLine: String?,
     val colors: List<String>,

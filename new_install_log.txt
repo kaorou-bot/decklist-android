@@ -1,0 +1,261 @@
+--------- beginning of system
+02-19 02:19:24.467 E/ClipboardService(  815): Denying clipboard access to com.android.chrome, application is not in focus nor is it a system service for user 0
+02-19 02:19:24.521 E/ClipboardService(  815): Denying clipboard access to com.android.chrome, application is not in focus nor is it a system service for user 0
+--------- beginning of main
+02-19 02:21:36.242 E/WifiScoringParams(  815): Invalid frequency(-1), using 5G as default rssi array
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): No service published for: persistent_data_block
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): android.os.ServiceManager$ServiceNotFoundException: No service published for: persistent_data_block
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.os.ServiceManager.getServiceOrThrow(ServiceManager.java:203)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry$86.createService(SystemServiceRegistry.java:1201)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry$86.createService(SystemServiceRegistry.java:1198)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry$StaticServiceFetcher.getService(SystemServiceRegistry.java:2610)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry.getSystemService(SystemServiceRegistry.java:2063)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.app.ContextImpl.getSystemService(ContextImpl.java:2434)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.content.Context.getSystemService(Context.java:4901)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageInstallerSession.markAsSealed(PackageInstallerSession.java:2573)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageInstallerSession.commit(PackageInstallerSession.java:2323)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.content.pm.PackageInstaller$Session.commit(PackageInstaller.java:2343)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.doCommitSession(PackageManagerShellCommand.java:4390)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.doRunInstall(PackageManagerShellCommand.java:1651)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.runInstall(PackageManagerShellCommand.java:1572)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.onCommand(PackageManagerShellCommand.java:246)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at com.android.modules.utils.BasicShellCommandHandler.exec(BasicShellCommandHandler.java:97)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.os.ShellCommand.exec(ShellCommand.java:38)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerService$IPackageManagerImpl.onShellCommand(PackageManagerService.java:6721)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.os.Binder.shellCommand(Binder.java:1183)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.os.Binder.onTransact(Binder.java:961)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.content.pm.IPackageManager$Stub.onTransact(IPackageManager.java:4666)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerService$IPackageManagerImpl.onTransact(PackageManagerService.java:6705)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.os.Binder.execTransactInternal(Binder.java:1478)
+02-19 02:23:37.852 E/SystemServiceRegistry(  815): 	at android.os.Binder.execTransact(Binder.java:1418)
+02-19 02:23:37.853 E/SystemServiceRegistry(  815): Manager wrapper not available: persistent_data_block
+02-19 02:23:38.094 E/InputDispatcher(  815): channel '36ec49 com.mtgo.decklistmanager/com.mtgo.decklistmanager.ui.decklist.EventDetailActivity' ~ Channel is unrecoverably broken and will be disposed!
+02-19 02:23:38.234 E/AppOps  (  815): attributionTag VCN not declared in manifest of android
+02-19 02:23:38.300 E/SmsApplication( 1222): com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+02-19 02:23:38.807 E/SmsApplication( 1222): com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+02-19 02:23:38.997 E/RoleControllerServiceImpl(  815): Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+02-19 02:23:39.145 E/SmsApplication( 1222): com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+02-19 02:23:39.245 E/Finsky  ( 9621): [54] [Counters] attempted to use a non-positive increment for: 4752
+02-19 02:23:39.256 E/Finsky  ( 9621): [54] [Counters] attempted to use a non-positive increment for: 4753
+02-19 02:23:39.256 E/AppOps  (  815): attributionTag VCN not declared in manifest of android
+02-19 02:23:39.275 E/libbinder.IPCThreadState(  815): Binder transaction failure. id: 10892298, cmd: BR_DEAD_REPLY (29189), error: -22 (Invalid argument)
+02-19 02:23:39.406 E/BpTransactionCompletedListener(  655): Failed to transact (-32)
+02-19 02:23:39.590 E/Finsky  ( 9621): [66] Unexpected android-id = 0
+02-19 02:23:39.674 E/AppOps  (  815): attributionTag VCN not declared in manifest of android
+02-19 02:23:39.859 E/Finsky  ( 9621): [60] [Counters] attempted to use a non-positive increment for: 4752
+02-19 02:23:39.861 E/Finsky  ( 9621): [60] [Counters] attempted to use a non-positive increment for: 4753
+02-19 02:23:40.015 E/RoleControllerServiceImpl(  815): Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.WALLET, user: 0
+02-19 02:23:42.373 E/TaskPersister(  815): File error accessing recents directory (directory doesn't exist?).
+02-19 02:23:44.807 E/Finsky  ( 9621): [66] Unexpected android-id = 0
+02-19 02:23:49.650 E/TraceManagerImpl(21055): Trace Broadcast to com.google.android.apps.wellbeing.time.delta.CheckTimeDeltaBroadcastReceiver_Receiver android.intent.action.TIME_SET timed out after 3461739 ms. Complete trace: # nad@c669f982
+02-19 02:23:49.650 E/TraceManagerImpl(21055): nai: 
+02-19 02:23:49.650 E/TraceManagerImpl(21055): 	at tk_trace.Write FocusModePreferences(Started After:3)
+02-19 02:23:49.650 E/TraceManagerImpl(21055): 	at tk_trace.Update FocusModePreferences(Started After:3)
+02-19 02:23:49.650 E/TraceManagerImpl(21055): 	at tk_trace.handleBroadcast(Started After:0)
+02-19 02:23:49.650 E/TraceManagerImpl(21055): 	at tk_trace.Broadcast to com.google.android.apps.wellbeing.time.delta.CheckTimeDeltaBroadcastReceiver_Receiver android.intent.action.TIME_SET(Started After:0)
+02-19 02:23:49.845 E/Finsky  ( 9621): [60] ItemStore: getItems RPC failed for item com.mtgo.decklistmanager
+02-19 02:23:49.846 E/Finsky  ( 9621): [58] ItemStore: getItems RPC failed for item com.mtgo.decklistmanager
+02-19 02:24:12.470 E/ashmem  (  756): Pinning is deprecated since Android Q. Please use trim or other methods.
+02-19 02:24:15.371 E/TaskPersister(  815): File error accessing recents directory (directory doesn't exist?).
+02-19 02:24:16.254 E/WifiScoringParams(  815): Invalid frequency(-1), using 5G as default rssi array
+02-19 02:24:16.329 D/EventDetailActivity(  756): Views initialized successfully
+02-19 02:24:16.342 D/EventDetailViewModel(  756): loadEventDetail called for eventId: 5, fromServer: true
+02-19 02:24:16.352 D/EventDetailViewModel(  756): Loading event from server: 5
+02-19 02:24:16.652 D/EventDetailViewModel(  756): Server returned 5 decklists
+02-19 02:24:16.652 D/EventDetailViewModel(  756): First decklist: id=92, deckName=AyeItsNick's Deck, playerName=AyeItsNick
+02-19 02:24:16.716 D/EventDetailActivity(  756): Decklists observer triggered - items: 5
+02-19 02:24:16.716 D/EventDetailActivity(  756): isDownloading: false
+02-19 02:24:16.720 D/EventDetailActivity(  756): sortedDecklists size: 5
+02-19 02:24:16.725 D/EventDetailViewModel(  756): Loaded 5 decklists for event 5
+02-19 02:24:16.726 D/EventDetailViewModel(  756): _decklists.value.size = 5
+02-19 02:24:19.730 E/TaskPersister(  815): File error accessing recents directory (directory doesn't exist?).
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): Cannot acquire BluetoothActivityEnergyInfo
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): java.util.concurrent.ExecutionException: java.lang.RuntimeException: error: 11
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:372)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2072)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.BluetoothPowerStatsCollector.collectBluetoothActivityInfo(BluetoothPowerStatsCollector.java:191)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.BluetoothPowerStatsCollector.collectStats(BluetoothPowerStatsCollector.java:155)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.PowerStatsCollector.collectAndDeliverStats(PowerStatsCollector.java:196)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.PowerStatsCollector.lambda$schedule$0(PowerStatsCollector.java:166)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.PowerStatsCollector.$r8$lambda$G7G_yFY7rV7oxQbQHnZ5FHX8eBk(PowerStatsCollector.java:0)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.PowerStatsCollector$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.os.Handler.handleCallback(Handler.java:1070)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.os.Handler.dispatchMessage(Handler.java:125)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.os.Looper.dispatchMessage(Looper.java:333)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.os.Looper.loopOnce(Looper.java:263)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.os.Looper.loop(Looper.java:367)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.os.HandlerThread.run(HandlerThread.java:139)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): Caused by: java.lang.RuntimeException: error: 11
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.BluetoothPowerStatsCollector$1.onBluetoothActivityEnergyInfoError(BluetoothPowerStatsCollector.java:180)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.lambda$onBluetoothActivityEnergyInfoAvailable$0(BluetoothAdapter.java:1010)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.$r8$lambda$ks_hN9Vo_x2Jp1k5f-s67WiAd4A(Unknown Source:0)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothUtils.lambda$executeFromBinder$0(BluetoothUtils.java:346)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothUtils$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.SystemServerInitThreadPool$$ExternalSyntheticLambda0.execute(R8$$SyntheticClass:0)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothUtils.executeFromBinder(BluetoothUtils.java:346)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.onBluetoothActivityEnergyInfoAvailable(BluetoothAdapter.java:1008)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.IBluetoothActivityEnergyInfoListener$Stub.onTransact(IBluetoothActivityEnergyInfoListener.java:98)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.os.Binder.execTransactInternal(Binder.java:1478)
+02-19 02:24:38.061 E/BluetoothPowerStatsCollector(  815): 	at android.os.Binder.execTransact(Binder.java:1418)
+02-19 02:24:48.767 E/TaskPersister(  815): File error accessing recents directory (directory doesn't exist?).
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): No service published for: persistent_data_block
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): android.os.ServiceManager$ServiceNotFoundException: No service published for: persistent_data_block
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.os.ServiceManager.getServiceOrThrow(ServiceManager.java:203)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry$86.createService(SystemServiceRegistry.java:1201)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry$86.createService(SystemServiceRegistry.java:1198)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry$StaticServiceFetcher.getService(SystemServiceRegistry.java:2610)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry.getSystemService(SystemServiceRegistry.java:2063)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.app.ContextImpl.getSystemService(ContextImpl.java:2434)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.content.Context.getSystemService(Context.java:4901)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageInstallerSession.markAsSealed(PackageInstallerSession.java:2573)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageInstallerSession.commit(PackageInstallerSession.java:2323)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.content.pm.PackageInstaller$Session.commit(PackageInstaller.java:2343)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.doCommitSession(PackageManagerShellCommand.java:4390)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.doRunInstall(PackageManagerShellCommand.java:1651)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.runInstall(PackageManagerShellCommand.java:1572)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.onCommand(PackageManagerShellCommand.java:246)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at com.android.modules.utils.BasicShellCommandHandler.exec(BasicShellCommandHandler.java:97)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.os.ShellCommand.exec(ShellCommand.java:38)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerService$IPackageManagerImpl.onShellCommand(PackageManagerService.java:6721)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.os.Binder.shellCommand(Binder.java:1183)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.os.Binder.onTransact(Binder.java:961)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.content.pm.IPackageManager$Stub.onTransact(IPackageManager.java:4666)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerService$IPackageManagerImpl.onTransact(PackageManagerService.java:6705)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.os.Binder.execTransactInternal(Binder.java:1478)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): 	at android.os.Binder.execTransact(Binder.java:1418)
+02-19 02:26:05.622 E/SystemServiceRegistry(  815): Manager wrapper not available: persistent_data_block
+02-19 02:26:05.800 E/InputDispatcher(  815): channel 'cb9b52a com.mtgo.decklistmanager/com.mtgo.decklistmanager.ui.decklist.DeckDetailActivity' ~ Channel is unrecoverably broken and will be disposed!
+02-19 02:26:05.898 E/AppOps  (  815): attributionTag VCN not declared in manifest of android
+02-19 02:26:06.069 E/SmsApplication( 1222): com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+02-19 02:26:06.136 E/AppOps  (  815): attributionTag VCN not declared in manifest of android
+02-19 02:26:06.328 E/AppOps  (  815): attributionTag VCN not declared in manifest of android
+02-19 02:26:06.546 E/PlayCommon( 3000): [76] Failed to connect to server for server timestamp: java.net.ConnectException: Failed to connect to play.googleapis.com/[2001:4860:4802:34::223]:443
+02-19 02:26:06.583 E/RoleControllerServiceImpl(  815): Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+02-19 02:26:06.722 E/SmsApplication( 1222): com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+02-19 02:26:06.940 E/libbinder.IPCThreadState(  815): Binder transaction failure. id: 10916948, cmd: BR_DEAD_REPLY (29189), error: -22 (Invalid argument)
+02-19 02:26:06.984 E/RoleControllerServiceImpl(  815): Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.WALLET, user: 0
+02-19 02:26:06.986 E/SmsApplication( 1222): com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+02-19 02:26:07.002 E/Finsky  ( 9621): [54] [Counters] attempted to use a non-positive increment for: 4752
+02-19 02:26:07.005 E/BpTransactionCompletedListener(  655): Failed to transact (-32)
+02-19 02:26:07.021 E/Finsky  ( 9621): [54] [Counters] attempted to use a non-positive increment for: 4753
+02-19 02:26:07.184 E/Finsky  ( 9621): [68] Unexpected android-id = 0
+02-19 02:26:07.410 E/Finsky  ( 9621): [60] [Counters] attempted to use a non-positive increment for: 4752
+02-19 02:26:07.410 E/Finsky  ( 9621): [60] [Counters] attempted to use a non-positive increment for: 4753
+02-19 02:26:09.981 E/TaskPersister(  815): File error accessing recents directory (directory doesn't exist?).
+02-19 02:26:12.261 E/Finsky  ( 9621): [68] Unexpected android-id = 0
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): Failed to get FIS auth token
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): java.util.concurrent.ExecutionException: com.google.firebase.installations.FirebaseInstallationsException: Firebase Installations Service is unavailable. Please try again later.
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at bszh.l(PG:32)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at bszh.bM(PG:36)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at bhoh.e(PG:189)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at axfo.a(PG:154)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at axkm.run(PG:394)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at axnr.run(PG:7)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at java.lang.Thread.run(Thread.java:1563)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): Caused by: com.google.firebase.installations.FirebaseInstallationsException: Firebase Installations Service is unavailable. Please try again later.
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at bgrw.b(PG:361)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at bgri.run(PG:231)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+02-19 02:26:16.540 E/FirebaseInstanceId( 9621): 	... 1 more
+02-19 02:26:16.663 E/Finsky  ( 9621): [59] Error when retrieving FCM instance id
+02-19 02:26:17.295 E/Finsky  ( 9621): [60] ItemStore: getItems RPC failed for item com.mtgo.decklistmanager
+02-19 02:26:17.295 E/Finsky  ( 9621): [58] ItemStore: getItems RPC failed for item com.mtgo.decklistmanager
+02-19 02:26:56.297 E/WifiScoringParams(  815): Invalid frequency(-1), using 5G as default rssi array
+02-19 02:28:33.852 E/DGFRR   ( 2402): FR error [CONTEXT service_id=25 ]
+02-19 02:28:33.852 E/DGFRR   ( 2402): java.io.IOException: Couldn't fetch response.
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at bhpq.a(:com.google.android.gms@253434038@25.34.34 (260800-800653487):137)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at bhnt.b(:com.google.android.gms@253434038@25.34.34 (260800-800653487):45)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at bhnt.a(:com.google.android.gms@253434038@25.34.34 (260800-800653487):2)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at bhni.a(:com.google.android.gms@253434038@25.34.34 (260800-800653487):106)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at bhnd.f(:com.google.android.gms@253434038@25.34.34 (260800-800653487):217)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at com.google.android.gms.droidguard.DroidGuardFastRefreshGmsTaskBoundService.a(:com.google.android.gms@253434038@25.34.34 (260800-800653487):50)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at clfo.call(:com.google.android.gms@253434038@25.34.34 (260800-800653487):30)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at java.util.concurrent.FutureTask.run(FutureTask.java:317)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at bbiq.c(:com.google.android.gms@253434038@25.34.34 (260800-800653487):50)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at bbiq.run(:com.google.android.gms@253434038@25.34.34 (260800-800653487):70)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at bboi.run(:com.google.android.gms@253434038@25.34.34 (260800-800653487):8)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at java.lang.Thread.run(Thread.java:1563)
+02-19 02:28:33.852 E/DGFRR   ( 2402): Caused by: java.util.concurrent.TimeoutException: Waited 60000 milliseconds (plus 2 milliseconds, 304400 nanoseconds delay) for jqg@5d82009[status=PENDING, info=[tag=[ckyv@6be920e]]]
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at jqc.get(:com.google.android.gms@253434038@25.34.34 (260800-800653487):52)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at jqh.get(:com.google.android.gms@253434038@25.34.34 (260800-800653487):2)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	at bhpq.a(:com.google.android.gms@253434038@25.34.34 (260800-800653487):120)
+02-19 02:28:33.852 E/DGFRR   ( 2402): 	... 13 more
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): No service published for: persistent_data_block
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): android.os.ServiceManager$ServiceNotFoundException: No service published for: persistent_data_block
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.os.ServiceManager.getServiceOrThrow(ServiceManager.java:203)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry$86.createService(SystemServiceRegistry.java:1201)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry$86.createService(SystemServiceRegistry.java:1198)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry$StaticServiceFetcher.getService(SystemServiceRegistry.java:2610)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.app.SystemServiceRegistry.getSystemService(SystemServiceRegistry.java:2063)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.app.ContextImpl.getSystemService(ContextImpl.java:2434)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.content.Context.getSystemService(Context.java:4901)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageInstallerSession.markAsSealed(PackageInstallerSession.java:2573)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageInstallerSession.commit(PackageInstallerSession.java:2323)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.content.pm.PackageInstaller$Session.commit(PackageInstaller.java:2343)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.doCommitSession(PackageManagerShellCommand.java:4390)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.doRunInstall(PackageManagerShellCommand.java:1651)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.runInstall(PackageManagerShellCommand.java:1572)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerShellCommand.onCommand(PackageManagerShellCommand.java:246)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at com.android.modules.utils.BasicShellCommandHandler.exec(BasicShellCommandHandler.java:97)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.os.ShellCommand.exec(ShellCommand.java:38)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerService$IPackageManagerImpl.onShellCommand(PackageManagerService.java:6721)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.os.Binder.shellCommand(Binder.java:1183)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.os.Binder.onTransact(Binder.java:961)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.content.pm.IPackageManager$Stub.onTransact(IPackageManager.java:4666)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at com.android.server.pm.PackageManagerService$IPackageManagerImpl.onTransact(PackageManagerService.java:6705)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.os.Binder.execTransactInternal(Binder.java:1478)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): 	at android.os.Binder.execTransact(Binder.java:1418)
+02-19 02:29:14.928 E/SystemServiceRegistry(  815): Manager wrapper not available: persistent_data_block
+02-19 02:29:15.094 E/AppOps  (  815): attributionTag VCN not declared in manifest of android
+02-19 02:29:15.108 E/SmsApplication( 1222): com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+02-19 02:29:15.195 E/AtomicFile(  815): Failed to rename /data/system/install_sessions.xml.new to /data/system/install_sessions.xml
+02-19 02:29:15.234 E/PlayCommon( 9621): [80] Failed to connect to server for log upload.
+02-19 02:29:15.377 E/SmsApplication( 1222): com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+02-19 02:29:15.402 E/RoleControllerServiceImpl(  815): Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+02-19 02:29:15.482 E/SmsApplication( 1222): com.google.android.apps.messaging lost android:read_cell_broadcasts:  (fixing)
+02-19 02:29:15.583 E/Finsky  ( 9621): [59] [Counters] attempted to use a non-positive increment for: 4752
+02-19 02:29:15.602 E/Finsky  ( 9621): [59] [Counters] attempted to use a non-positive increment for: 4753
+02-19 02:29:15.761 E/Finsky  ( 9621): [67] Unexpected android-id = 0
+02-19 02:29:15.778 E/Finsky  ( 9621): [58] [Counters] attempted to use a non-positive increment for: 4752
+02-19 02:29:15.785 E/Finsky  ( 9621): [59] [Counters] attempted to use a non-positive increment for: 4753
+02-19 02:29:15.825 E/RoleControllerServiceImpl(  815): Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.WALLET, user: 0
+02-19 02:29:16.106 E/AppOps  (  815): attributionTag VCN not declared in manifest of android
+02-19 02:29:20.838 E/Finsky  ( 9621): [67] Unexpected android-id = 0
+02-19 02:29:25.877 E/Finsky  ( 9621): [60] ItemStore: getItems RPC failed for item com.mtgo.decklistmanager
+02-19 02:29:25.881 E/Finsky  ( 9621): [54] ItemStore: getItems RPC failed for item com.mtgo.decklistmanager
+02-19 02:29:36.310 E/WifiScoringParams(  815): Invalid frequency(-1), using 5G as default rssi array
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): Cannot acquire BluetoothActivityEnergyInfo
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): java.util.concurrent.ExecutionException: java.lang.RuntimeException: error: 11
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:372)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2072)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.BluetoothPowerStatsCollector.collectBluetoothActivityInfo(BluetoothPowerStatsCollector.java:191)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.BluetoothPowerStatsCollector.collectStats(BluetoothPowerStatsCollector.java:155)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.PowerStatsCollector.collectAndDeliverStats(PowerStatsCollector.java:196)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.PowerStatsCollector.lambda$schedule$0(PowerStatsCollector.java:166)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.PowerStatsCollector.$r8$lambda$G7G_yFY7rV7oxQbQHnZ5FHX8eBk(PowerStatsCollector.java:0)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.PowerStatsCollector$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.os.Handler.handleCallback(Handler.java:1070)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.os.Handler.dispatchMessage(Handler.java:125)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.os.Looper.dispatchMessage(Looper.java:333)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.os.Looper.loopOnce(Looper.java:263)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.os.Looper.loop(Looper.java:367)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.os.HandlerThread.run(HandlerThread.java:139)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): Caused by: java.lang.RuntimeException: error: 11
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.power.stats.BluetoothPowerStatsCollector$1.onBluetoothActivityEnergyInfoError(BluetoothPowerStatsCollector.java:180)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.lambda$onBluetoothActivityEnergyInfoAvailable$0(BluetoothAdapter.java:1010)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.$r8$lambda$ks_hN9Vo_x2Jp1k5f-s67WiAd4A(Unknown Source:0)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothUtils.lambda$executeFromBinder$0(BluetoothUtils.java:346)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothUtils$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at com.android.server.SystemServerInitThreadPool$$ExternalSyntheticLambda0.execute(R8$$SyntheticClass:0)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothUtils.executeFromBinder(BluetoothUtils.java:346)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.BluetoothAdapter$OnBluetoothActivityEnergyInfoProxy.onBluetoothActivityEnergyInfoAvailable(BluetoothAdapter.java:1008)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.bluetooth.IBluetoothActivityEnergyInfoListener$Stub.onTransact(IBluetoothActivityEnergyInfoListener.java:98)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.os.Binder.execTransactInternal(Binder.java:1478)
+02-19 02:30:15.127 E/BluetoothPowerStatsCollector(  815): 	at android.os.Binder.execTransact(Binder.java:1418)

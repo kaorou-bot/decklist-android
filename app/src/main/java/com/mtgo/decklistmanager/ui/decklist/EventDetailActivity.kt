@@ -46,6 +46,9 @@ class EventDetailActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_event_detail)
 
+        // Version marker for debugging
+        android.util.Log.d("EventDetailActivity", "=== v5.0.1 with Adapter logs ===")
+
         eventId = intent.getLongExtra("eventId", -1)
         if (eventId == -1L) {
             Toast.makeText(this, "Invalid event ID", Toast.LENGTH_SHORT).show()
@@ -146,6 +149,11 @@ class EventDetailActivity : AppCompatActivity() {
             // Check if downloading is in progress
             val isDownloading = viewModel.uiState.value is EventDetailViewModel.UiState.Downloading
             AppLogger.d("EventDetailActivity", "isDownloading: $isDownloading")
+
+            if (items == null) {
+                AppLogger.w("EventDetailActivity", "Decklists items is null, skipping")
+                return@observe
+            }
 
             val decklists = items.map { item ->
                 Decklist(

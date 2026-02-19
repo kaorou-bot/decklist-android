@@ -1,0 +1,28 @@
+--------- beginning of main
+02-19 02:12:36.618 D/MainActivity(32341): Has more events: false
+02-19 02:12:36.632 D/MainActivity(32341): Has more events: true
+02-19 02:12:36.949 D/MainActivity(32341): Has more events: false
+--------- beginning of system
+02-19 02:12:40.531 E/TaskPersister(  815): File error accessing recents directory (directory doesn't exist?).
+02-19 02:13:36.068 E/WifiScoringParams(  815): Invalid frequency(-1), using 5G as default rssi array
+02-19 02:15:28.007 D/EventDetailActivity(32341): Views initialized successfully
+02-19 02:15:28.009 D/EventDetailViewModel(32341): loadEventDetail called for eventId: 2, fromServer: true
+02-19 02:15:28.009 D/EventDetailViewModel(32341): Loading event from server: 2
+02-19 02:15:28.220 E/EventDetailViewModel(32341): Error loading event: Parameter specified as non-null is null: method com.mtgo.decklistmanager.data.local.entity.EventEntity.<init>, parameter eventName
+02-19 02:15:28.220 E/EventDetailViewModel(32341): java.lang.NullPointerException: Parameter specified as non-null is null: method com.mtgo.decklistmanager.data.local.entity.EventEntity.<init>, parameter eventName
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at com.mtgo.decklistmanager.data.local.entity.EventEntity.<init>(Unknown Source:2)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at com.mtgo.decklistmanager.ui.decklist.EventDetailViewModel.loadEventDetailFromServer(EventDetailViewModel.kt:117)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at com.mtgo.decklistmanager.ui.decklist.EventDetailViewModel.access$loadEventDetailFromServer(EventDetailViewModel.kt:25)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at com.mtgo.decklistmanager.ui.decklist.EventDetailViewModel$loadEventDetailFromServer$1.invokeSuspend(Unknown Source:16)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at android.os.Handler.handleCallback(Handler.java:1070)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at android.os.Handler.dispatchMessage(Handler.java:125)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at android.os.Looper.dispatchMessage(Looper.java:333)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at android.os.Looper.loopOnce(Looper.java:263)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at android.os.Looper.loop(Looper.java:367)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at android.app.ActivityThread.main(ActivityThread.java:9287)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at java.lang.reflect.Method.invoke(Native Method)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:566)
+02-19 02:15:28.220 E/EventDetailViewModel(32341): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:929)
+02-19 02:15:30.848 E/TaskPersister(  815): File error accessing recents directory (directory doesn't exist?).

@@ -92,7 +92,7 @@ class MainActivity : BaseActivity() {
         super.onResume()
         // 刷新赛事列表（当从赛事详情页返回时，可能需要更新赛事的卡组数量）
         if (currentTab == TAB_EVENT_LIST) {
-            viewModel.loadEvents()
+            viewModel.refreshEvents()
         }
     }
 
@@ -255,6 +255,28 @@ class MainActivity : BaseActivity() {
         rvDecklists.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = eventSectionAdapter // 默认使用 EventSectionAdapter (带日期分组)
+
+            // 添加滚动监听器，用于分页加载
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+
+                    // 只在向下滑动时加载更多
+                    if (dy > 0 && currentTab == TAB_EVENT_LIST) {
+                        val layoutManager = recyclerView.layoutManager as? LinearLayoutManager
+                        if (layoutManager != null) {
+                            val visibleItemCount = layoutManager.childCount
+                            val totalItemCount = layoutManager.itemCount
+                            val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+
+                            // 当滚动到距离底部还有 5 个 item 时开始加载
+                            if (visibleItemCount + firstVisibleItemPosition + 5 >= totalItemCount) {
+                                viewModel.loadMoreEvents()
+                            }
+                        }
+                    }
+                }
+            })
         }
 
         // Setup swipe to delete for events
@@ -495,6 +517,19 @@ class MainActivity : BaseActivity() {
                 viewModel.clearStatusMessage()
             }
         }
+
+        // 监听加载更多状态，可以在这里添加底部加载提示
+        collectFlow(viewModel.isLoadingMore) { isLoading ->
+            if (isLoading) {
+                // 可以在这里显示底部加载进度条或提示
+                AppLogger.d("MainActivity", "Loading more events...")
+            }
+        }
+
+        // 监听是否还有更多数据
+        collectFlow(viewModel.hasMore) { hasMore ->
+            AppLogger.d("MainActivity", "Has more events: $hasMore")
+        }
     }
 
     private fun showFormatFilterDialog() {
@@ -514,7 +549,7 @@ class MainActivity : BaseActivity() {
                 if (currentTab == TAB_FAVORITES) {
                     viewModel.loadFavoriteDecklists()
                 } else {
-                    viewModel.loadEvents()
+                    viewModel.refreshEvents()  // 筛选时刷新而不是追加
                 }
             }
         }

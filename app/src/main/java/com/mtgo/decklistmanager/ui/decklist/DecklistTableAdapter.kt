@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.textview.MaterialTextView
 import com.mtgo.decklistmanager.databinding.ItemDecklistTableBinding
 import com.mtgo.decklistmanager.domain.model.Decklist
+import com.mtgo.decklistmanager.util.AppLogger
 
 /**
  * DecklistTableAdapter - Table-style adapter for displaying decklists
@@ -15,6 +16,17 @@ import com.mtgo.decklistmanager.domain.model.Decklist
 class DecklistTableAdapter(
     private val onItemClick: (Decklist) -> Unit
 ) : ListAdapter<Decklist, DecklistTableAdapter.DecklistTableViewHolder>(DecklistDiffCallback()) {
+
+    override fun submitList(list: List<Decklist>?) {
+        android.util.Log.d("DecklistTableAdapter", "submitList called with ${list?.size ?: "null"} items")
+        super.submitList(list)
+    }
+
+    override fun getItemCount(): Int {
+        val count = super.getItemCount()
+        android.util.Log.d("DecklistTableAdapter", "getItemCount: $count")
+        return count
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DecklistTableViewHolder {
         val binding = ItemDecklistTableBinding.inflate(
@@ -26,6 +38,7 @@ class DecklistTableAdapter(
     }
 
     override fun onBindViewHolder(holder: DecklistTableViewHolder, position: Int) {
+        AppLogger.d("DecklistTableAdapter", "onBindViewHolder position=$position, itemCount=$itemCount")
         holder.bind(getItem(position))
     }
 
@@ -41,6 +54,7 @@ class DecklistTableAdapter(
                 !decklist.playerName.isNullOrEmpty() && decklist.playerName != "Unknown" -> decklist.playerName
                 else -> decklist.eventName
             }
+            android.util.Log.d("DecklistTableAdapter", "bind: displayName=$displayName, record=${decklist.record}")
             binding.tvPlayerName.text = displayName
             binding.tvRecord.text = decklist.record ?: "N/A"
 

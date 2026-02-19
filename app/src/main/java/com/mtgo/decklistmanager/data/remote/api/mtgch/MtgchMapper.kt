@@ -1,6 +1,7 @@
 package com.mtgo.decklistmanager.data.remote.api.mtgch
 
 import com.mtgo.decklistmanager.data.local.entity.CardInfoEntity
+import com.mtgo.decklistmanager.util.AppLogger
 import com.google.gson.Gson
 
 /**
@@ -305,5 +306,8 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         frontImageUri = frontImageUri,
         backImageUri = backImageUri,
         lastUpdated = System.currentTimeMillis()
-    )
+    ).also {
+        // 调试日志
+        AppLogger.d("MtgchMapper", "Saved to database - name: ${it.name}, manaCost: ${it.manaCost}, layout: $layout")
+    }
 }

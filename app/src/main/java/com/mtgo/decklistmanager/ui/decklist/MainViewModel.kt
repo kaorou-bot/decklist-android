@@ -7,6 +7,8 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.mtgo.decklistmanager.data.local.dao.DecklistDao
 import com.mtgo.decklistmanager.data.local.dao.EventDao
+import com.mtgo.decklistmanager.data.remote.api.ServerApi
+import com.mtgo.decklistmanager.data.remote.api.dto.EventDto
 import com.mtgo.decklistmanager.domain.model.*
 import com.mtgo.decklistmanager.data.repository.DecklistRepository
 import com.mtgo.decklistmanager.data.repository.TagRepository
@@ -27,7 +29,8 @@ class MainViewModel @Inject constructor(
     private val repository: DecklistRepository,
     private val eventDao: EventDao,
     private val decklistDao: DecklistDao,
-    private val tagRepository: TagRepository
+    private val tagRepository: TagRepository,
+    private val serverApi: ServerApi
 ) : ViewModel() {
 
     // UI State
@@ -73,6 +76,19 @@ class MainViewModel @Inject constructor(
     // Favorite count
     private val _favoriteCount = MutableStateFlow(0)
     val favoriteCount: StateFlow<Int> = _favoriteCount.asStateFlow()
+
+    // 分页状态
+    private val _currentOffset = MutableStateFlow(0)
+    val currentOffset: StateFlow<Int> = _currentOffset.asStateFlow()
+
+    private val _hasMore = MutableStateFlow(true)
+    val hasMore: StateFlow<Boolean> = _hasMore.asStateFlow()
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
+
+    private val _totalEvents = MutableStateFlow<Int?>(null)
+    val totalEvents: StateFlow<Int?> = _totalEvents.asStateFlow()
 
     init {
         // 初始化时加载筛选选项
@@ -205,8 +221,8 @@ class MainViewModel @Inject constructor(
      */
     fun applyDateFilter(date: String?) {
         _selectedDate.value = if (date == "All Dates") null else date
-        // 日期筛选只用于赛事列表
-        loadEvents()
+        // 日期筛选只用于赛事列表，刷新而不是追加
+        refreshEvents()
     }
 
     /**
@@ -509,7 +525,135 @@ class MainViewModel @Inject constructor(
     /**
      * 加载赛事列表
      */
-    fun loadEvents() {
+    /**
+     * 加载赛事列表（从服务器 API）
+     * @param refresh 是否刷新（重置分页）
+     */
+    fun loadEvents(refresh: Boolean = true) {
+        viewModelScope.launch {
+            if (refresh) {
+                _uiState.value = UiState.Loading
+                _currentOffset.value = 0
+                _hasMore.value = true
+            } else {
+                _isLoadingMore.value = true
+            }
+
+            try {
+                val format = _selectedFormat.value
+                val date = _selectedDate.value
+                val offset = if (refresh) 0 else _currentOffset.value
+                val limit = 50
+
+                AppLogger.d("MainViewModel", "Loading events from server: format=$format, date=$date, offset=$offset, limit=$limit")
+
+                // 从服务器 API 获取赛事数据
+                val response = serverApi.getEvents(
+                    format = format,
+                    date = date,
+                    limit = limit,
+                    offset = offset
+                )
+
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val responseData = response.body()?.data
+                    val eventDtos = responseData?.events ?: emptyList()
+                    val total = responseData?.total
+
+                    AppLogger.d("MainViewModel", "Server returned ${eventDtos.size} events, total: $total")
+
+                    // 转换 DTO 为 Entity 并保存到本地数据库
+                    val entities = eventDtos.map { dto ->
+                        com.mtgo.decklistmanager.data.local.entity.EventEntity(
+                            id = dto.id,
+                            eventName = dto.eventName,
+                            eventType = dto.eventType,
+                            format = dto.format,
+                            date = dto.date,
+                            sourceUrl = dto.sourceUrl,
+                            source = dto.source,
+                            deckCount = dto.deckCount,
+                            createdAt = System.currentTimeMillis()
+                        )
+                    }
+
+                    // 保存到数据库
+                    eventDao.insertAll(entities)
+
+                    // 转换为 EventItem
+                    val items = entities.map { entity ->
+                        EventItem(
+                            id = entity.id,
+                            eventName = entity.eventName,
+                            eventType = entity.eventType,
+                            format = entity.format,
+                            date = normalizeDate(entity.date),
+                            sourceUrl = entity.sourceUrl,
+                            source = entity.source,
+                            deckCount = entity.deckCount
+                        )
+                    }
+
+                    if (refresh) {
+                        // 刷新模式：替换整个列表
+                        _events.postValue(items)
+                        _totalEvents.value = total
+                    } else {
+                        // 加载更多模式：追加到现有列表
+                        val currentList = _events.value ?: emptyList()
+                        _events.postValue(currentList + items)
+                    }
+
+                    // 更新分页状态
+                    _currentOffset.value = offset + eventDtos.size
+                    _hasMore.value = if (total != null) {
+                        offset + eventDtos.size < total
+                    } else {
+                        eventDtos.size >= limit
+                    }
+
+                    _uiState.value = UiState.Success("Loaded ${items.size} events")
+                    AppLogger.d("MainViewModel", "Events loaded successfully, hasMore: ${_hasMore.value}")
+                } else {
+                    val errorMsg = "Failed to load events: ${response.code()} ${response.message()}"
+                    AppLogger.e("MainViewModel", errorMsg)
+                    _uiState.value = UiState.Error(errorMsg)
+                    _statusMessage.value = errorMsg
+                }
+            } catch (e: Exception) {
+                val errorMsg = "Error loading events: ${e.message}"
+                AppLogger.e("MainViewModel", errorMsg, e)
+                _uiState.value = UiState.Error(errorMsg)
+                _statusMessage.value = errorMsg
+            } finally {
+                _isLoadingMore.value = false
+            }
+        }
+    }
+
+    /**
+     * 加载更多赛事（向下滑动时调用）
+     */
+    fun loadMoreEvents() {
+        if (_hasMore.value && !_isLoadingMore.value) {
+            AppLogger.d("MainViewModel", "Loading more events...")
+            loadEvents(refresh = false)
+        }
+    }
+
+    /**
+     * 重新加载（刷新时调用）
+     */
+    fun refreshEvents() {
+        AppLogger.d("MainViewModel", "Refreshing events...")
+        loadEvents(refresh = true)
+    }
+
+    /**
+     * 加载赛事列表（本地数据库 - 作为后备）
+     * 保留此方法以便在服务器 API 不可用时使用
+     */
+    fun loadEventsFromLocal() {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
@@ -526,7 +670,7 @@ class MainViewModel @Inject constructor(
                         eventName = entity.eventName,
                         eventType = entity.eventType,
                         format = entity.format,
-                        date = normalizeDate(entity.date),  // 统一日期格式
+                        date = normalizeDate(entity.date),
                         sourceUrl = entity.sourceUrl,
                         source = entity.source,
                         deckCount = entity.deckCount
@@ -534,14 +678,9 @@ class MainViewModel @Inject constructor(
                 }
 
                 _events.postValue(items)
-                _uiState.value = UiState.Success("Loaded ${items.size} events")
+                _uiState.value = UiState.Success("Loaded ${items.size} events (local)")
 
-                // 移除提示
-                /*
-                if (items.isEmpty()) {
-                    _statusMessage.value = "No events found. Try downloading from MTGTop8."
-                }
-                */
+                AppLogger.d("MainViewModel", "Loaded ${items.size} events from local database")
             } catch (e: Exception) {
                 _uiState.value = UiState.Error("Error loading events: ${e.message}")
                 _statusMessage.value = "Error: ${e.message}"

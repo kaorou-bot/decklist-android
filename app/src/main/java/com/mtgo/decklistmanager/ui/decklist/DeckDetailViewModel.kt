@@ -12,6 +12,11 @@ import com.mtgo.decklistmanager.domain.model.CardInfo
 import com.mtgo.decklistmanager.data.repository.DecklistRepository
 import com.mtgo.decklistmanager.data.local.entity.DecklistEntity
 import com.mtgo.decklistmanager.data.local.entity.CardEntity
+import com.mtgo.decklistmanager.data.local.dao.CardDao
+import com.mtgo.decklistmanager.data.local.dao.DecklistDao
+import com.mtgo.decklistmanager.data.remote.api.ServerApi
+import com.mtgo.decklistmanager.data.remote.api.dto.DecklistDetailResponse
+import com.mtgo.decklistmanager.data.remote.api.dto.CardInfoDto
 import com.mtgo.decklistmanager.exporter.DecklistExporter
 import com.mtgo.decklistmanager.exporter.ExportResult
 import com.mtgo.decklistmanager.exporter.format.MtgoFormatExporter
@@ -29,10 +34,14 @@ import javax.inject.Inject
 
 /**
  * DeckDetailViewModel - 牌组详情 ViewModel
+ * v4.2.0: 支持从服务端 API 获取套牌详情（含卡牌）
  */
 @HiltViewModel
 class DeckDetailViewModel @Inject constructor(
     private val repository: DecklistRepository,
+    private val cardDao: CardDao,
+    private val decklistDao: DecklistDao,
+    private val serverApi: ServerApi,
     private val languagePreferenceManager: LanguagePreferenceManager,
     private val mtgoExporter: MtgoFormatExporter,
     private val arenaExporter: ArenaFormatExporter,
@@ -109,53 +118,180 @@ class DeckDetailViewModel @Inject constructor(
         // 若 displayName 为 null，则回退使用英文名，确保中文名始终有值
         cardNameZh = displayName ?: cardName
     ).also {
-        // 调试日志
-        if (it.cardName.contains("Force of Negation") || it.cardName.contains("Subtlety") || it.cardName.contains("Flash")) {
-            AppLogger.d("DeckDetailViewModel", "CardEntity.toCard(): ${it.cardNameZh}, manaCost=${it.manaCost}")
-        }
+        // 调试日志 - 记录所有卡牌
+        AppLogger.d("DeckDetailViewModel", "CardEntity.toCard(): ${it.cardNameZh}, manaCost=${it.manaCost}")
     }
 
     /**
      * 加载牌组详情
+     * v4.2.0: 优先从服务端 API 获取，失败则从本地数据库读取
      */
-    fun loadDecklistDetail() {
+    fun loadDecklistDetail(fromServer: Boolean = true) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // v4.1.0: 首先修复所有 NULL 的 display_name 和 mana_cost
-                repository.fixAllNullDisplayNames()
-
-                // 首次加载时修复双面牌数据
-                repository.fixDualFacedCards()
-
-                // 加载牌组信息
-                val decklistEntity = repository.getDecklistById(decklistId)
-                if (decklistEntity != null) {
-                    _decklist.value = decklistEntity.toDecklist()
-
-                    // v4.1.0: 确保卡牌详情已获取后再加载卡牌列表
-                    // fetchScryfallDetails 会等待所有异步任务完成
-                    repository.ensureCardDetails(decklistId)
-
-                    // 加载所有卡牌（重新查询确保获取最新数据）
-                    val allCards = repository.getCardsByDecklistId(decklistId)
-
-                    // 分离主牌和备牌
-                    val mainCards = allCards
-                        .filter { it.location == "main" }
-                        .map { it.toCard() }
-                    _mainDeck.value = mainCards
-
-                    val sideboardCards = allCards
-                        .filter { it.location == "sideboard" }
-                        .map { it.toCard() }
-                    _sideboard.value = sideboardCards
+                if (fromServer) {
+                    loadDecklistDetailFromServer()
+                } else {
+                    loadDecklistDetailFromLocal()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                AppLogger.e("DeckDetailViewModel", "Error loading decklist: ${e.message}", e)
+                // 服务器失败时，尝试从本地加载
+                loadDecklistDetailFromLocal()
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+
+    /**
+     * 从服务端 API 加载套牌详情
+     * v5.0: 使用正确的架构
+     * 1. 从 /api/v1/decklists/{id} 获取卡牌名称列表
+     * 2. 用 cardName 调用 /api/cards/search 获取完整信息（中文、法术力值等）
+     */
+    private suspend fun loadDecklistDetailFromServer() {
+        AppLogger.d("DeckDetailViewModel", "Loading decklist from server: $decklistId")
+
+        val response = serverApi.getDecklistDetail(decklistId)
+        if (!response.isSuccessful || response.body()?.success != true) {
+            throw Exception("Failed to load decklist: ${response.code()}")
+        }
+
+        val detail = response.body()!!.data!!
+        AppLogger.d("DeckDetailViewModel", "Server returned ${detail.mainDeck.size} main cards, ${detail.sideboard.size} sideboard cards")
+
+        // 保存套牌信息到本地
+        val decklistEntity = DecklistEntity(
+            id = detail.id,
+            eventId = detail.eventId,
+            eventName = detail.eventName,
+            deckName = detail.deckName,
+            format = detail.format,
+            date = detail.date,
+            url = "", // 服务端不提供 URL
+            playerName = detail.playerName,
+            playerId = null,
+            record = detail.record,
+            eventType = null,
+            createdAt = System.currentTimeMillis()
+        )
+        decklistDao.insert(decklistEntity)
+
+        // 第一步：从套牌接口获取卡牌名称列表
+        data class CardRef(val index: Int, val name: String, val quantity: Int, val location: String)
+
+        val mainCardNames = detail.mainDeck.mapIndexed { index, cardDto ->
+            CardRef(index, cardDto.cardName, cardDto.quantity, "main")
+        }
+        val sideCardNames = detail.sideboard.mapIndexed { index, cardDto ->
+            CardRef(index, cardDto.cardName, cardDto.quantity, "sideboard")
+        }
+
+        val allCardRefs = mainCardNames + sideCardNames
+        AppLogger.d("DeckDetailViewModel", "Fetching details for ${allCardRefs.size} unique cards from /api/cards/search")
+
+        // 第二步：对每个唯一的卡牌名称，调用 /api/cards/search 获取完整信息
+        val uniqueCardNames = allCardRefs.map { it.name }.distinct()
+        val cardInfoMap = mutableMapOf<String, CardInfoDto>()
+
+        for (cardName in uniqueCardNames) {
+            try {
+                AppLogger.d("DeckDetailViewModel", "Fetching card info: $cardName")
+                val cardResponse = serverApi.searchCard(cardName, 1)
+                if (cardResponse.isSuccessful && cardResponse.body()?.success == true) {
+                    val cards = cardResponse.body()!!.cards
+                    if (cards != null && cards.isNotEmpty()) {
+                        // 找到精确匹配的卡牌
+                        val exactMatch = cards.find { it.name.equals(cardName, ignoreCase = true) }
+                        if (exactMatch != null) {
+                            cardInfoMap[cardName] = exactMatch
+                            AppLogger.d("DeckDetailViewModel", "  ✓ Found: ${exactMatch.nameZh} (${exactMatch.manaCost})")
+                        } else {
+                            AppLogger.w("DeckDetailViewModel", "  ⚠ No exact match for: $cardName")
+                            // 使用第一个结果作为回退
+                            cardInfoMap[cardName] = cards[0]
+                        }
+                    } else {
+                        AppLogger.w("DeckDetailViewModel", "  ✗ No results for: $cardName")
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.e("DeckDetailViewModel", "Error fetching card $cardName: ${e.message}")
+            }
+        }
+
+        // 第三步：使用完整信息构建 CardEntity
+        val cardEntities = allCardRefs.map { cardRef ->
+            val cardInfo = cardInfoMap[cardRef.name]
+            CardEntity(
+                decklistId = decklistId,
+                cardName = cardRef.name,
+                quantity = cardRef.quantity,
+                location = cardRef.location,
+                cardOrder = cardRef.index,
+                manaCost = cardInfo?.manaCost,
+                displayName = cardInfo?.nameZh,
+                rarity = cardInfo?.rarity?.replaceFirstChar { it.uppercase() },
+                color = cardInfo?.colors?.joinToString(","),
+                cardType = cardInfo?.typeLine,
+                cardSet = cardInfo?.setName
+            ).also {
+                if (cardInfo == null) {
+                    AppLogger.w("DeckDetailViewModel", "Missing card info for: ${cardRef.name}")
+                }
+            }
+        }
+
+        // 删除旧数据并插入新数据
+        cardDao.deleteByDecklistId(decklistId)
+        cardDao.insertAll(cardEntities)
+
+        AppLogger.d("DeckDetailViewModel", "Inserted ${cardEntities.size} cards with full details from /api/cards/search")
+
+        // 直接从数据库加载
+        val allCards = cardDao.getCardsByDecklistId(decklistId)
+        val mainCards = allCards.filter { it.location == "main" }.map { it.toCard() }
+        val sideboardCards = allCards.filter { it.location == "sideboard" }.map { it.toCard() }
+
+        // 加载到 LiveData
+        _decklist.value = decklistEntity.toDecklist()
+        _mainDeck.value = mainCards
+        _sideboard.value = sideboardCards
+
+        AppLogger.d("DeckDetailViewModel", "Loaded ${mainCards.size} main cards, ${sideboardCards.size} sideboard cards")
+    }
+
+    /**
+     * 从本地数据库加载套牌详情（后备方案）
+     * v5.0: 简化逻辑，直接从数据库读取，不再调用 MTGCH API
+     */
+    private suspend fun loadDecklistDetailFromLocal() {
+        AppLogger.d("DeckDetailViewModel", "Loading decklist from local database: $decklistId")
+
+        // 加载牌组信息
+        val decklistEntity = decklistDao.getDecklistById(decklistId)
+        if (decklistEntity != null) {
+            _decklist.value = decklistEntity.toDecklist()
+
+            // 加载所有卡牌
+            val allCards = cardDao.getCardsByDecklistId(decklistId)
+
+            // 分离主牌和备牌
+            val mainCards = allCards
+                .filter { it.location == "main" }
+                .map { it.toCard() }
+            _mainDeck.value = mainCards
+
+            val sideboardCards = allCards
+                .filter { it.location == "sideboard" }
+                .map { it.toCard() }
+            _sideboard.value = sideboardCards
+
+            AppLogger.d("DeckDetailViewModel", "Loaded from local: ${mainCards.size} main cards, ${sideboardCards.size} sideboard cards")
+        } else {
+            AppLogger.w("DeckDetailViewModel", "Decklist not found in local database: $decklistId")
         }
     }
 

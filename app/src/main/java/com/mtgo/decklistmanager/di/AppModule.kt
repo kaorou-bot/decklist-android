@@ -7,11 +7,13 @@ import com.mtgo.decklistmanager.data.local.dao.EventDao
 import com.mtgo.decklistmanager.data.local.database.AppDatabase
 import com.mtgo.decklistmanager.data.remote.api.MagicScraper
 import com.mtgo.decklistmanager.data.remote.api.MtgTop8Scraper
+import com.mtgo.decklistmanager.data.remote.api.ServerApi
 import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Named
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -104,15 +106,30 @@ object AppModule {
     }
 
     /**
-     * 提供 Retrofit for MTG Card Server API (自有服务端)
-     * Base URL: http://182.92.109.160/
-     * API 文档: 见项目根目录 API_DOCUMENTATION.md
-     *
-     * 服务端完全兼容 MTGCH 搜索接口格式
+     * 提供 Retrofit for MTGCH API (外部 MTGCH 服务)
+     * Base URL: https://mtgch.com/
+     * 用于卡牌搜索和详情查询
      */
     @Provides
     @Singleton
+    @Named("mtgch")
     fun provideMtgchRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl("https://mtgch.com/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    /**
+     * 提供 Retrofit for Server API (自有服务端)
+     * Base URL: http://182.92.109.160/
+     * 用于赛事和套牌数据
+     */
+    @Provides
+    @Singleton
+    @Named("server")
+    fun provideServerRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
             .baseUrl("http://182.92.109.160/")
             .client(okHttpClient)
@@ -122,8 +139,18 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideMtgchApi(retrofit: Retrofit): MtgchApi {
+    fun provideMtgchApi(@Named("mtgch") retrofit: Retrofit): MtgchApi {
         return retrofit.create(MtgchApi::class.java)
+    }
+
+    /**
+     * 提供 ServerApi - 服务端赛事和套牌数据 API
+     * Base URL: http://182.92.109.160/
+     */
+    @Provides
+    @Singleton
+    fun provideServerApi(@Named("server") retrofit: Retrofit): ServerApi {
+        return retrofit.create(ServerApi::class.java)
     }
 
     @Provides

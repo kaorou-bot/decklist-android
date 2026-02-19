@@ -14,15 +14,6 @@
             android:summary="@string/theme_mode_summary"
             app:useSimpleSummaryProvider="true" />
 
-        <ListPreference
-            android:key="language"
-            android:title="@string/language"
-            android:entries="@array/language_entries"
-            android:entryValues="@array/language_values"
-            android:defaultValue="zh"
-            android:summary="@string/language_summary"
-            app:useSimpleSummaryProvider="true" />
-
     </PreferenceCategory>
 
     <!-- About Settings -->

@@ -31,6 +31,12 @@ class CardInfoFragment : DialogFragment() {
     private var currentCardInfo: CardInfo? = null
     private var isShowingFront = true
 
+    // 保存原始卡牌的中文规则文本，切换版本时继续使用
+    private var originalChineseOracleText: String? = null
+    private var originalChineseTypeLine: String? = null
+    private var originalBackFaceOracleText: String? = null
+    private var originalBackFaceTypeLine: String? = null
+
     private var oracleId: String? = null
     private var printings: List<MtgchCardDto> = emptyList()
     private var currentPrintingIndex: Int = 0
@@ -52,12 +58,31 @@ class CardInfoFragment : DialogFragment() {
         cardInfo?.let {
             currentCardInfo = it
             isShowingFront = true
+            // 保存原始中文规则文本和类型行
+            originalChineseOracleText = it.oracleText
+            originalChineseTypeLine = it.typeLine
+            originalBackFaceOracleText = it.backFaceOracleText
+            originalBackFaceTypeLine = it.backFaceTypeLine
             displayCardInfo(it)
         }
 
         oracleId = arguments?.getString(ARG_ORACLE_ID)
-        oracleId?.let {
-            loadPrintings(it)
+        val receivedOracleId = oracleId
+        AppLogger.d("CardInfoFragment", "Received oracleId: $receivedOracleId")
+        AppLogger.d("CardInfoFragment", "Card info oracleId: ${cardInfo?.oracleId}")
+
+        if (receivedOracleId != null) {
+            AppLogger.d("CardInfoFragment", "Loading printings for oracleId: $receivedOracleId")
+            loadPrintings(receivedOracleId)
+        } else {
+            // 没有 oracleId 时，尝试使用卡牌名称搜索获取印刷版本
+            AppLogger.w("CardInfoFragment", "No oracleId available, trying to load printings by card name")
+            val cardName = cardInfo?.name
+            if (!cardName.isNullOrEmpty()) {
+                loadPrintingsByName(cardName)
+            } else {
+                AppLogger.w("CardInfoFragment", "No card name available, cannot load printings")
+            }
         }
 
         val title = cardInfo?.name ?: "卡牌详情"
@@ -97,7 +122,7 @@ class CardInfoFragment : DialogFragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("选择印刷版本")
             .setItems(items) { _, which ->
-                if (which != currentPrintingIndex && which in printings.indices) {
+                if (which in printings.indices) {
                     switchToPrinting(which)
                 }
             }
@@ -111,13 +136,28 @@ class CardInfoFragment : DialogFragment() {
                 AppLogger.d("CardInfoFragment", "Loading printings for: $oracleId")
                 val result = searchViewModel.getCardPrintings(oracleId, limit = 100)
                 result?.let { (cards, total) ->
-                    printings = cards
-                    AppLogger.d("CardInfoFragment", "Loaded ${cards.size} printings")
-                    AppLogger.d("CardInfoFragment", "_binding is null: ${_binding == null}")
-                    if (_binding != null) {
-                        updateVersionSelectorItems()
+                    // 验证返回的印刷版本是否匹配当前卡牌
+                    val expectedCardName = currentCardInfo?.name
+                    val isValid = cards.isEmpty() || cards.any { card ->
+                        val cardNameMatches = card.name?.equals(expectedCardName, ignoreCase = true) == true
+                        val zhNameMatches = card.nameZh?.equals(expectedCardName, ignoreCase = true) == true
+                        val translatedNameMatches = card.atomicTranslatedName?.equals(expectedCardName, ignoreCase = true) == true
+                        cardNameMatches || zhNameMatches || translatedNameMatches
+                    }
+
+                    if (isValid) {
+                        printings = cards
+                        AppLogger.d("CardInfoFragment", "Loaded ${cards.size} printings (validated)")
+                        if (_binding != null) {
+                            updateVersionSelectorItems()
+                        } else {
+                            AppLogger.e("CardInfoFragment", "_binding is null, cannot update button")
+                        }
                     } else {
-                        AppLogger.e("CardInfoFragment", "_binding is null, cannot update button")
+                        // oracleId 指向了错误的卡牌，回退到按名称搜索
+                        AppLogger.w("CardInfoFragment", "Oracle ID mismatch: expected '$expectedCardName', got cards with names: ${cards.map { it.name }.take(3).joinToString()}")
+                        AppLogger.w("CardInfoFragment", "Falling back to name-based search")
+                        expectedCardName?.let { loadPrintingsByName(it) }
                     }
                 }
             } catch (e: Exception) {
@@ -126,22 +166,127 @@ class CardInfoFragment : DialogFragment() {
         }
     }
 
+    private fun loadPrintingsByName(cardName: String) {
+        // 使用卡牌名称搜索获取印刷版本
+        loadingJob = lifecycleScope.launch {
+            try {
+                AppLogger.d("CardInfoFragment", "Searching printings by name: $cardName")
+                AppLogger.d("CardInfoFragment", "Current card info - name: ${currentCardInfo?.name}, enName: ${currentCardInfo?.enName}, oracleId: ${currentCardInfo?.oracleId}")
+
+                var oracleId: String? = currentCardInfo?.oracleId
+                var englishName: String? = currentCardInfo?.enName
+
+                // 如果 oracleId 为 null，先搜索获取 oracleId
+                if (oracleId.isNullOrEmpty()) {
+                    AppLogger.d("CardInfoFragment", "oracleId is null, fetching from API")
+
+                    try {
+                        // 尝试多个搜索词
+                        val searchTerms = mutableListOf<String>()
+
+                        // 1. 优先使用英文名（如果存在）
+                        if (!englishName.isNullOrEmpty()) {
+                            searchTerms.add(englishName)
+                        }
+
+                        // 2. 对于双面牌（名称包含 //），只使用第一部分搜索
+                        val firstHalfName = if (cardName.contains(" // ")) {
+                            cardName.split(" // ")[0].trim()
+                        } else null
+                        if (firstHalfName != null) {
+                            searchTerms.add(firstHalfName)
+                        }
+
+                        // 3. 使用原始卡名
+                        searchTerms.add(cardName)
+
+                        AppLogger.d("CardInfoFragment", "Will try searching with: ${searchTerms.joinToString(", ")}")
+
+                        // 依次尝试每个搜索词，直到找到结果
+                        for (searchTerm in searchTerms) {
+                            val response = searchViewModel.mtgchApi.searchCard(query = searchTerm, limit = 5)
+                            if (response.isSuccessful && response.body()?.success == true) {
+                                val cards = response.body()?.cards ?: emptyList()
+                                if (cards.isNotEmpty()) {
+                                    // 找到匹配的卡牌，获取其 oracleId
+                                    val matchedCard = cards.find { card ->
+                                        val nameMatch = card.name?.equals(searchTerm, ignoreCase = true) == true
+                                        val zhNameMatch = card.nameZh?.equals(cardName, ignoreCase = true) == true ||
+                                                        card.nameZh?.equals(firstHalfName, ignoreCase = true) == true
+                                        nameMatch || zhNameMatch
+                                    } ?: cards.firstOrNull()
+
+                                    if (matchedCard != null) {
+                                        oracleId = matchedCard.oracleId
+                                        englishName = matchedCard.name
+
+                                        AppLogger.d("CardInfoFragment", "Found oracleId: $oracleId, English name: $englishName")
+
+                                        // 更新 currentCardInfo
+                                        currentCardInfo = currentCardInfo?.copy(
+                                            oracleId = oracleId,
+                                            enName = englishName
+                                        )
+
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        AppLogger.e("CardInfoFragment", "Failed to fetch oracleId", e)
+                    }
+                }
+
+                // 现在使用 oracleId 获取所有印刷版本
+                if (!oracleId.isNullOrEmpty()) {
+                    AppLogger.d("CardInfoFragment", "Loading printings using oracleId: $oracleId")
+                    val result = searchViewModel.getCardPrintings(oracleId, limit = 100)
+                    result?.let { (cards, total) ->
+                        printings = cards
+                        AppLogger.d("CardInfoFragment", "Loaded ${cards.size} printings using oracleId")
+                        if (_binding != null) {
+                            updateVersionSelectorItems()
+                        } else {
+                            AppLogger.e("CardInfoFragment", "_binding is null, cannot update button")
+                        }
+                        return@launch
+                    }
+                }
+
+                // 如果没有 oracleId，回退到直接搜索（可能只有1个结果）
+                AppLogger.w("CardInfoFragment", "No oracleId found, falling back to direct search")
+                val cards = searchViewModel.searchCardPrintingsByName(cardName)
+                printings = cards
+                if (_binding != null) {
+                    updateVersionSelectorItems()
+                } else {
+                    AppLogger.e("CardInfoFragment", "_binding is null, cannot update button")
+                }
+            } catch (e: Exception) {
+                AppLogger.e("CardInfoFragment", "Error loading printings by name", e)
+            }
+        }
+    }
+
     private fun updateVersionSelectorItems() {
         AppLogger.d("CardInfoFragment", "updateVersionSelectorItems - printings size: ${printings.size}")
-        // 如果有多个版本，显示选择按钮
-        val shouldShow = printings.size > 1
+        // 只要有印刷版本数据就显示选择按钮
+        val shouldShow = printings.isNotEmpty()
         binding.btnSelectVersion.visibility = if (shouldShow) View.VISIBLE else View.GONE
         AppLogger.d("CardInfoFragment", "Button visibility set to: ${if (shouldShow) "VISIBLE" else "GONE"}")
         AppLogger.d("CardInfoFragment", "Button height: ${binding.btnSelectVersion.height}, width: ${binding.btnSelectVersion.width}")
     }
 
     private fun switchToPrinting(index: Int) {
+        AppLogger.d("CardInfoFragment", "switchToPrinting called with index: $index, printings size: ${printings.size}")
         if (index in printings.indices) {
             currentPrintingIndex = index
 
             val newCard = printings[index]
             AppLogger.d("CardInfoFragment", "Switching to printing $index: ${newCard.name}")
             AppLogger.d("CardInfoFragment", "  setCode: ${newCard.setCode}, collectorNumber: ${newCard.collectorNumber}")
+            AppLogger.d("CardInfoFragment", "  setNameZh: ${newCard.setNameZh}")
             AppLogger.d("CardInfoFragment", "  frontImageUri: ${newCard.imageUris?.normal}")
 
             // 打印 cardFaces 信息
@@ -153,10 +298,34 @@ class CardInfoFragment : DialogFragment() {
                 }
             }
 
-            val newCardInfo = com.mtgo.decklistmanager.util.CardDetailHelper.buildCardInfo(
+            // 先构建新的 CardInfo
+            val tempCardInfo = com.mtgo.decklistmanager.util.CardDetailHelper.buildCardInfo(
                 mtgchCard = newCard,
-                cardInfoId = newCard.idString ?: newCard.oracleId ?: ""
+                cardInfoId = newCard.idString ?: newCard.oracleId ?: "",
+                // 明确使用中文字段，如果新版本没有中文，使用原始的中文文本
+                displayName = newCard.nameZh ?: newCard.name,
+                typeLine = originalChineseTypeLine ?: (newCard.typeLineZh ?: newCard.typeLine),
+                oracleText = originalChineseOracleText ?: (newCard.oracleTextZh ?: newCard.oracleText),
+                setName = newCard.setNameZh ?: newCard.setTranslatedName ?: newCard.setName
             )
+
+            // 如果有背面的中文文本，也使用原始的
+            val newCardInfo = tempCardInfo.copy(
+                backFaceOracleText = if (originalBackFaceOracleText != null && tempCardInfo.backFaceOracleText != null) {
+                    originalBackFaceOracleText
+                } else {
+                    tempCardInfo.backFaceOracleText
+                },
+                backFaceTypeLine = if (originalBackFaceTypeLine != null && tempCardInfo.backFaceTypeLine != null) {
+                    originalBackFaceTypeLine
+                } else {
+                    tempCardInfo.backFaceTypeLine
+                }
+            )
+
+            AppLogger.d("CardInfoFragment", "Built new CardInfo: ${newCardInfo.name}")
+            AppLogger.d("CardInfoFragment", "  new imageUriNormal: ${newCardInfo.imageUriNormal}")
+            AppLogger.d("CardInfoFragment", "  new frontImageUri: ${newCardInfo.frontImageUri}")
 
             currentCardInfo = newCardInfo
             isShowingFront = true
@@ -164,7 +333,10 @@ class CardInfoFragment : DialogFragment() {
             // 更新系列名称显示
             binding.textViewSetName.text = newCardInfo.setName ?: "N/A"
 
+            AppLogger.d("CardInfoFragment", "Calling displayCardInfo with new CardInfo")
             displayCardInfo(newCardInfo)
+        } else {
+            AppLogger.w("CardInfoFragment", "Invalid index $index, printings size: ${printings.size}")
         }
     }
 
@@ -243,8 +415,65 @@ class CardInfoFragment : DialogFragment() {
             binding.textViewSetName.text = cardInfo.setName ?: "N/A"
 
             val details = buildString {
-                if (cardInfo.isDualFaced && !isShowingFront) {
-                    appendLine("卡牌名称：${cardInfo.backFaceName ?: cardInfo.name}")
+                if (cardInfo.isDualFaced) {
+                    // 真正的双面牌，根据当前显示哪一面来决定显示内容
+                    if (!isShowingFront) {
+                        // 显示背面
+                        appendLine("卡牌名称：${cardInfo.backFaceName ?: cardInfo.name}")
+                        appendLine()
+                        appendLine("类别：${cardInfo.backFaceTypeLine ?: ""}")
+                        // 法术力不为空才显示
+                        cardInfo.backFaceManaCost?.let { manaCost ->
+                            if (manaCost.isNotEmpty() && manaCost != "N/A") {
+                                appendLine("法术力：$manaCost")
+                            }
+                        }
+                        cardInfo.backFaceOracleText?.let {
+                            val text = formatText(it)
+                            if (text.isNotEmpty()) {
+                                appendLine("规则文本：\n$text")
+                            }
+                        }
+                    } else {
+                        // 显示正面
+                        appendLine("卡牌名称：${cardInfo.frontFaceName ?: cardInfo.name}")
+                        appendLine()
+                        appendLine("类别：${cardInfo.typeLine ?: ""}")
+                        // 法术力不为空才显示
+                        cardInfo.manaCost?.let { manaCost ->
+                            if (manaCost.isNotEmpty() && manaCost != "N/A") {
+                                appendLine("法术力：$manaCost")
+                            }
+                        }
+                        cardInfo.oracleText?.let {
+                            val text = formatText(it)
+                            if (text.isNotEmpty()) {
+                                appendLine("规则文本：\n$text")
+                            }
+                        }
+                    }
+                } else if (cardInfo.backFaceName != null) {
+                    // Split型等多面卡牌（不是真正的双面牌），同时显示所有面
+                    appendLine("=== 第一部分 ===")
+                    appendLine("卡牌名称：${cardInfo.name}")
+                    appendLine()
+                    appendLine("类别：${cardInfo.typeLine ?: ""}")
+                    // 法术力不为空才显示
+                    cardInfo.manaCost?.let { manaCost ->
+                        if (manaCost.isNotEmpty() && manaCost != "N/A") {
+                            appendLine("法术力：$manaCost")
+                        }
+                    }
+                    cardInfo.oracleText?.let {
+                        val text = formatText(it)
+                        if (text.isNotEmpty()) {
+                            appendLine("规则文本：\n$text")
+                        }
+                    }
+
+                    appendLine()
+                    appendLine("=== 第二部分 ===")
+                    appendLine("卡牌名称：${cardInfo.backFaceName}")
                     appendLine()
                     appendLine("类别：${cardInfo.backFaceTypeLine ?: ""}")
                     // 法术力不为空才显示

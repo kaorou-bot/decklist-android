@@ -4,21 +4,26 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9.20-blue.svg)](https://kotlinlang.org)
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg)](https://android.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-4.1.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-5.1.0-brightgreen.svg)](CHANGELOG.md)
 
 一个用于浏览、搜索和分析 Magic: The Gathering 竞技牌组数据的 Android 应用程序。
 
 ## 项目概述
 
 MTGO Decklist Manager 允许用户：
-- 📋 浏览 MTGTop8 竞技赛事和牌组数据
+- 📋 浏览 MTGO 竞技赛事和牌组数据（来自自有服务器）
 - 🔍 按格式和日期筛选赛事
-- 📖 查看牌组详细卡表
-- 🔮 查询单卡详细信息（使用 mtgch.com API - 大学院废墟）
+- 📖 查看牌组详细卡表（含中文卡牌名称）
+- 🔍 搜索卡牌（使用 mtgch.com API - 大学院废墟）
 - 🖼️ 查看高清卡牌图片（包括双面牌，支持中文图片）
 - ⭐ 收藏喜欢的牌组
-- 🗑️ 滑动删除赛事
-- 🌐 从 MTGTop8.com 爬取最新数据
+- 📊 查看卡牌数据和统计信息
+- 🌐 自动从服务器同步最新赛事和牌组数据
+
+**v5.1.0 新特性**：
+- ✅ 正确的架构设计，高质量中文卡牌名称
+- ✅ 完全使用自有服务器数据（赛事、牌组、卡牌）
+- ✅ 标准法术力值格式和完整卡牌信息
 
 ## 技术栈
 
@@ -28,11 +33,33 @@ MTGO Decklist Manager 允许用户：
 | 架构 | MVVM + Clean Architecture |
 | UI | Material Design 3 |
 | 数据库 | Room (v4) |
-| 网页解析 | Jsoup |
+| 网络请求 | Retrofit + OkHttp |
+| API 服务 | 自有服务器 (http://182.92.109.160) |
+| 卡牌搜索 | MTGCH API (https://mtgch.com) |
 | 异步 | Coroutines + StateFlow |
 | 依赖注入 | Hilt |
 | 图片加载 | Glide |
 | 构建工具 | Gradle 8.1.2 |
+
+## 数据架构
+
+```
+┌─────────────────┐
+│  Android App    │
+└────────┬────────┘
+         │
+    ┌────┴─────┐
+    │          │
+┌───▼───┐  ┌──▼──────────────┐
+│自有服务器│  │  MTGCH API     │
+│ 赛事/牌组│  │  (卡牌搜索)    │
+└───────┘  └─────────────────┘
+```
+
+**数据源**：
+- 赛事和牌组：自有服务器 API (`/api/v1/events`, `/api/v1/decklists`)
+- 卡牌详情：自有服务器 API (`/api/cards/search`)
+- 卡牌搜索：MTGCH API (搜索功能)
 
 ## 项目结构
 

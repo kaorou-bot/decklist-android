@@ -183,6 +183,7 @@ fun CardInfoEntity.toDomainModel(): com.mtgo.decklistmanager.domain.model.CardIn
     id = id,
     oracleId = oracleId,
     name = name,
+    enName = enName,
     manaCost = manaCost,
     cmc = cmc,
     typeLine = typeLine,
