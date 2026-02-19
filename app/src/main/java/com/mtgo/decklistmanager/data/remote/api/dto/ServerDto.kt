@@ -64,8 +64,9 @@ data class DecklistDto(
     val date: String,
     val playerName: String?,
     val record: String?,
-    val url: String?,
-    val source: String?
+    val url: String?
+    // 注意：服务器套牌列表接口不返回 source 字段，所以移除了它
+    // 如果需要，可以从赛事信息中获取
 )
 
 /**
