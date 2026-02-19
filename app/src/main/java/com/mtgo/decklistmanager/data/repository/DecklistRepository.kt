@@ -13,6 +13,9 @@ import com.mtgo.decklistmanager.data.local.entity.DecklistEntity
 import com.mtgo.decklistmanager.data.local.entity.EventEntity
 import com.mtgo.decklistmanager.data.remote.api.MagicScraper
 import com.mtgo.decklistmanager.data.remote.api.MtgTop8Scraper
+import com.mtgo.decklistmanager.data.remote.api.ServerApi
+import com.mtgo.decklistmanager.data.remote.api.dto.CardInfoDto
+import com.mtgo.decklistmanager.data.remote.api.dto.toCardInfo
 import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchApi
 import com.mtgo.decklistmanager.data.remote.api.mtgch.toEntity
 import com.mtgo.decklistmanager.data.remote.api.dto.ScryfallCardDto
@@ -44,6 +47,7 @@ class DecklistRepository @Inject constructor(
     private val magicScraper: MagicScraper,
     private val mtgTop8Scraper: MtgTop8Scraper,
     private val mtgchApi: MtgchApi,
+    private val serverApi: ServerApi,
     private val languagePreferenceManager: LanguagePreferenceManager
 ) {
 
@@ -612,59 +616,72 @@ class DecklistRepository @Inject constructor(
     }
 
     private suspend fun fetchCardInfoFromApi(cardName: String): CardInfo? {
-        // v4.0.0 在线模式：直接调用 MTGCH API
-        // 注意：不使用 ! 前缀，因为 API 的精确搜索不可靠
-        // 改为客户端精确匹配验证
+        // v5.1.0: 使用自有服务器 API 替代 MTGCH API
+        // MTGCH API 已返回 404，改用 ServerApi.searchCard()
 
-        val response = mtgchApi.searchCard(
-            query = cardName,
+        // 格式化卡牌名称（处理 split/fusion 卡牌）
+        val formattedName = formatCardNameForSearch(cardName)
+        AppLogger.d("DecklistRepository", "Fetching card info from ServerApi: $cardName (formatted: $formattedName)")
+
+        val response = serverApi.searchCard(
+            q = formattedName,
             limit = 20  // 获取更多结果以便精确匹配
         )
 
         if (response.isSuccessful && response.body() != null) {
             val searchResponse = response.body()!!
-            val results = searchResponse.data
 
-            if (results != null && results.isNotEmpty()) {
-                // v4.0.0: 严格精确匹配（忽略大小写），支持双面牌
+            if (searchResponse.success && searchResponse.cards != null && searchResponse.cards.isNotEmpty()) {
+                val results = searchResponse.cards
+
+                // 严格精确匹配（忽略大小写），尝试原始名称和格式化后的名称
                 val exactMatch = results.find { card ->
-                    val nameMatch = card.name?.equals(cardName, ignoreCase = true) == true
+                    val nameMatch = card.name.equals(cardName, ignoreCase = true)
                     val zhNameMatch = card.nameZh?.equals(cardName, ignoreCase = true) == true
-                    val translatedNameMatch = card.atomicTranslatedName?.equals(cardName, ignoreCase = true) == true
+                    val formattedNameMatch = card.name.equals(formattedName, ignoreCase = true)
 
                     // 双面牌特殊处理：检查 name 是否包含卡名
-                    val dualFaceMatch = card.name?.contains("//") == true &&
+                    val dualFaceMatch = card.name.contains("//", ignoreCase = true) &&
                         (card.name.startsWith("$cardName //", ignoreCase = true) ||
                          card.name.endsWith("// $cardName", ignoreCase = true) ||
                          card.name.contains(" // $cardName //", ignoreCase = true))
 
-                    nameMatch || zhNameMatch || translatedNameMatch || dualFaceMatch
+                    nameMatch || zhNameMatch || formattedNameMatch || dualFaceMatch
                 }
 
                 if (exactMatch != null) {
-                    val cardInfoEntity = exactMatch.toEntity()
+                    val cardInfo = exactMatch.toCardInfo()
 
-                    // v4.0.0: 基本地中文名映射
-                    val finalDisplayName = getBasicLandChineseName(cardInfoEntity.name) ?: cardInfoEntity.name
-                    if (finalDisplayName != cardInfoEntity.name) {
-                        // 更新卡牌名称为中文基本地名称
-                        return cardInfoEntity.copy(name = finalDisplayName).toDomainModel()
-                    }
-
-                    AppLogger.d("DecklistRepository", "✓ Found exact match: $cardName -> ${cardInfoEntity.name}")
-                    return cardInfoEntity.toDomainModel()
+                    AppLogger.d("DecklistRepository", "✓ Found exact match: $cardName -> ${cardInfo.name}")
+                    return cardInfo
                 } else {
                     // 没有找到精确匹配，记录警告并返回 null
-                    AppLogger.w("DecklistRepository", "✗ No exact match found for: $cardName")
+                    AppLogger.w("DecklistRepository", "✗ No exact match found for: $cardName (tried: $formattedName)")
                     AppLogger.w("DecklistRepository", "  Candidates: ${results.take(3).map { it.name }.joinToString(", ")}")
                     return null
                 }
+            } else {
+                AppLogger.w("DecklistRepository", "✗ API returned success=false or no cards for: $cardName")
             }
+        } else {
+            AppLogger.w("DecklistRepository", "✗ API call failed for: $cardName (HTTP ${response.code()})")
         }
 
-        // API 调用失败或没有结果
-        AppLogger.w("DecklistRepository", "✗ API returned no results for: $cardName")
         return null
+    }
+
+    /**
+     * 格式化卡牌名称以用于搜索
+     * 处理特殊卡牌类型（split/fusion/adventure 等）
+     */
+    private fun formatCardNameForSearch(cardName: String): String {
+        // 如果已经是正确的格式（双斜杠加空格），直接返回
+        if (" // " in cardName) {
+            return cardName
+        }
+
+        // 将单斜杠转换为双斜杠加空格（处理 split/fusion 卡牌）
+        return cardName.replace("/", " // ")
     }
 
     /**

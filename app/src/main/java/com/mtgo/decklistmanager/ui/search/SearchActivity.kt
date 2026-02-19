@@ -18,6 +18,7 @@ import com.mtgo.decklistmanager.databinding.BottomSheetAdvancedSearchBinding
 import com.mtgo.decklistmanager.ui.search.model.*
 import com.mtgo.decklistmanager.ui.decklist.CardInfoFragment
 import com.mtgo.decklistmanager.util.Debouncer
+import com.mtgo.decklistmanager.data.remote.api.dto.toCardInfo
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -107,39 +108,20 @@ class SearchActivity : AppCompatActivity() {
 
     /**
      * 显示卡牌详情（使用 CardInfoFragment，与套牌页面保持一致）
+     * v5.1.0: 使用自有服务器的 CardInfoDto
      * 限制只能同时显示一个对话框
-     *
-     * 注意：MTGCH API 搜索结果中，双面牌信息在 `other_faces` 字段中，而不是 `card_faces`
      */
     private fun showCardDetail(result: SearchResultItem) {
         // 如果已有对话框打开，先关闭
         currentDetailDialog?.dismiss()
 
-        val mtgchCard = result.mtgchCard ?: return
+        val serverCard = result.serverCard ?: return
 
-        // 使用统一的工具类构建 CardInfo
-        val cardInfo = com.mtgo.decklistmanager.util.CardDetailHelper.buildCardInfo(
-            mtgchCard = mtgchCard,
-            cardInfoId = result.cardInfoId.toString(),
-            displayName = result.displayName,
-            manaCost = result.manaCost,
-            cmc = result.cmc,
-            typeLine = result.typeLine,
-            oracleText = result.oracleText,
-            colors = result.colors,
-            power = result.power,
-            toughness = result.toughness,
-            loyalty = result.loyalty,
-            rarity = result.rarity,
-            setCode = result.setCode,
-            setName = result.setName,
-            artist = result.artist,
-            collectorNumber = result.collectorNumber,
-            imageUrl = result.imageUrl
-        )
+        // 使用 ServerMapper 将 CardInfoDto 转换为 CardInfo
+        val cardInfo = serverCard.toCardInfo()
 
-        // 显示 CardInfoFragment，传递 oracleId 用于加载印刷版本
-        val fragment = CardInfoFragment.newInstance(cardInfo, mtgchCard.oracleId)
+        // 显示 CardInfoFragment，传递 oracleId（如果可用）
+        val fragment = CardInfoFragment.newInstance(cardInfo, serverCard.oracleId)
         fragment.show(supportFragmentManager, "card_detail")
 
         currentDetailDialog = null

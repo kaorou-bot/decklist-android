@@ -6,7 +6,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchCardDto
+import com.mtgo.decklistmanager.data.remote.api.dto.CardInfoDto
 import com.mtgo.decklistmanager.ui.search.SearchViewModel
 import com.mtgo.decklistmanager.util.AppLogger
 import dagger.hilt.android.AndroidEntryPoint
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
  * 印刷版本选择弹窗
  *
  * 显示卡牌的所有印刷版本，允许用户选择
- * 使用 ViewModel 共享数据而不是通过 Bundle 传递
+ * v5.1.0: 使用 CardInfoDto（自有服务器）
  */
 @AndroidEntryPoint
 class PrintingSelectorDialog : DialogFragment() {
@@ -33,7 +33,7 @@ class PrintingSelectorDialog : DialogFragment() {
         )[SearchViewModel::class.java]
     }
 
-    private var printings: List<MtgchCardDto> = emptyList()
+    private var printings: List<CardInfoDto> = emptyList()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         // 获取参数

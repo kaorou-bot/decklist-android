@@ -198,23 +198,29 @@ class DeckDetailViewModel @Inject constructor(
 
         for (cardName in uniqueCardNames) {
             try {
-                AppLogger.d("DeckDetailViewModel", "Fetching card info: $cardName")
-                val cardResponse = serverApi.searchCard(cardName, 1)
+                // 格式化卡牌名称（处理 split/fusion 卡牌）
+                val formattedName = formatCardNameForSearch(cardName)
+                AppLogger.d("DeckDetailViewModel", "Fetching card info: $cardName (formatted: $formattedName)")
+
+                val cardResponse = serverApi.searchCard(formattedName, 1)
                 if (cardResponse.isSuccessful && cardResponse.body()?.success == true) {
                     val cards = cardResponse.body()!!.cards
                     if (cards != null && cards.isNotEmpty()) {
-                        // 找到精确匹配的卡牌
-                        val exactMatch = cards.find { it.name.equals(cardName, ignoreCase = true) }
+                        // 找到精确匹配的卡牌（尝试原始名称和格式化后的名称）
+                        val exactMatch = cards.find {
+                            it.name.equals(cardName, ignoreCase = true) ||
+                            it.name.equals(formattedName, ignoreCase = true)
+                        }
                         if (exactMatch != null) {
                             cardInfoMap[cardName] = exactMatch
                             AppLogger.d("DeckDetailViewModel", "  ✓ Found: ${exactMatch.nameZh} (${exactMatch.manaCost})")
                         } else {
-                            AppLogger.w("DeckDetailViewModel", "  ⚠ No exact match for: $cardName")
+                            AppLogger.w("DeckDetailViewModel", "  ⚠ No exact match for: $cardName (tried: $formattedName)")
                             // 使用第一个结果作为回退
                             cardInfoMap[cardName] = cards[0]
                         }
                     } else {
-                        AppLogger.w("DeckDetailViewModel", "  ✗ No results for: $cardName")
+                        AppLogger.w("DeckDetailViewModel", "  ✗ No results for: $cardName (formatted: $formattedName)")
                     }
                 }
             } catch (e: Exception) {
@@ -424,5 +430,25 @@ class DeckDetailViewModel @Inject constructor(
      */
     fun getAllCards(): List<Card> {
         return (_mainDeck.value ?: emptyList()) + (_sideboard.value ?: emptyList())
+    }
+
+    /**
+     * 格式化卡牌名称以用于搜索
+     * 处理特殊卡牌类型（split/fusion/adventure 等）
+     *
+     * 例如:
+     * - "Wear/Tear" -> "Wear // Tear"
+     * - "Become // immense" -> "Become // immense" (保持不变)
+     * - "Fire // Ice" -> "Fire // Ice" (保持不变)
+     */
+    private fun formatCardNameForSearch(cardName: String): String {
+        // 如果已经是正确的格式（双斜杠加空格），直接返回
+        if (" // " in cardName) {
+            return cardName
+        }
+
+        // 将单斜杠转换为双斜杠加空格（处理 split/fusion 卡牌）
+        // 例如: "Wear/Tear" -> "Wear // Tear"
+        return cardName.replace("/", " // ")
     }
 }

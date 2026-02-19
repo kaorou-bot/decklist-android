@@ -2,8 +2,8 @@ package com.mtgo.decklistmanager.ui.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchApi
-import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchCardDto
+import com.mtgo.decklistmanager.data.remote.api.ServerApi
+import com.mtgo.decklistmanager.data.remote.api.dto.CardInfoDto
 import com.mtgo.decklistmanager.data.local.dao.SearchHistoryDao
 import com.mtgo.decklistmanager.data.local.entity.SearchHistoryEntity
 import com.mtgo.decklistmanager.domain.model.SearchHistory
@@ -17,12 +17,11 @@ import javax.inject.Inject
 /**
  * 搜索 ViewModel - 使用自有服务端 API
  *
- * 自有服务端完全兼容 MTGCH 搜索接口
- * API 文档: 见项目根目录 API_DOCUMENTATION.md
+ * v5.1.0: 迁移到 ServerApi，不再依赖 MTGCH API
  */
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    val mtgchApi: MtgchApi,
+    private val serverApi: ServerApi,
     private val searchHistoryDao: SearchHistoryDao
 ) : ViewModel() {
 
@@ -90,35 +89,25 @@ class SearchViewModel @Inject constructor(
 
                 AppLogger.d("SearchViewModel", "Searching: $searchQuery")
 
-                // 调用自有服务端 API 搜索（新 API 使用 offset/limit）
-                val response = mtgchApi.searchCard(
-                    query = searchQuery,
-                    offset = offset,
+                // v5.1.0: 使用自有服务器 API 搜索
+                val response = serverApi.searchCard(
+                    q = searchQuery,
                     limit = limit
                 )
 
-                if (response.isSuccessful) {
-                    val body = response.body()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val body = response.body()!!
+                    val cards = body.cards ?: emptyList()
 
-                    // 检查响应的 success 字段
-                    if (body?.success == true) {
-                        val cards = body.cards ?: emptyList()
+                    AppLogger.d("SearchViewModel", "Found ${cards.size} results (total: ${body.total})")
 
-                        AppLogger.d("SearchViewModel", "Found ${cards.size} results (total: ${body.total})")
+                    // 转换为 SearchResult
+                    val results = cards.map { it.toSearchResultItem() }
+                    _searchResults.value = results
 
-                        // 转换为 SearchResult
-                        val results = cards.map { it.toSearchResultItem() }
-                        _searchResults.value = results
-
-                        // 保存搜索历史（仅在非空搜索时）
-                        if (query.isNotBlank() && results.isNotEmpty()) {
-                            saveSearchHistory(query, results.size)
-                        }
-                    } else {
-                        val errorMsg = "搜索失败: ${body?.success}"
-                        AppLogger.e("SearchViewModel", errorMsg)
-                        _errorMessage.value = errorMsg
-                        _searchResults.value = emptyList()
+                    // 保存搜索历史（仅在非空搜索时）
+                    if (query.isNotBlank() && results.isNotEmpty()) {
+                        saveSearchHistory(query, results.size)
                     }
                 } else {
                     val errorMsg = "搜索失败: ${response.code()} ${response.message()}"
@@ -327,9 +316,10 @@ class SearchViewModel @Inject constructor(
     }
 
     /**
-     * MtgchCardDto 转 SearchResultItem
+     * CardInfoDto 转 SearchResultItem
+     * v5.1.0: 使用自有服务器的 CardInfoDto
      */
-    private fun MtgchCardDto.toSearchResultItem(): SearchResultItem {
+    private fun CardInfoDto.toSearchResultItem(): SearchResultItem {
         // 真正的双面牌（需要显示背面和翻转功能）
         val realDualFaceLayouts = listOf(
             "transform",           // 标准双面牌（如：狼人）
@@ -339,43 +329,34 @@ class SearchViewModel @Inject constructor(
 
         // 严格的双面牌判断：优先使用 isDoubleFaced 字段
         // split、adventure、flip 等伪双面牌虽然名称包含 "//"，但不需要显示背面
-        val isDualFaced = (isDoubleFaced == true) || layout in realDualFaceLayouts ||
+        val isDualFaced = (isDoubleFaced == true) || (layout in realDualFaceLayouts) ||
                          (cardFaces != null && cardFaces.size >= 2)
 
-        // 获取中文名称（优先使用新字段 nameZh）
-        val getZhsName = nameZh ?: atomicTranslatedName
-
-        // 获取中文类型行（优先使用新字段 typeLineZh）
-        val getTypeLineZh = typeLineZh ?: atomicTranslatedType
-
-        // 获取中文规则文本（优先使用新字段 oracleTextZh）
-        val getOracleTextZh = oracleTextZh ?: atomicTranslatedText
-
         return SearchResultItem(
-            cardInfoId = oracleId?.hashCode()?.toLong() ?: id?.hashCode()?.toLong() ?: 0L,
-            name = getZhsName ?: name ?: "",
-            displayName = getZhsName,
+            cardInfoId = scryfallId?.hashCode()?.toLong() ?: oracleId?.hashCode()?.toLong() ?: id.hashCode().toLong(),
+            name = nameZh ?: name,
+            displayName = nameZh,
             enName = name, // 保存原始英文名
             manaCost = manaCost,
-            typeLine = getTypeLineZh ?: typeLine,
+            typeLine = typeLineZh ?: typeLine,
             colors = colors ?: emptyList(),
-            cmc = cmc?.toDouble(),
+            cmc = cmc,
             rarity = rarity,
-            imageUrl = zhsImageUris?.normal ?: imageUris?.normal,
+            imageUrl = imageUris?.normal,
             isDualFaced = isDualFaced,
             // 额外信息（用于详情展示）
-            oracleText = getOracleTextZh ?: oracleText,
+            oracleText = oracleTextZh ?: oracleText,
             power = power,
             toughness = toughness,
             loyalty = loyalty,
             setCode = setCode,
-            setName = setNameZh ?: setTranslatedName ?: setName,
+            setName = setNameZh ?: setName,
             collectorNumber = collectorNumber,
-            artist = artist,
+            artist = null, // ServerDto 暂未提供
             colorIdentity = colorIdentity,
-            type = getTypeLineZh ?: typeLine,
+            type = typeLineZh ?: typeLine,
             // 完整的卡牌数据
-            mtgchCard = this
+            serverCard = this
         )
     }
 
@@ -392,50 +373,26 @@ class SearchViewModel @Inject constructor(
     }
 
     /**
-     * 获取完整的卡牌详情（用于双面牌背面图片等需要额外数据的情况）
-     * 使用自有服务端 API
-     *
-     * 新 API 直接返回卡牌对象（不需要解析 {success, card} 包装）
-     *
-     * @param oracleId 卡牌 Oracle ID
-     * @return 完整的卡牌数据
-     */
-    suspend fun getFullCardDetails(oracleId: String): MtgchCardDto? {
-        return try {
-            AppLogger.d("SearchViewModel", "获取完整卡牌详情: $oracleId")
-            val response = mtgchApi.getCardById(oracleId)
-            if (response.isSuccessful && response.body() != null) {
-                // 新 API 直接返回卡牌对象
-                response.body()
-            } else {
-                AppLogger.e("SearchViewModel", "获取完整卡牌详情失败: ${response.code()}")
-                null
-            }
-        } catch (e: Exception) {
-            AppLogger.e("SearchViewModel", "获取完整卡牌详情异常", e)
-            null
-        }
-    }
-
-    /**
      * 获取卡牌的所有印刷版本
      *
      * @param oracleId 卡牌 Oracle ID
-     * @param limit 每页数量
-     * @param offset 偏移量
+     * @param limit 每页数量（默认 20）
+     * @param offset 偏移量（默认 0）
      * @return 印刷版本列表和总数
      */
     suspend fun getCardPrintings(
         oracleId: String,
         limit: Int = 20,
         offset: Int = 0
-    ): Pair<List<MtgchCardDto>, Int?>? {
+    ): Pair<List<CardInfoDto>, Int?>? {
         return try {
             AppLogger.d("SearchViewModel", "获取印刷版本: $oracleId")
-            val response = mtgchApi.getCardPrintings(oracleId, limit, offset)
+            val response = serverApi.getCardPrintings(oracleId, limit, offset)
             if (response.isSuccessful && response.body()?.success == true) {
                 val body = response.body()!!
-                Pair(body.cards ?: emptyList(), body.total)
+                val cards = body.cards ?: emptyList()
+                AppLogger.d("SearchViewModel", "找到 ${cards.size} 个印刷版本")
+                Pair(cards, body.total)
             } else {
                 AppLogger.e("SearchViewModel", "获取印刷版本失败: ${response.code()}")
                 null
@@ -450,16 +407,16 @@ class SearchViewModel @Inject constructor(
      * 按卡牌名称搜索印刷版本
      *
      * @param cardName 卡牌名称
-     * @param limit 每页数量
+     * @param limit 每页数量（默认 100）
      * @return 印刷版本列表
      */
     suspend fun searchCardPrintingsByName(
         cardName: String,
         limit: Int = 100
-    ): List<MtgchCardDto> {
+    ): List<CardInfoDto> {
         return try {
             AppLogger.d("SearchViewModel", "按名称搜索印刷版本: $cardName")
-            val response = mtgchApi.searchCard(query = cardName, offset = 0, limit = limit)
+            val response = serverApi.searchCardPrintingsByName(cardName, limit)
             if (response.isSuccessful && response.body()?.success == true) {
                 val cards = response.body()?.cards ?: emptyList()
                 AppLogger.d("SearchViewModel", "找到 ${cards.size} 个印刷版本")
@@ -477,6 +434,7 @@ class SearchViewModel @Inject constructor(
 
 /**
  * 搜索结果（增强版）
+ * v5.1.0: 使用自有服务器的 CardInfoDto
  */
 data class SearchResultItem(
     val cardInfoId: Long,
@@ -503,6 +461,6 @@ data class SearchResultItem(
     val colorIdentity: List<String>? = null,
     val type: String? = null,
 
-    // 完整的 MTGCH 卡牌数据
-    val mtgchCard: MtgchCardDto? = null
+    // 完整的卡牌数据（自有服务器）
+    val serverCard: CardInfoDto? = null
 )

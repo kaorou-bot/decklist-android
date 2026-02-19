@@ -5,42 +5,65 @@
 ## [5.1.0] - 2025-02-19
 
 ### 重大变更 (Major Change)
-- **正确的架构设计**: 采用正确的数据流架构
-  - 从 `/api/v1/decklists/{id}` 获取卡牌名称列表
-  - 用卡牌名称调用 `/api/cards/search` 获取完整信息
-  - 合并数据后显示给用户
-- **完全使用自有服务器**: 所有赛事、套牌、卡牌数据均来自自有服务器
-  - 不再依赖套牌接口返回的 displayName（质量差）
-  - 使用权威的卡牌搜索接口获取高质量数据
+- **完全迁移到自有服务器**: 所有功能均使用自有服务器 API
+  - SearchViewModel 完全迁移到 ServerApi
+  - 印刷版本查询使用 ServerApi
+  - 卡牌详情使用 ServerApi
+  - 不再依赖 MTGCH API（已返回 404）
 
 ### 新增功能 (Added)
-- **高质量中文名称**: 所有卡牌显示正确的中文翻译
-  - Force of Negation → 否认之力
-  - Boseiju, Who Endures → 历祚母圣树
-  - 所有 19,070 张卡牌均有中文名
-- **标准法术力值格式**: 使用正确的格式显示法术力值
-  - {1}{U}{U} 而非 "2" 或其他错误格式
-- **完整卡牌信息**: 显示稀有度、颜色、类型行、系列等
+- **印刷版本查询**: 使用自有服务器 API
+  - 按 Oracle ID 查询: `/api/cards/{oracleId}/printings`
+  - 按卡牌名称查询: `/api/cards/printings?name={cardName}`
+  - 支持显示和切换不同印刷版本
+- **中文字段优先级**: 所有卡牌数据优先使用中文
+  - 类型行: `typeLineZh`
+  - 规则文本: `oracleTextZh`
+  - 系列名称: `setNameZh`
+- **双面牌背面信息**: 从 `cardFaces` 提取背面数据
+  - 背面名称、类型、规则文本
+  - 背面图片 URI
+- **Split 卡牌支持**: 格式化卡牌名称搜索
+  - `Wear/Tear` → `Wear // Tear`
+  - 支持混合格式识别
 
 ### 技术改进 (Technical)
-- 新增 `CardInfoDto`: 完整的卡牌信息数据结构
-- 新增 `CardSearchResponse`: 卡牌搜索响应包装
-- `ServerApi.searchCard()`: 卡牌搜索接口
-- `DeckDetailViewModel.loadDecklistDetailFromServer()`: 重写使用新架构
+- 新增 `ServerCardFaceDto`: 双面牌卡牌面数据结构
+- 新增 `ServerMapper.toCardInfo()`: DTO 到领域模型映射
+- `ServerApi.getCardPrintings()`: 印刷版本查询接口
+- `ServerApi.searchCardPrintingsByName()`: 按名称查询印刷版本
+- `SearchViewModel.getCardPrintings()`: 获取印刷版本方法
+- `SearchViewModel.searchCardPrintingsByName()`: 按名称搜索印刷版本
+- `DeckDetailViewModel.formatCardNameForSearch()`: Split 卡牌名称格式化
+- `CardInfoFragment` 迁移到 CardInfoDto
+- `PrintingSelectorDialog` 迁移到 CardInfoDto
 
 ### 修复 (Fixed)
-- ✅ 卡牌中文名称显示问题（v5.0.0 的遗留问题）
-- ✅ 法术力值格式不正确的问题
-- ✅ 数据来源不清晰的问题
+- ✅ 搜索功能失效（MTGCH API 404）
+- ✅ 卡牌详情不显示中文类型、规则文本、系列
+- ✅ Split 卡牌无法搜索（Wear/Tear）
+- ✅ 双面牌背面无信息和图片
+- ✅ 印刷版本功能失效
+- ✅ 套牌页面卡牌名称和法术力值不显示
+
+### 架构变更 (Architecture)
+- **移除 MTGCH API 依赖**:
+  - SearchViewModel 不再依赖 MtgchApi
+  - CardInfoFragment 不再依赖 MtgchCardDto
+  - PrintingSelectorDialog 不再依赖 MtgchCardDto
+- **数据流统一**:
+  - 所有卡牌数据使用 CardInfoDto
+  - 所有映射通过 ServerMapper.toCardInfo()
+  - 所有搜索通过 ServerApi
 
 ### 已知问题 (Known Issues)
-- 套牌详情加载时间 3-6 秒（正在优化中）
-- 卡牌搜索功能仍依赖 MTGCH API（服务器待实现）
+- 印刷版本查询必须使用英文名称（服务器限制）
+- 中文名称查询印刷版本返回 404（待服务器支持）
 
 ### 性能 (Performance)
-- 赛事列表: < 2 秒
-- 赛事详情: < 1 秒
-- 套牌列表: < 2 秒
+- 搜索: < 1 秒
+- 卡牌详情: < 1 秒
+- 印刷版本查询: < 2 秒
 - 套牌详情: 3-6 秒（75 张卡牌）
 
 ---

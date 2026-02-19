@@ -77,4 +77,30 @@ interface ServerApi {
         @Query("q") q: String,
         @Query("limit") limit: Int = 20
     ): Response<CardSearchResponse>
+
+    /**
+     * 获取卡牌的所有印刷版本
+     *
+     * @param oracleId 卡牌 Oracle ID
+     * @param limit 每页数量（默认 20）
+     * @param offset 偏移量（默认 0）
+     */
+    @GET("api/cards/{oracleId}/printings")
+    suspend fun getCardPrintings(
+        @Path("oracleId") oracleId: String,
+        @Query("limit") limit: Int = 20,
+        @Query("offset") offset: Int = 0
+    ): Response<CardSearchResponse>
+
+    /**
+     * 按卡牌名称搜索印刷版本
+     *
+     * @param name 卡牌名称
+     * @param limit 每页数量（默认 100）
+     */
+    @GET("api/cards/printings")
+    suspend fun searchCardPrintingsByName(
+        @Query("name") name: String,
+        @Query("limit") limit: Int = 100
+    ): Response<CardSearchResponse>
 }

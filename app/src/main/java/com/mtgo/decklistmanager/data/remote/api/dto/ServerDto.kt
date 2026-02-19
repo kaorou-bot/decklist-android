@@ -127,13 +127,16 @@ data class CardInfoDto(
     val colors: List<String>?,
     val colorIdentity: List<String>?,
     val typeLine: String?,
+    val typeLineZh: String?,           // 中文类型行 ✅
     val oracleText: String?,
+    val oracleTextZh: String?,         // 中文规则文本 ✅
     val power: String?,
     val toughness: String?,
     val loyalty: String?,
     val rarity: String?,
     val setCode: String?,
     val setName: String?,
+    val setNameZh: String?,            // 中文系列名称 ✅
     val collectorNumber: String?,
     val layout: String?,
     val imageUris: ImageUris?,
@@ -142,7 +145,9 @@ data class CardInfoDto(
     val oracleId: String?,
     val releasedAt: String?,
     val isDoubleFaced: Boolean?,
-    val isToken: Boolean?
+    val isToken: Boolean?,
+    val faceIndex: Int? = null,        // 面索引（用于双面牌）
+    val cardFaces: List<ServerCardFaceDto>? = null  // 卡牌面列表（双面牌、多面牌）✅
 )
 
 /**
@@ -155,4 +160,21 @@ data class ImageUris(
     val png: String?,
     val artCrop: String?,
     val borderCrop: String?
+)
+
+/**
+ * 卡牌面信息（用于双面牌、多面牌等）- 自有服务器版本
+ */
+data class ServerCardFaceDto(
+    val name: String?,
+    val nameZh: String?,
+    val manaCost: String?,
+    val typeLine: String?,
+    val typeLineZh: String?,
+    val oracleText: String?,
+    val oracleTextZh: String?,
+    val power: String?,
+    val toughness: String?,
+    val loyalty: String?,
+    val imageUris: ImageUris?
 )

@@ -11,7 +11,8 @@ import com.bumptech.glide.Glide
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mtgo.decklistmanager.databinding.DialogCardDetailBinding
 import com.mtgo.decklistmanager.domain.model.CardInfo
-import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchCardDto
+import com.mtgo.decklistmanager.data.remote.api.dto.CardInfoDto
+import com.mtgo.decklistmanager.data.remote.api.dto.toCardInfo
 import com.mtgo.decklistmanager.ui.search.SearchViewModel
 import com.mtgo.decklistmanager.util.AppLogger
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,11 +35,12 @@ class CardInfoFragment : DialogFragment() {
     // 保存原始卡牌的中文规则文本，切换版本时继续使用
     private var originalChineseOracleText: String? = null
     private var originalChineseTypeLine: String? = null
+    private var originalChineseSetName: String? = null
     private var originalBackFaceOracleText: String? = null
     private var originalBackFaceTypeLine: String? = null
 
     private var oracleId: String? = null
-    private var printings: List<MtgchCardDto> = emptyList()
+    private var printings: List<CardInfoDto> = emptyList()
     private var currentPrintingIndex: Int = 0
     private var loadingJob: Job? = null
 
@@ -61,6 +63,7 @@ class CardInfoFragment : DialogFragment() {
             // 保存原始中文规则文本和类型行
             originalChineseOracleText = it.oracleText
             originalChineseTypeLine = it.typeLine
+            originalChineseSetName = it.setName
             originalBackFaceOracleText = it.backFaceOracleText
             originalBackFaceTypeLine = it.backFaceTypeLine
             displayCardInfo(it)
@@ -138,11 +141,12 @@ class CardInfoFragment : DialogFragment() {
                 result?.let { (cards, total) ->
                     // 验证返回的印刷版本是否匹配当前卡牌
                     val expectedCardName = currentCardInfo?.name
+                    val expectedEnName = currentCardInfo?.enName
                     val isValid = cards.isEmpty() || cards.any { card ->
-                        val cardNameMatches = card.name?.equals(expectedCardName, ignoreCase = true) == true
+                        val cardNameMatches = card.name.equals(expectedCardName, ignoreCase = true)
                         val zhNameMatches = card.nameZh?.equals(expectedCardName, ignoreCase = true) == true
-                        val translatedNameMatches = card.atomicTranslatedName?.equals(expectedCardName, ignoreCase = true) == true
-                        cardNameMatches || zhNameMatches || translatedNameMatches
+                        val enNameMatches = card.name.equals(expectedEnName, ignoreCase = true)
+                        cardNameMatches || zhNameMatches || enNameMatches
                     }
 
                     if (isValid) {
@@ -204,32 +208,29 @@ class CardInfoFragment : DialogFragment() {
 
                         // 依次尝试每个搜索词，直到找到结果
                         for (searchTerm in searchTerms) {
-                            val response = searchViewModel.mtgchApi.searchCard(query = searchTerm, limit = 5)
-                            if (response.isSuccessful && response.body()?.success == true) {
-                                val cards = response.body()?.cards ?: emptyList()
-                                if (cards.isNotEmpty()) {
-                                    // 找到匹配的卡牌，获取其 oracleId
-                                    val matchedCard = cards.find { card ->
-                                        val nameMatch = card.name?.equals(searchTerm, ignoreCase = true) == true
-                                        val zhNameMatch = card.nameZh?.equals(cardName, ignoreCase = true) == true ||
-                                                        card.nameZh?.equals(firstHalfName, ignoreCase = true) == true
-                                        nameMatch || zhNameMatch
-                                    } ?: cards.firstOrNull()
+                            val cards = searchViewModel.searchCardPrintingsByName(searchTerm, limit = 5)
+                            if (cards.isNotEmpty()) {
+                                // 找到匹配的卡牌，获取其 oracleId
+                                val matchedCard = cards.find { card ->
+                                    val nameMatch = card.name.equals(searchTerm, ignoreCase = true)
+                                    val zhNameMatch = card.nameZh?.equals(cardName, ignoreCase = true) == true ||
+                                                    card.nameZh?.equals(firstHalfName, ignoreCase = true) == true
+                                    nameMatch || zhNameMatch
+                                } ?: cards.firstOrNull()
 
-                                    if (matchedCard != null) {
-                                        oracleId = matchedCard.oracleId
-                                        englishName = matchedCard.name
+                                if (matchedCard != null) {
+                                    oracleId = matchedCard.oracleId
+                                    englishName = matchedCard.name
 
-                                        AppLogger.d("CardInfoFragment", "Found oracleId: $oracleId, English name: $englishName")
+                                    AppLogger.d("CardInfoFragment", "Found oracleId: $oracleId, English name: $englishName")
 
-                                        // 更新 currentCardInfo
-                                        currentCardInfo = currentCardInfo?.copy(
-                                            oracleId = oracleId,
-                                            enName = englishName
-                                        )
+                                    // 更新 currentCardInfo
+                                    currentCardInfo = currentCardInfo?.copy(
+                                        oracleId = oracleId,
+                                        enName = englishName
+                                    )
 
-                                        break
-                                    }
+                                    break
                                 }
                             }
                         }
@@ -298,19 +299,15 @@ class CardInfoFragment : DialogFragment() {
                 }
             }
 
-            // 先构建新的 CardInfo
-            val tempCardInfo = com.mtgo.decklistmanager.util.CardDetailHelper.buildCardInfo(
-                mtgchCard = newCard,
-                cardInfoId = newCard.idString ?: newCard.oracleId ?: "",
-                // 明确使用中文字段，如果新版本没有中文，使用原始的中文文本
-                displayName = newCard.nameZh ?: newCard.name,
-                typeLine = originalChineseTypeLine ?: (newCard.typeLineZh ?: newCard.typeLine),
-                oracleText = originalChineseOracleText ?: (newCard.oracleTextZh ?: newCard.oracleText),
-                setName = newCard.setNameZh ?: newCard.setTranslatedName ?: newCard.setName
-            )
+            // 使用 ServerMapper 将 CardInfoDto 转换为 CardInfo
+            val tempCardInfo = newCard.toCardInfo()
 
-            // 如果有背面的中文文本，也使用原始的
+            // 如果原始有中文文本，优先使用原始的（保留用户选择的语言）
+            // 但是系列名称应该跟随切换的版本变化
             val newCardInfo = tempCardInfo.copy(
+                oracleText = originalChineseOracleText ?: tempCardInfo.oracleText,
+                typeLine = originalChineseTypeLine ?: tempCardInfo.typeLine,
+                setName = tempCardInfo.setName,  // 使用新版本的系列名称
                 backFaceOracleText = if (originalBackFaceOracleText != null && tempCardInfo.backFaceOracleText != null) {
                     originalBackFaceOracleText
                 } else {
