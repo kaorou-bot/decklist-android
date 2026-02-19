@@ -147,9 +147,7 @@ class DeckDetailViewModel @Inject constructor(
 
     /**
      * 从服务端 API 加载套牌详情
-     * v5.0: 使用正确的架构
-     * 1. 从 /api/v1/decklists/{id} 获取卡牌名称列表
-     * 2. 用 cardName 调用 /api/cards/search 获取完整信息（中文、法术力值等）
+     * v5.1.0: 服务器直接返回完整的卡牌信息，无需再调用搜索 API
      */
     private suspend fun loadDecklistDetailFromServer() {
         AppLogger.d("DeckDetailViewModel", "Loading decklist from server: $decklistId")
@@ -179,74 +177,38 @@ class DeckDetailViewModel @Inject constructor(
         )
         decklistDao.insert(decklistEntity)
 
-        // 第一步：从套牌接口获取卡牌名称列表
-        data class CardRef(val index: Int, val name: String, val quantity: Int, val location: String)
-
-        val mainCardNames = detail.mainDeck.mapIndexed { index, cardDto ->
-            CardRef(index, cardDto.cardName, cardDto.quantity, "main")
-        }
-        val sideCardNames = detail.sideboard.mapIndexed { index, cardDto ->
-            CardRef(index, cardDto.cardName, cardDto.quantity, "sideboard")
-        }
-
-        val allCardRefs = mainCardNames + sideCardNames
-        AppLogger.d("DeckDetailViewModel", "Fetching details for ${allCardRefs.size} unique cards from /api/cards/search")
-
-        // 第二步：对每个唯一的卡牌名称，调用 /api/cards/search 获取完整信息
-        val uniqueCardNames = allCardRefs.map { it.name }.distinct()
-        val cardInfoMap = mutableMapOf<String, CardInfoDto>()
-
-        for (cardName in uniqueCardNames) {
-            try {
-                // 格式化卡牌名称（处理 split/fusion 卡牌）
-                val formattedName = formatCardNameForSearch(cardName)
-                AppLogger.d("DeckDetailViewModel", "Fetching card info: $cardName (formatted: $formattedName)")
-
-                val cardResponse = serverApi.searchCard(formattedName, 1)
-                if (cardResponse.isSuccessful && cardResponse.body()?.success == true) {
-                    val cards = cardResponse.body()!!.cards
-                    if (cards != null && cards.isNotEmpty()) {
-                        // 找到精确匹配的卡牌（尝试原始名称和格式化后的名称）
-                        val exactMatch = cards.find {
-                            it.name.equals(cardName, ignoreCase = true) ||
-                            it.name.equals(formattedName, ignoreCase = true)
-                        }
-                        if (exactMatch != null) {
-                            cardInfoMap[cardName] = exactMatch
-                            AppLogger.d("DeckDetailViewModel", "  ✓ Found: ${exactMatch.nameZh} (${exactMatch.manaCost})")
-                        } else {
-                            AppLogger.w("DeckDetailViewModel", "  ⚠ No exact match for: $cardName (tried: $formattedName)")
-                            // 使用第一个结果作为回退
-                            cardInfoMap[cardName] = cards[0]
-                        }
-                    } else {
-                        AppLogger.w("DeckDetailViewModel", "  ✗ No results for: $cardName (formatted: $formattedName)")
-                    }
-                }
-            } catch (e: Exception) {
-                AppLogger.e("DeckDetailViewModel", "Error fetching card $cardName: ${e.message}")
-            }
-        }
-
-        // 第三步：使用完整信息构建 CardEntity
-        val cardEntities = allCardRefs.map { cardRef ->
-            val cardInfo = cardInfoMap[cardRef.name]
+        // 直接使用服务器返回的完整卡牌信息，无需再调用搜索 API
+        val cardEntities = detail.mainDeck.mapIndexed { index, card ->
             CardEntity(
                 decklistId = decklistId,
-                cardName = cardRef.name,
-                quantity = cardRef.quantity,
-                location = cardRef.location,
-                cardOrder = cardRef.index,
-                manaCost = cardInfo?.manaCost,
-                displayName = cardInfo?.nameZh,
-                rarity = cardInfo?.rarity?.replaceFirstChar { it.uppercase() },
-                color = cardInfo?.colors?.joinToString(","),
-                cardType = cardInfo?.typeLine,
-                cardSet = cardInfo?.setName
+                cardName = card.name,
+                quantity = card.quantity,
+                location = "main",
+                cardOrder = index,
+                manaCost = card.manaCost,
+                displayName = card.nameZh,
+                rarity = card.rarity?.replaceFirstChar { it.uppercase() },
+                color = card.colors?.joinToString(","),
+                cardType = card.typeLineZh ?: card.typeLine,
+                cardSet = card.setNameZh ?: card.setName
             ).also {
-                if (cardInfo == null) {
-                    AppLogger.w("DeckDetailViewModel", "Missing card info for: ${cardRef.name}")
-                }
+                AppLogger.d("DeckDetailViewModel", "Main card: ${it.displayName} (${it.manaCost})")
+            }
+        } + detail.sideboard.mapIndexed { index, card ->
+            CardEntity(
+                decklistId = decklistId,
+                cardName = card.name,
+                quantity = card.quantity,
+                location = "sideboard",
+                cardOrder = index,
+                manaCost = card.manaCost,
+                displayName = card.nameZh,
+                rarity = card.rarity?.replaceFirstChar { it.uppercase() },
+                color = card.colors?.joinToString(","),
+                cardType = card.typeLineZh ?: card.typeLine,
+                cardSet = card.setNameZh ?: card.setName
+            ).also {
+                AppLogger.d("DeckDetailViewModel", "Sideboard card: ${it.displayName} (${it.manaCost})")
             }
         }
 
@@ -254,7 +216,7 @@ class DeckDetailViewModel @Inject constructor(
         cardDao.deleteByDecklistId(decklistId)
         cardDao.insertAll(cardEntities)
 
-        AppLogger.d("DeckDetailViewModel", "Inserted ${cardEntities.size} cards with full details from /api/cards/search")
+        AppLogger.d("DeckDetailViewModel", "Inserted ${cardEntities.size} cards with full details from server")
 
         // 直接从数据库加载
         val allCards = cardDao.getCardsByDecklistId(decklistId)

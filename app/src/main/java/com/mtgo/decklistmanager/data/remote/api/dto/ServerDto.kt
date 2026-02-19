@@ -88,13 +88,49 @@ data class DecklistDetailDto(
     val date: String,
     val playerName: String?,
     val record: String?,
-    val mainDeck: List<CardDto>,
-    val sideboard: List<CardDto>
+    val mainDeck: List<CardWithQuantityDto>,
+    val sideboard: List<CardWithQuantityDto>
 )
 
 /**
- * 卡牌 DTO（用于 decklist 中的简化版本）
+ * 带数量的卡牌 DTO（用于 decklist）
+ * v5.1.0: 服务器返回完整的卡牌信息，包含所有字段
  */
+data class CardWithQuantityDto(
+    // 数量（套牌特有）
+    val quantity: Int,
+
+    // 完整的卡牌信息（与 CardInfoDto 相同）
+    val name: String,                    // ✅ 英文名
+    val nameZh: String?,                 // ✅ 中文名
+    val manaCost: String?,              // ✅ 法术力值
+    val cmc: Double?,                    // 法术力值数值
+    val typeLine: String?,               // ✅ 英文类型行
+    val typeLineZh: String?,             // ✅ 中文类型行
+    val oracleText: String?,             // ✅ 英文规则文本
+    val oracleTextZh: String?,           // ✅ 中文规则文本
+    val power: String?,
+    val toughness: String?,
+    val loyalty: String?,
+    val rarity: String?,
+    val colorIdentity: List<String>?,
+    val colors: List<String>?,
+    val setCode: String?,
+    val setName: String?,                // ✅ 英文系列名称
+    val setNameZh: String?,              // ✅ 中文系列名称
+    val collectorNumber: String?,
+    val layout: String?,
+    val imageUris: ImageUris?,
+    val scryfallId: String?,
+    val oracleId: String?,
+    val cardFaces: List<ServerCardFaceDto>?
+)
+
+/**
+ * @deprecated 使用 CardWithQuantityDto 替代
+ * 保留用于兼容旧代码
+ */
+@Deprecated("Use CardWithQuantityDto instead", ReplaceWith("CardWithQuantityDto"))
 data class CardDto(
     val cardName: String,
     val quantity: Int,
