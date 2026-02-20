@@ -15,7 +15,9 @@ data class Card(
     val color: String?,
     val cardType: String?,
     val cardSet: String?,
-    val cardNameZh: String? = null  // 中文名称，用于显示
+    val cardNameZh: String? = null,  // 中文名称，用于显示
+    val oracleId: String? = null,    // ✅ Oracle ID，用于获取印刷版本
+    val enName: String? = null       // ✅ 英文名称，用于搜索
 )
 
 /**

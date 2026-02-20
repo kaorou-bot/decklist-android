@@ -62,5 +62,13 @@ data class CardEntity(
 
     @ColumnInfo(name = "card_set")
     @SerializedName("card_set")
-    val cardSet: String?
+    val cardSet: String?,
+
+    @ColumnInfo(name = "oracle_id")
+    @SerializedName("oracle_id")
+    val oracleId: String? = null,
+
+    @ColumnInfo(name = "en_name")
+    @SerializedName("en_name")
+    val enName: String? = null
 )

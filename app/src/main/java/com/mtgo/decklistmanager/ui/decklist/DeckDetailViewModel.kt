@@ -116,10 +116,12 @@ class DeckDetailViewModel @Inject constructor(
         cardType = cardType,
         cardSet = cardSet,
         // 若 displayName 为 null，则回退使用英文名，确保中文名始终有值
-        cardNameZh = displayName ?: cardName
+        cardNameZh = displayName ?: cardName,
+        oracleId = oracleId,  // ✅ 传递 oracleId
+        enName = enName          // ✅ 传递英文名
     ).also {
         // 调试日志 - 记录所有卡牌
-        AppLogger.d("DeckDetailViewModel", "CardEntity.toCard(): ${it.cardNameZh}, manaCost=${it.manaCost}")
+        AppLogger.d("DeckDetailViewModel", "CardEntity.toCard(): ${it.cardNameZh}, oracleId: ${it.oracleId}, enName: ${it.enName}")
     }
 
     /**
@@ -190,9 +192,11 @@ class DeckDetailViewModel @Inject constructor(
                 rarity = card.rarity?.replaceFirstChar { it.uppercase() },
                 color = card.colors?.joinToString(","),
                 cardType = card.typeLineZh ?: card.typeLine,
-                cardSet = card.setNameZh ?: card.setName
+                cardSet = card.setNameZh ?: card.setName,
+                oracleId = card.oracleId,  // ✅ 保存 oracleId 用于印刷版本切换
+                enName = card.name           // ✅ 保存英文名用于搜索
             ).also {
-                AppLogger.d("DeckDetailViewModel", "Main card: ${it.displayName} (${it.manaCost})")
+                AppLogger.d("DeckDetailViewModel", "Main card: ${it.displayName} (${it.manaCost}), oracleId: ${it.oracleId}")
             }
         } + detail.sideboard.mapIndexed { index, card ->
             CardEntity(
@@ -206,9 +210,11 @@ class DeckDetailViewModel @Inject constructor(
                 rarity = card.rarity?.replaceFirstChar { it.uppercase() },
                 color = card.colors?.joinToString(","),
                 cardType = card.typeLineZh ?: card.typeLine,
-                cardSet = card.setNameZh ?: card.setName
+                cardSet = card.setNameZh ?: card.setName,
+                oracleId = card.oracleId,  // ✅ 保存 oracleId 用于印刷版本切换
+                enName = card.name           // ✅ 保存英文名用于搜索
             ).also {
-                AppLogger.d("DeckDetailViewModel", "Sideboard card: ${it.displayName} (${it.manaCost})")
+                AppLogger.d("DeckDetailViewModel", "Sideboard card: ${it.displayName} (${it.manaCost}), oracleId: ${it.oracleId}")
             }
         }
 
