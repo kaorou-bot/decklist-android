@@ -76,16 +76,24 @@ class CardInfoFragment : DialogFragment() {
         AppLogger.d("CardInfoFragment", "Received oracleId: $receivedOracleId")
         AppLogger.d("CardInfoFragment", "Card info oracleId: ${cardInfo?.oracleId}")
 
-        // 只有当有 oracleId 时才自动加载印刷版本
-        // 避免对没有 oracleId 的卡牌进行耗时的搜索
-        if (receivedOracleId != null) {
-            AppLogger.d("CardInfoFragment", "Loading printings for oracleId: $receivedOracleId")
-            loadPrintings(receivedOracleId)
+        // 优先使用传入的 oracleId，否则使用 cardInfo.oracleId
+        val effectiveOracleId = receivedOracleId ?: cardInfo?.oracleId
+
+        if (effectiveOracleId != null) {
+            AppLogger.d("CardInfoFragment", "Loading printings for oracleId: $effectiveOracleId")
+            loadPrintings(effectiveOracleId)
         } else {
-            // 没有 oracleId 时不加载印刷版本，避免性能问题
-            // 用户可以手动点击"选择版本"按钮（如果将来需要的话）
-            AppLogger.d("CardInfoFragment", "No oracleId available, skipping printings load")
-            binding.btnSelectVersion.visibility = View.GONE
+            // 没有 oracleId 时，尝试使用卡牌名称搜索获取印刷版本
+            // 但只对英文名称进行搜索（中文名称搜索会失败）
+            AppLogger.w("CardInfoFragment", "No oracleId available, trying to load printings by card name")
+            val cardName = cardInfo?.enName ?: cardInfo?.name
+            if (!cardName.isNullOrEmpty()) {
+                // 只使用英文名称搜索
+                loadPrintingsByName(cardName)
+            } else {
+                AppLogger.w("CardInfoFragment", "No card name available, cannot load printings")
+                binding.btnSelectVersion.visibility = View.GONE
+            }
         }
 
         val title = cardInfo?.name ?: "卡牌详情"
@@ -410,14 +418,17 @@ class CardInfoFragment : DialogFragment() {
                 cardInfo.imageUriNormal
             }
 
-            // 使用 Glide 加载图片，带错误处理
+            // 使用 Glide 加载图片
             if (!imageUrl.isNullOrEmpty()) {
+                AppLogger.d("CardInfoFragment", "Loading image: $imageUrl")
                 Glide.with(this@CardInfoFragment)
                     .load(imageUrl)
                     .placeholder(com.google.android.material.R.drawable.mtrl_ic_cancel)
                     .error(com.google.android.material.R.drawable.mtrl_ic_error)
                     .into(imageViewCard)
+                imageViewCard.visibility = View.VISIBLE
             } else {
+                AppLogger.w("CardInfoFragment", "No image URL available")
                 imageViewCard.visibility = View.GONE
             }
 
