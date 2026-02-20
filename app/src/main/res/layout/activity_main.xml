@@ -163,28 +163,6 @@
                 app:cardBackgroundColor="@color/md_surface"
                 app:strokeWidth="0dp">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:padding="8dp">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnDownloadEvent"
-                        android:layout_width="wrap_content"
-                        android:layout_height="48dp"
-                        android:minWidth="200dp"
-                        android:text="下载赛事"
-                        android:textSize="14sp"
-                        android:padding="8dp"
-                        app:icon="@android:drawable/ic_input_add"
-                        app:iconGravity="textStart"
-                        app:iconPadding="8dp"
-                        style="@style/Widget.Material3.Button.TonalButton" />
-
-                </LinearLayout>
-
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Decklist RecyclerView -->

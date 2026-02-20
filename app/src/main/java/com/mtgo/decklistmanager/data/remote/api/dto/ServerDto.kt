@@ -197,11 +197,18 @@ data class ImageUris(
     val png: String?,
     val artCrop: String?,
     val borderCrop: String?,
-    // Scryfall 备用图片（当 MTGCH 图片不可用时）
-    val scryfallSmall: String? = null,
-    val scryfallNormal: String? = null,
-    val scryfallLarge: String? = null,
-    val scryfallPng: String? = null
+    // Scryfall 备用图片（嵌套对象结构）
+    val scryfallImageUris: ScryfallImageUris? = null
+)
+
+/**
+ * Scryfall 图片 URIs
+ */
+data class ScryfallImageUris(
+    val small: String?,
+    val normal: String?,
+    val large: String?,
+    val png: String?
 )
 
 /**

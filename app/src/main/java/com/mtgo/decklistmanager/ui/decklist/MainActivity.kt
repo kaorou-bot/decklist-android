@@ -43,7 +43,6 @@ class MainActivity : BaseActivity() {
     private lateinit var formatSelector: View
     private lateinit var tagSelector: View
     private lateinit var dateSelector: View
-    private lateinit var btnDownloadEvent: MaterialButton
     private lateinit var bottomNavigation: com.google.android.material.bottomnavigation.BottomNavigationView
     private lateinit var tvCurrentFormat: android.widget.TextView
     private lateinit var tvCurrentTag: android.widget.TextView
@@ -103,7 +102,6 @@ class MainActivity : BaseActivity() {
         formatSelector = findViewById(R.id.formatSelector)
         tagSelector = findViewById(R.id.tagSelector)
         dateSelector = findViewById(R.id.dateSelector)
-        btnDownloadEvent = findViewById(R.id.btnDownloadEvent)
         bottomNavigation = findViewById(R.id.bottomNavigation)
         tvCurrentFormat = findViewById(R.id.tvCurrentFormat)
         tvCurrentTag = findViewById(R.id.tvCurrentTag)
@@ -198,11 +196,6 @@ class MainActivity : BaseActivity() {
         // Date selector in status bar
         dateSelector.setOnClickListener {
             showDateFilterDialog()
-        }
-
-        // Download event button
-        btnDownloadEvent.setOnClickListener {
-            showDownloadEventDialog()
         }
     }
 
@@ -605,122 +598,6 @@ class MainActivity : BaseActivity() {
                 viewModel.applyDateFilter(date)
             }
         }
-    }
-
-    private fun showDownloadEventDialog() {
-        lifecycleScope.launch {
-            // 获取当前选中的赛制
-            val currentFormat = viewModel.selectedFormatName.value
-            val formats = arrayOf("Modern", "Standard", "Legacy", "Vintage", "Pauper", "Pioneer", "Historic", "Alchemy", "Premodern")
-            // 默认选中当前筛选的赛制，如果没有则默认Modern
-            val defaultIndex = if (currentFormat != null && currentFormat != "All Formats") {
-                formats.indexOf(currentFormat).let { if (it >= 0) it else 0 }
-            } else {
-                0
-            }
-            var selectedFormat = formats[defaultIndex]
-
-            val dialog = android.app.AlertDialog.Builder(this@MainActivity)
-                .setTitle("下载赛事列表")
-                .setMessage("选择赛制下载赛事列表。下载后点击赛事可以查看详情并下载套牌。")
-                .setSingleChoiceItems(formats, defaultIndex) { _, which ->
-                    selectedFormat = formats[which]
-                }
-                .setPositiveButton("下一步") { _, _ ->
-                    // 使用FormatMapper转换format name到code
-                    val formatCode = com.mtgo.decklistmanager.util.FormatMapper.nameToCode(selectedFormat) ?: "MO"
-                    // 日期选择对话框
-                    showDateSelectionDialog(formatCode)
-                }
-                .setNegativeButton("取消", null)
-                .create()
-
-            dialog.show()
-        }
-    }
-
-    private fun showDateSelectionDialog(formatCode: String) {
-        // Create date selection dialog
-        val container = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(50, 20, 50, 20)
-        }
-
-        // Date label
-        val dateLabel = android.widget.TextView(this).apply {
-            text = "选择日期 (可选):"
-            textSize = 16f
-        }
-        container.addView(dateLabel)
-
-        // Date button
-        val dateButton = android.widget.Button(this).apply {
-            text = "全部日期"
-            setPadding(0, 10, 0, 0)
-            setBackgroundColor(getColor(android.R.color.holo_blue_light))
-            setTextColor(getColor(android.R.color.white))
-        }
-
-        var selectedDate: String? = null
-
-        dateButton.setOnClickListener {
-            val calendar = java.util.Calendar.getInstance()
-            val year = calendar.get(java.util.Calendar.YEAR)
-            val month = calendar.get(java.util.Calendar.MONTH)
-            val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
-
-            val datePickerDialog = android.app.DatePickerDialog(
-                this@MainActivity,
-                { _, selectedYear, selectedMonth, dayOfMonth ->
-                    selectedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, dayOfMonth)
-                    dateButton.text = "已选择: $selectedDate"
-                    dateButton.setBackgroundColor(getColor(android.R.color.holo_green_light))
-                },
-                year, month, day
-            )
-            datePickerDialog.show()
-        }
-
-        // Clear date button
-        val clearDateButton = android.widget.Button(this).apply {
-            text = "清除日期"
-            setPadding(0, 10, 0, 0)
-            setBackgroundColor(getColor(android.R.color.darker_gray))
-            setTextColor(getColor(android.R.color.white))
-        }
-        clearDateButton.setOnClickListener {
-            selectedDate = null
-            dateButton.text = "全部日期"
-            dateButton.setBackgroundColor(getColor(android.R.color.holo_blue_light))
-        }
-
-        container.addView(dateButton)
-        container.addView(clearDateButton)
-
-        android.app.AlertDialog.Builder(this)
-            .setTitle("筛选日期")
-            .setView(container)
-            .setPositiveButton("下一步") { _, _ ->
-                showNumberOfEventsDialog(formatCode, selectedDate)
-            }
-            .setNegativeButton("返回", null)
-            .show()
-    }
-
-    private fun showNumberOfEventsDialog(formatCode: String, selectedDate: String?) {
-        android.app.AlertDialog.Builder(this)
-            .setTitle("赛事数量")
-            .setItems(arrayOf("5", "10", "20")) { _, which ->
-                val maxEvents = when (which) {
-                    0 -> 5
-                    1 -> 10
-                    2 -> 20
-                    else -> 10
-                }
-                viewModel.startEventScraping(formatCode, selectedDate, maxEvents, 0)
-            }
-            .setNegativeButton("返回", null)
-            .show()
     }
 
     private fun showDeleteEventDialog(event: MainViewModel.EventItem, _position: Int, viewHolder: RecyclerView.ViewHolder) {

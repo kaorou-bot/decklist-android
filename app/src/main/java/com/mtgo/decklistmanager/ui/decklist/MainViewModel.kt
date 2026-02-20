@@ -562,6 +562,21 @@ class MainViewModel @Inject constructor(
 
                     AppLogger.d("MainViewModel", "Server returned ${eventDtos.size} events, total: $total")
 
+                    if (refresh) {
+                        // 刷新模式：先清空本地数据库中符合筛选条件的旧数据
+                        if (eventDtos.isEmpty()) {
+                            // 服务器返回空数据，清空显示
+                            AppLogger.d("MainViewModel", "Server returned no events, clearing local data")
+                            // 清空本地数据库（根据筛选条件）
+                            eventDao.clearEvents(format, date)
+                            _events.postValue(emptyList())
+                            _totalEvents.value = 0
+                            _hasMore.value = false
+                            _uiState.value = UiState.Success("No events found")
+                            return@launch
+                        }
+                    }
+
                     // 转换 DTO 为 Entity 并保存到本地数据库
                     val entities = eventDtos.map { dto ->
                         com.mtgo.decklistmanager.data.local.entity.EventEntity(
@@ -580,8 +595,8 @@ class MainViewModel @Inject constructor(
                     // 保存到数据库
                     eventDao.insertAll(entities)
 
-                    // 转换为 EventItem
-                    val items = entities.map { entity ->
+                    // 转换为 EventItem，并过滤掉 deckCount 为 0 的赛事
+                    val items = entities.filter { it.deckCount > 0 }.map { entity ->
                         EventItem(
                             id = entity.id,
                             eventName = entity.eventName,

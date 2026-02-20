@@ -145,7 +145,7 @@ class CardInfoFragment : DialogFragment() {
         loadingJob = lifecycleScope.launch {
             try {
                 AppLogger.d("CardInfoFragment", "Loading printings for: $oracleId")
-                val result = searchViewModel.getCardPrintings(oracleId, limit = 100)
+                val result = searchViewModel.getCardPrintings(oracleId, limit = 2000)
                 result?.let { (cards, total) ->
                     // 验证返回的印刷版本是否匹配当前卡牌
                     val expectedCardName = currentCardInfo?.name

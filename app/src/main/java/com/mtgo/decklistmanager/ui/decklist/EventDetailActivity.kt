@@ -35,7 +35,6 @@ class EventDetailActivity : AppCompatActivity() {
     private lateinit var tvDeckCount: MaterialTextView
     private lateinit var tvStatus: MaterialTextView
     private lateinit var tvProgressText: MaterialTextView
-    private lateinit var btnDownloadDecklists: MaterialButton
     private lateinit var bottomNavigation: com.google.android.material.bottomnavigation.BottomNavigationView
     private lateinit var progressContainer: View
     private lateinit var progressBar: View
@@ -74,7 +73,6 @@ class EventDetailActivity : AppCompatActivity() {
         tvDeckCount = findViewById(R.id.tvDeckCount)
         tvStatus = findViewById(R.id.tvStatus)
         tvProgressText = findViewById(R.id.tvProgressText)
-        btnDownloadDecklists = findViewById(R.id.btnDownloadDecklists)
         bottomNavigation = findViewById(R.id.bottomNavigation)
         progressContainer = findViewById(R.id.progressContainer)
         progressBar = findViewById(R.id.progressBar)
@@ -184,17 +182,9 @@ class EventDetailActivity : AppCompatActivity() {
             decklistTableAdapter.submitList(sortedDecklists)
 
             AppLogger.d("EventDetailActivity", "sortedDecklists size: ${sortedDecklists.size}")
-            // 如果套牌列表为空且不在下载中，显示下载提示对话框
+            // 如果套牌列表为空，显示提示信息
             if (sortedDecklists.isEmpty() && !isDownloading) {
-                // 延迟检查，确保数据已经加载完成
-                android.os.Handler(Looper.getMainLooper()).postDelayed({
-                    val shouldShow = viewModel.shouldShowDownloadDialog()
-                    AppLogger.d("EventDetailActivity", "shouldShowDownloadDialog: $shouldShow (delayed check)")
-                    if (shouldShow) {
-                        AppLogger.d("EventDetailActivity", "Showing download dialog for empty event")
-                        showDownloadDialogIfNeeded()
-                    }
-                }, 100)  // 延迟100ms
+                tvStatus.text = "该赛事暂无套牌数据"
             }
         }
 
@@ -246,46 +236,6 @@ class EventDetailActivity : AppCompatActivity() {
         // 返回按钮
         findViewById<MaterialButton>(R.id.btnBack).setOnClickListener {
             finish()
-        }
-
-        btnDownloadDecklists.setOnClickListener {
-            // Get event info
-            val event = viewModel.event.value
-            if (event != null && event.sourceUrl != null) {
-                // event.format 已经是format code（如 "MO", "ST"）
-                // 直接使用即可，不需要转换
-                val formatCode = event.format
-
-                // Show confirmation dialog
-                android.app.AlertDialog.Builder(this)
-                    .setTitle("下载套牌")
-                    .setMessage("下载此赛事的所有套牌?\n\n赛事: ${event.eventName}\n赛制: ${event.format}")
-                    .setPositiveButton("下载") { _, _ ->
-                        viewModel.downloadEventDecklists(event.sourceUrl, formatCode)
-                    }
-                    .setNegativeButton("取消", null)
-                    .show()
-            } else {
-                Toast.makeText(this, "赛事信息不可用", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    /**
-     * 如果赛事没有套牌，显示下载提示对话框
-     */
-    private fun showDownloadDialogIfNeeded() {
-        val event = viewModel.event.value
-        if (event != null && event.sourceUrl != null) {
-            android.app.AlertDialog.Builder(this)
-                .setTitle("赛事暂无套牌")
-                .setMessage("当前赛事还没有套牌数据，是否下载该赛事的套牌?\n\n赛事: ${event.eventName}\n赛制: ${event.format}")
-                .setPositiveButton("下载") { _, _ ->
-                    val formatCode = event.format
-                    viewModel.downloadEventDecklists(event.sourceUrl, formatCode)
-                }
-                .setNegativeButton("取消", null)
-                .show()
         }
     }
 }

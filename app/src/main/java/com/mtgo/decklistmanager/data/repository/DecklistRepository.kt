@@ -460,6 +460,7 @@ class DecklistRepository @Inject constructor(
     /**
      * 获取卡牌信息 - 优先使用本地缓存，缓存未命中时调用 API
      * v4.1.0: 优化性能，减少 API 调用
+     * v5.1.0: 如果缓存的 CardInfo 没有 oracleId，强制从服务器刷新
      */
     suspend fun getCardInfo(cardName: String): CardInfo? = withContext(Dispatchers.IO) {
         AppLogger.d("DecklistRepository", "getCardInfo called for: $cardName")
@@ -478,6 +479,18 @@ class DecklistRepository @Inject constructor(
         }
 
         if (cachedInfo != null) {
+            // v5.1.0: 如果缓存没有 oracleId，强制从服务器刷新
+            if (cachedInfo.oracleId == null) {
+                AppLogger.d("DecklistRepository", "Cache has no oracleId, refreshing from server: $cardName")
+                val freshCardInfo = fetchCardInfoFromApi(formattedCardName)
+                if (freshCardInfo != null) {
+                    val entity = freshCardInfo.toEntity()
+                    cardInfoDao.insertOrUpdate(entity)
+                    AppLogger.d("DecklistRepository", "✓ Updated cache with oracleId: ${entity.oracleId}")
+                    return@withContext freshCardInfo
+                }
+            }
+
             // v4.1.0: 检查双面牌数据完整性
             val isDualFaced = cachedInfo.isDualFaced
 

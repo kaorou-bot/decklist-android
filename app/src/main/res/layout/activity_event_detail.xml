@@ -152,20 +152,6 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Download Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDownloadDecklists"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="下载所有套牌"
-                android:textSize="14sp"
-                app:backgroundTint="@color/divider"
-                android:textColor="@color/text_primary"
-                app:cornerRadius="8dp"
-                android:padding="12dp"
-                style="@style/Widget.Material3.Button"
-                android:layout_marginBottom="16dp" />
-
             <!-- Status Message and Progress -->
             <LinearLayout
                 android:id="@+id/statusContainer"

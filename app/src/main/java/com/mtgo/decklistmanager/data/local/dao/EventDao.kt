@@ -60,6 +60,13 @@ interface EventDao {
     @Query("DELETE FROM events")
     suspend fun clearAll()
 
+    @Query("""
+        DELETE FROM events
+        WHERE (:format IS NULL OR format = :format)
+        AND (:date IS NULL OR date = :date)
+    """)
+    suspend fun clearEvents(format: String? = null, date: String? = null)
+
     @Query("UPDATE events SET deck_count = :count WHERE id = :eventId")
     suspend fun updateDeckCount(eventId: Long, count: Int)
 

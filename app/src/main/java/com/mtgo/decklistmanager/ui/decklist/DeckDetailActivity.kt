@@ -310,7 +310,7 @@ class DeckDetailActivity : AppCompatActivity() {
         // 优先显示中文名，如果没有则显示英文名
         btnCardName.text = card.cardNameZh ?: card.cardName
         btnCardName.setOnClickListener {
-            showCardInfo(card.cardName)
+            showCardInfo(card)
         }
         val tvManaCost = cardView.findViewById<MaterialTextView>(R.id.tvManaCost)
         tvManaCost.text = ManaSymbolRenderer.renderManaCost(card.manaCost, this)
@@ -320,15 +320,68 @@ class DeckDetailActivity : AppCompatActivity() {
 
     /**
      * 填充卡牌列表
+     * 按类型分类排序：地-生物-法术-瞬间-神器-结界-鹏洛克-其他
      */
     private fun populateCardList(linearLayout: LinearLayout, cards: List<Card>) {
         // 清空现有视图
         linearLayout.removeAllViews()
 
-        // 添加卡牌视图
-        cards.forEach { card ->
-            val cardView = createCardView(card)
-            linearLayout.addView(cardView)
+        // 定义类型优先级顺序（英文和中文）
+        val typeMappings = listOf(
+            listOf("Land", "地") to "地",
+            listOf("Creature", "生物") to "生物",
+            listOf("Sorcery", "法术") to "法术",
+            listOf("Instant", "瞬间") to "瞬间",
+            listOf("Artifact", "神器") to "神器",
+            listOf("Enchantment", "结界") to "结界",
+            listOf("Planeswalker", "鹏洛克") to "鹏洛克"
+        )
+
+        // 按类型分组
+        val groupedCards = cards.groupBy { card ->
+            // 获取卡牌类型
+            val typeLine = card.cardType?.lowercase() ?: ""
+
+            // 按优先级匹配类型（支持中英文），多类别卡牌匹配第一个符合条件的
+            val matchedIndex = typeMappings.indexOfFirst { (keywords, _) ->
+                keywords.any { keyword ->
+                    typeLine.contains(keyword.lowercase())
+                }
+            }
+
+            // 返回匹配的类型索引，未匹配返回最大值
+            if (matchedIndex >= 0) matchedIndex else Int.MAX_VALUE
+        }
+
+        // 按类型优先级排序并添加视图
+        typeMappings.forEachIndexed { index, (_, cnType) ->
+            val typeCards = groupedCards[index]
+
+            if (!typeCards.isNullOrEmpty()) {
+                // 添加分类标题
+                val typeHeader = layoutInflater.inflate(R.layout.item_card_type_header, linearLayout, false)
+                typeHeader.findViewById<com.google.android.material.textview.MaterialTextView>(R.id.tvTypeTitle).text = cnType
+                linearLayout.addView(typeHeader)
+
+                // 添加该分类下的所有卡牌
+                typeCards.forEach { card ->
+                    val cardView = createCardView(card)
+                    linearLayout.addView(cardView)
+                }
+            }
+        }
+
+        // 添加未分类的卡牌
+        val uncategorizedCards = groupedCards[Int.MAX_VALUE]
+        if (!uncategorizedCards.isNullOrEmpty()) {
+            val typeHeader = layoutInflater.inflate(R.layout.item_card_type_header, linearLayout, false)
+            typeHeader.findViewById<com.google.android.material.textview.MaterialTextView>(R.id.tvTypeTitle).text = "其他"
+            linearLayout.addView(typeHeader)
+
+            uncategorizedCards.forEach { card ->
+                val cardView = createCardView(card)
+                linearLayout.addView(cardView)
+            }
         }
     }
 
@@ -466,8 +519,8 @@ class DeckDetailActivity : AppCompatActivity() {
         loadTagsAndNotes()
     }
 
-    private fun showCardInfo(cardName: String) {
-        viewModel.loadCardInfo(cardName)
+    private fun showCardInfo(card: Card) {
+        viewModel.loadCardInfo(card.cardName, card.oracleId)
     }
 
     private fun showCardInfoDialog(cardInfo: com.mtgo.decklistmanager.domain.model.CardInfo) {

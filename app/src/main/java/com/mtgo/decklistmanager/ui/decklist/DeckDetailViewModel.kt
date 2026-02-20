@@ -17,6 +17,7 @@ import com.mtgo.decklistmanager.data.local.dao.DecklistDao
 import com.mtgo.decklistmanager.data.remote.api.ServerApi
 import com.mtgo.decklistmanager.data.remote.api.dto.DecklistDetailResponse
 import com.mtgo.decklistmanager.data.remote.api.dto.CardInfoDto
+import com.mtgo.decklistmanager.data.remote.api.dto.toCardInfo
 import com.mtgo.decklistmanager.exporter.DecklistExporter
 import com.mtgo.decklistmanager.exporter.ExportResult
 import com.mtgo.decklistmanager.exporter.format.MtgoFormatExporter
@@ -273,19 +274,66 @@ class DeckDetailViewModel @Inject constructor(
      * 查询单卡信息
      * v4.1.0: 直接使用 repository.getCardInfo()，依赖数据库缓存
      * 数据库缓存速度很快（< 50ms）且持久化，无需内存缓存
+     * v5.1.0: 如果传入 oracleId，从服务器获取该特定版本的数据
+     * v5.1.1: 如果获取到的是衍生物(token)，直接搜索服务器获取非衍生版本
      */
-    fun loadCardInfo(cardName: String) {
+    fun loadCardInfo(cardName: String, oracleId: String? = null) {
         viewModelScope.launch {
             try {
                 _isCardInfoLoading.value = true
                 _cardInfoError.value = null
 
-                AppLogger.d("DeckDetailViewModel", "loadCardInfo called for: $cardName")
+                AppLogger.d("DeckDetailViewModel", "loadCardInfo called for: $cardName, oracleId: $oracleId")
 
-                // 直接使用 repository.getCardInfo()，它会自动处理数据库缓存
-                val cardInfo = repository.getCardInfo(cardName)
+                val cardInfo = if (oracleId != null) {
+                    // 如果提供了 oracleId，从服务器获取该特定版本的数据
+                    AppLogger.d("DeckDetailViewModel", "Fetching specific version by oracleId: $oracleId")
+                    val printings = serverApi.getCardPrintings(oracleId, limit = 1)
+                    if (printings.isSuccessful && printings.body()?.success == true) {
+                        val cards = printings.body()!!.cards
+                        if (cards != null && cards.isNotEmpty()) {
+                            val cardDto = cards[0]
+                            AppLogger.d("DeckDetailViewModel", "Loaded specific version: ${cardDto.name}, layout: ${cardDto.layout}, isToken: ${cardDto.isToken}")
+
+                            // 如果获取到的是衍生物，使用英文名搜索获取非衍生版本
+                            if (cardDto.layout == "token" || cardDto.isToken == true) {
+                                AppLogger.d("DeckDetailViewModel", "Got token version, searching for non-token version from server")
+
+                                // 使用搜索API获取非衍生版本
+                                val searchPrintings = serverApi.searchCardPrintingsByName(cardDto.name, limit = 20)
+                                if (searchPrintings.isSuccessful && searchPrintings.body()?.success == true) {
+                                    val searchCards = searchPrintings.body()!!.cards ?: emptyList()
+                                    // 找到第一个非衍生物版本
+                                    val nonTokenCard = searchCards.firstOrNull { it.layout != "token" && it.isToken != true }
+                                    if (nonTokenCard != null) {
+                                        AppLogger.d("DeckDetailViewModel", "Found non-token version: ${nonTokenCard.name}, set: ${nonTokenCard.setName}")
+                                        nonTokenCard.toCardInfo()
+                                    } else {
+                                        AppLogger.w("DeckDetailViewModel", "Non-token version not found in search (got ${searchCards.size} cards), using token version")
+                                        cardDto.toCardInfo()
+                                    }
+                                } else {
+                                    AppLogger.w("DeckDetailViewModel", "Search failed, using token version")
+                                    cardDto.toCardInfo()
+                                }
+                            } else {
+                                cardDto.toCardInfo()
+                            }
+                        } else {
+                            AppLogger.w("DeckDetailViewModel", "No cards found for oracleId, falling back to repository")
+                            repository.getCardInfo(cardName)
+                        }
+                    } else {
+                        AppLogger.w("DeckDetailViewModel", "Failed to get printings, falling back to repository")
+                        repository.getCardInfo(cardName)
+                    }
+                } else {
+                    // 没有 oracleId，使用常规方法
+                    repository.getCardInfo(cardName)
+                }
 
                 if (cardInfo != null) {
+                    AppLogger.d("DeckDetailViewModel", "Loaded cardInfo: ${cardInfo.name}, oracleId: ${cardInfo.oracleId}, set: ${cardInfo.setName}")
                     _cardInfo.value = cardInfo
                 } else {
                     // v4.0.0: 提供更友好的错误提示
