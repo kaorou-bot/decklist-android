@@ -7,6 +7,9 @@ import com.mtgo.decklistmanager.data.local.dao.EventDao
 import com.mtgo.decklistmanager.data.local.database.AppDatabase
 import com.mtgo.decklistmanager.data.remote.api.MagicScraper
 import com.mtgo.decklistmanager.data.remote.api.MtgTop8Scraper
+import com.mtgo.decklistmanager.data.remote.api.forge.ForgeCardApi
+import com.mtgo.decklistmanager.data.remote.api.forge.ForgeCardApiAdapter
+import com.mtgo.decklistmanager.data.remote.api.forge.ForgeCardServerConfig
 import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchApi
 import dagger.Module
 import dagger.Provides
@@ -104,26 +107,46 @@ object AppModule {
     }
 
     /**
-     * 提供 Retrofit for MTG Card Server API (自有服务端)
-     * Base URL: http://182.92.109.160/
-     * API 文档: 见项目根目录 API_DOCUMENTATION.md
+     * 提供 Retrofit for Forge 中文卡查 API
+     * Base URL: https://play.mtg-forge-kaorou.vip:8443/api/v1/
      *
-     * 服务端完全兼容 MTGCH 搜索接口格式
+     * 如服务器启用鉴权，自动附加 X-API-Key 请求头
      */
     @Provides
     @Singleton
-    fun provideMtgchRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideForgeRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        val client = if (ForgeCardServerConfig.API_KEY != null) {
+            okHttpClient.newBuilder()
+                .addInterceptor { chain ->
+                    chain.proceed(
+                        chain.request().newBuilder()
+                            .header("X-API-Key", ForgeCardServerConfig.API_KEY!!)
+                            .build()
+                    )
+                }
+                .build()
+        } else {
+            okHttpClient
+        }
+
         return Retrofit.Builder()
-            .baseUrl("http://182.92.109.160/")
-            .client(okHttpClient)
+            .baseUrl(ForgeCardServerConfig.BASE_URL)
+            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
 
     @Provides
     @Singleton
-    fun provideMtgchApi(retrofit: Retrofit): MtgchApi {
-        return retrofit.create(MtgchApi::class.java)
+    fun provideForgeCardApi(retrofit: Retrofit): ForgeCardApi {
+        return retrofit.create(ForgeCardApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMtgchApi(forgeCardApi: ForgeCardApi): MtgchApi {
+        // 旧接口由 Forge 中文卡查 API 适配器实现（2026-09-03 切换）
+        return ForgeCardApiAdapter(forgeCardApi)
     }
 
     @Provides
