@@ -29,9 +29,15 @@
 - [x] 创建开发分支 `dev/v5.1.0`
 - [x] 文档治理：80+ 过程文档归档到 `docs/archive/`（git mv，保留历史）
 - [x] 新增 GitHub Actions CI（android-ci.yml：JDK 17 + 生成调试证书 + 构建 + 上传 APK）
+- [x] **接入 Forge 中文卡查 API**（2026-09-03）
+  - 新服务器：`https://play.mtg-forge-kaorou.vip:8443/api/v1/`（34444 卡 / 672 系列，在线）
+  - 新增 `forge` 包：ForgeCardApi + ForgeCardDto + ForgeMapper + ForgeCardApiAdapter
+  - 适配器实现旧 MtgchApi 接口，上层零改动；新 24 位 id → 旧 oracleId 字段
+  - 旧查询语法 → 新结构化参数解析器
+  - 模拟器实测：英文关键词命中中文卡牌，中文卡图 CDN 加载正常
 
 #### 待完成 📋
-- [ ] 接入新卡牌服务器（等用户提供数据格式后实现适配层）
+- [ ] 卡图加载失败回退：按详情 printings 顺序尝试其他版本 image_url（README 要求）
 - [ ] 补齐代码内 8 处 TODO（ArenaFormatExporter、ScrapingOptionsDialog、FoldersActivity）
 - [ ] 补单元测试（当前为零）
 - [ ] 发布 v5.1.0 并同步 GitHub Release（目前 Release 停在 4.2.6）
