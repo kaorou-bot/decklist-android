@@ -6,9 +6,47 @@
 
 ## 📊 任务状态
 
-**状态**: 🟡 **开发中 - v4.3.0**
-**最后更新**: 2026-02-10
-**当前版本**: v4.3.0 (开发中)
+**状态**: 🟡 **开发中 - v5.1.0**
+**最后更新**: 2026-09-03
+**当前版本**: v5.0.1 (已发布)，v5.1.0 (开发中)
+**当前分支**: dev/v5.1.0
+
+---
+
+## 🚀 当前任务 (2026-09-03)
+
+### v5.1.0 - 恢复开发：工程治理 + 新卡牌服务器接入
+
+#### 背景
+- 项目停更约 7 个月（最后提交 2026-02-20，v5.0.1）
+- 旧自建卡牌服务器 `http://182.92.109.160/` 已离线，在线搜索功能不可用
+- 用户已有新的卡牌服务器（数据格式待提供），将接入替换
+
+#### 已完成 ✅
+- [x] 本机环境打通：克隆仓库、SSL 证书（Windows 根证书 PEM）、JDK 17 构建、debug.keystore
+- [x] 构建验证：`decklist-manager-v5.0.1-debug.apk` 构建成功（零错误）
+- [x] 模拟器验证：Medium_Phone_API_36.1 上安装运行正常，无崩溃
+- [x] 创建开发分支 `dev/v5.1.0`
+- [x] 文档治理：80+ 过程文档归档到 `docs/archive/`（git mv，保留历史）
+- [x] 新增 GitHub Actions CI（android-ci.yml：JDK 17 + 生成调试证书 + 构建 + 上传 APK）
+
+#### 待完成 📋
+- [ ] 接入新卡牌服务器（等用户提供数据格式后实现适配层）
+- [ ] 补齐代码内 8 处 TODO（ArenaFormatExporter、ScrapingOptionsDialog、FoldersActivity）
+- [ ] 补单元测试（当前为零）
+- [ ] 发布 v5.1.0 并同步 GitHub Release（目前 Release 停在 4.2.6）
+
+#### 技术要点
+- 构建必须用 JDK 17（Gradle 8.1.1 不兼容 JDK 21）：`JAVA_HOME="C:\Program Files\Java\jdk-17\jdk-17.0.18+8"`
+- git 访问 GitHub 需 `http.sslBackend=openssl` + `http.sslCAInfo` 指向 Windows 根证书 PEM（已固化在仓库本地配置）
+- API 层入口：`MtgchApi.kt`（Retrofit 接口）+ `MtgchMapper.kt`（DTO→Entity），Base URL 在 `AppModule.provideMtgchRetrofit`
+
+---
+
+## 📜 历史任务（v4.3.0，2026-02-10，已被 v5.0.1 取代）
+
+**状态**: ✅ 已完成
+**旧版本**: v4.3.0 (开发中)
 **整体进度**: 95%
 
 ---
