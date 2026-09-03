@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,6 +44,21 @@ class CardImageFallbackLoader @Inject constructor(
     /** 主线程 Handler：Glide 禁止在 RequestListener 回调内发起新加载，需 post 到下一轮消息循环 */
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    /**
+     * Scryfall API 要求描述性 User-Agent（HTTP 库默认 UA 会被 400 generic_user_agent 拒绝），
+     * 按官方政策附带应用标识与项目地址
+     */
+    private val scryfallUserAgent =
+        "decklist-manager-android/5.0.1 (https://github.com/kaorou-bot/decklist-android)"
+
+    /** Scryfall 专用 OkHttp 客户端（Glide 默认 UA 无法覆盖，故直接抓取） */
+    private val scryfallClient by lazy {
+        okhttp3.OkHttpClient.Builder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
+
     /** cardId -> 候选图片 URL 列表（正面与背面分开缓存） */
     private val frontCache = ConcurrentHashMap<String, List<String>>()
     private val backCache = ConcurrentHashMap<String, List<String>>()
@@ -70,7 +86,19 @@ class CardImageFallbackLoader @Inject constructor(
         errorRes: Int
     ) {
         if (primaryUrl.isNullOrEmpty()) {
-            imageView.visibility = ImageView.GONE
+            // 主图缺失（服务器无该版本图）：若有标识信息则直接进回退链
+            // （printings 候选 → Scryfall），否则隐藏视图
+            val hasFallbackData = !cardId.isNullOrEmpty() ||
+                (!setCode.isNullOrBlank() && !collectorNumber.isNullOrBlank())
+            if (!hasFallbackData) {
+                imageView.visibility = ImageView.GONE
+                return
+            }
+            imageView.visibility = ImageView.VISIBLE
+            loadWithFallbacks(
+                imageView, emptyList(), cardId, isBack, 0,
+                setCode, collectorNumber, placeholderRes, errorRes
+            )
             return
         }
         imageView.visibility = ImageView.VISIBLE
@@ -179,36 +207,51 @@ class CardImageFallbackLoader @Inject constructor(
             "https://api.scryfall.com/cards/${setCode.lowercase()}/$collectorNumber?format=image$face"
 
         AppLogger.d("CardImageFallback", "Trying Scryfall fallback: $scryfallUrl")
+        imageView.setImageResource(placeholderRes)
 
-        Glide.with(imageView)
-            .load(scryfallUrl)
-            .placeholder(placeholderRes)
-            .error(errorRes)
-            .listener(object : RequestListener<Drawable> {
-                override fun onLoadFailed(
-                    e: GlideException?,
-                    model: Any?,
-                    target: Target<Drawable>,
-                    isFirstResource: Boolean
-                ): Boolean {
+        // Glide 默认 UA 无法覆盖（会被 Scryfall 400 拒绝），
+        // 故用 OkHttp 带自定义 UA 抓取图片字节，再交 Glide 解码显示
+        scope.launch(Dispatchers.IO) {
+            val bytes = try {
+                val request = okhttp3.Request.Builder()
+                    .url(scryfallUrl)
+                    .header("User-Agent", scryfallUserAgent)
+                    .header("Accept", "*/*") // Scryfall 强制要求 Accept 头（OkHttp 默认不发）
+                    .build()
+                scryfallClient.newCall(request).execute().use { resp ->
+                    if (resp.isSuccessful) {
+                        resp.body?.bytes()
+                    } else {
+                        val snippet = resp.body?.string()?.take(200) ?: ""
+                        AppLogger.w(
+                            "CardImageFallback",
+                            "Scryfall HTTP ${resp.code} for $scryfallUrl body: $snippet"
+                        )
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.e("CardImageFallback", "Scryfall fetch exception: $scryfallUrl", e)
+                null
+            }
+
+            withContext(Dispatchers.Main) {
+                if (bytes != null && bytes.isNotEmpty()) {
+                    AppLogger.d(
+                        "CardImageFallback",
+                        "Scryfall fallback succeeded: $scryfallUrl (${bytes.size} bytes)"
+                    )
+                    Glide.with(imageView)
+                        .load(bytes)
+                        .placeholder(placeholderRes)
+                        .error(errorRes)
+                        .into(imageView)
+                } else {
                     AppLogger.w("CardImageFallback", "Scryfall fallback also failed: $scryfallUrl")
-                    // 返回 false 让 Glide 自行显示上面配置的 error(errorRes) 图，
-                    // 避免在回调内再次发起加载导致 IllegalStateException
-                    return false
+                    Glide.with(imageView).load(errorRes).into(imageView)
                 }
-
-                override fun onResourceReady(
-                    resource: Drawable,
-                    model: Any,
-                    target: Target<Drawable>?,
-                    dataSource: DataSource,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    AppLogger.d("CardImageFallback", "Scryfall fallback succeeded: $scryfallUrl")
-                    return false
-                }
-            })
-            .into(imageView)
+            }
+        }
     }
 
     /**

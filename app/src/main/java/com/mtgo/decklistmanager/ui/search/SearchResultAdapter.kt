@@ -47,27 +47,25 @@ class SearchResultAdapter(
                 // 显示法术力值
                 textViewManaCost.text = result.manaCost ?: ""
 
-                // 加载卡牌图片（失败时按 printings 顺序回退）
-                if (!result.imageUrl.isNullOrEmpty()) {
+                // 加载卡牌图片（主图缺失/失败时按 printings 顺序回退，最后 Scryfall）
+                if (imageFallbackLoader != null) {
+                    imageFallbackLoader.load(
+                        imageView = imageViewCard,
+                        primaryUrl = result.imageUrl,
+                        cardId = result.mtgchCard?.oracleId,
+                        isBack = false,
+                        setCode = result.setCode,
+                        collectorNumber = result.collectorNumber,
+                        placeholderRes = com.google.android.material.R.drawable.mtrl_ic_cancel,
+                        errorRes = com.google.android.material.R.drawable.mtrl_ic_error
+                    )
+                } else if (!result.imageUrl.isNullOrEmpty()) {
                     imageViewCard.visibility = android.view.View.VISIBLE
-                    if (imageFallbackLoader != null) {
-                        imageFallbackLoader.load(
-                            imageView = imageViewCard,
-                            primaryUrl = result.imageUrl,
-                            cardId = result.mtgchCard?.oracleId,
-                            isBack = false,
-                            setCode = result.setCode,
-                            collectorNumber = result.collectorNumber,
-                            placeholderRes = com.google.android.material.R.drawable.mtrl_ic_cancel,
-                            errorRes = com.google.android.material.R.drawable.mtrl_ic_error
-                        )
-                    } else {
-                        Glide.with(imageViewCard.context)
-                            .load(result.imageUrl)
-                            .placeholder(com.google.android.material.R.drawable.mtrl_ic_cancel)
-                            .error(com.google.android.material.R.drawable.mtrl_ic_error)
-                            .into(imageViewCard)
-                    }
+                    Glide.with(imageViewCard.context)
+                        .load(result.imageUrl)
+                        .placeholder(com.google.android.material.R.drawable.mtrl_ic_cancel)
+                        .error(com.google.android.material.R.drawable.mtrl_ic_error)
+                        .into(imageViewCard)
                 } else {
                     imageViewCard.visibility = android.view.View.GONE
                 }

@@ -228,20 +228,16 @@ class CardInfoFragment : DialogFragment() {
                 cardInfo.imageUriNormal
             }
 
-            if (!imageUrl.isNullOrEmpty()) {
-                imageFallbackLoader.load(
-                    imageView = imageViewCard,
-                    primaryUrl = imageUrl,
-                    cardId = oracleId,
-                    isBack = cardInfo.isDualFaced && !isShowingFront,
-                    setCode = cardInfo.setCode,
-                    collectorNumber = cardInfo.cardNumber,
-                    placeholderRes = com.google.android.material.R.drawable.mtrl_ic_cancel,
-                    errorRes = com.google.android.material.R.drawable.mtrl_ic_error
-                )
-            } else {
-                imageViewCard.visibility = View.GONE
-            }
+            imageFallbackLoader.load(
+                imageView = imageViewCard,
+                primaryUrl = imageUrl,
+                cardId = oracleId,
+                isBack = cardInfo.isDualFaced && !isShowingFront,
+                setCode = cardInfo.setCode,
+                collectorNumber = cardInfo.cardNumber,
+                placeholderRes = com.google.android.material.R.drawable.mtrl_ic_cancel,
+                errorRes = com.google.android.material.R.drawable.mtrl_ic_error
+            )
 
             if (cardInfo.isDualFaced) {
                 btnFlipCard.text = "查看其他部分"

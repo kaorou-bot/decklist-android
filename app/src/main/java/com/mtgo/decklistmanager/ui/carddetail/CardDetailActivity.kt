@@ -252,18 +252,16 @@ class CardDetailActivity : AppCompatActivity() {
                 cardInfo.imageUriNormal
             }
 
-            imageUrl?.let {
-                imageFallbackLoader.load(
-                    imageView = ivCardImage,
-                    primaryUrl = it,
-                    cardId = cardInfo.oracleId,
-                    isBack = cardInfo.isDualFaced && !isShowingFront,
-                    setCode = cardInfo.setCode,
-                    collectorNumber = cardInfo.cardNumber,
-                    placeholderRes = R.drawable.ic_placeholder,
-                    errorRes = R.drawable.ic_error
-                )
-            }
+            imageFallbackLoader.load(
+                imageView = ivCardImage,
+                primaryUrl = imageUrl,
+                cardId = cardInfo.oracleId,
+                isBack = cardInfo.isDualFaced && !isShowingFront,
+                setCode = cardInfo.setCode,
+                collectorNumber = cardInfo.cardNumber,
+                placeholderRes = R.drawable.ic_placeholder,
+                errorRes = R.drawable.ic_error
+            )
 
             // Card info
             if (cardInfo.isDualFaced) {
