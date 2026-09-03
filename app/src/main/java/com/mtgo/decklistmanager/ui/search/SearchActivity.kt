@@ -31,6 +31,9 @@ class SearchActivity : AppCompatActivity() {
     private val viewModel: SearchViewModel by viewModels()
     private lateinit var binding: ActivitySearchBinding
 
+    @javax.inject.Inject
+    lateinit var imageFallbackLoader: com.mtgo.decklistmanager.util.CardImageFallbackLoader
+
     private lateinit var resultAdapter: SearchResultAdapter
     private lateinit var historyAdapter: SearchHistoryAdapter
 
@@ -83,9 +86,12 @@ class SearchActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerViews() {
-        resultAdapter = SearchResultAdapter { result ->
-            showCardDetail(result)
-        }
+        resultAdapter = SearchResultAdapter(
+            onItemClick = { result ->
+                showCardDetail(result)
+            },
+            imageFallbackLoader = imageFallbackLoader
+        )
         binding.recyclerViewResults.apply {
             layoutManager = LinearLayoutManager(this@SearchActivity)
             adapter = resultAdapter

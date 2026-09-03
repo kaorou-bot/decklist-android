@@ -31,6 +31,9 @@ class CardDetailActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCardDetailBinding
     private lateinit var legalitiesAdapter: LegalitiesAdapter
 
+    @javax.inject.Inject
+    lateinit var imageFallbackLoader: com.mtgo.decklistmanager.util.CardImageFallbackLoader
+
     private var currentCardInfo: CardInfo? = null
     private var isShowingFront = true
     private var printings: List<MtgchCardDto> = emptyList()
@@ -250,11 +253,16 @@ class CardDetailActivity : AppCompatActivity() {
             }
 
             imageUrl?.let {
-                Glide.with(this@CardDetailActivity)
-                    .load(it)
-                    .placeholder(R.drawable.ic_placeholder)
-                    .error(R.drawable.ic_error)
-                    .into(ivCardImage)
+                imageFallbackLoader.load(
+                    imageView = ivCardImage,
+                    primaryUrl = it,
+                    cardId = cardInfo.oracleId,
+                    isBack = cardInfo.isDualFaced && !isShowingFront,
+                    setCode = cardInfo.setCode,
+                    collectorNumber = cardInfo.cardNumber,
+                    placeholderRes = R.drawable.ic_placeholder,
+                    errorRes = R.drawable.ic_error
+                )
             }
 
             // Card info

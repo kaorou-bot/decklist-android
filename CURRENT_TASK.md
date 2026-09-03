@@ -36,8 +36,14 @@
   - 旧查询语法 → 新结构化参数解析器
   - 模拟器实测：英文关键词命中中文卡牌，中文卡图 CDN 加载正常
 
+- [x] **卡图加载失败回退**（2026-09-03）
+  - 新增 `util/CardImageFallbackLoader.kt`：主图 → printings 候选（带缓存）→ Scryfall 最终回退
+  - Scryfall 回退：`api.scryfall.com/cards/{set}/{collector}?format=image`（双面牌背面加 `&face=back`）
+  - 三个调用点（SearchResultAdapter / CardInfoFragment / CardDetailActivity）传入 setCode/collectorNumber
+  - 修复 Glide 崩溃：RequestListener 回调内禁止发起新加载，改用主线程 Handler post
+  - 模拟器实测：幸运佩戴者比尔博主图 404 → 自动回退其他版本图正常显示，无崩溃
+
 #### 待完成 📋
-- [ ] 卡图加载失败回退：按详情 printings 顺序尝试其他版本 image_url（README 要求）
 - [ ] 补齐代码内 8 处 TODO（ArenaFormatExporter、ScrapingOptionsDialog、FoldersActivity）
 - [ ] 补单元测试（当前为零）
 - [ ] 发布 v5.1.0 并同步 GitHub Release（目前 Release 停在 4.2.6）

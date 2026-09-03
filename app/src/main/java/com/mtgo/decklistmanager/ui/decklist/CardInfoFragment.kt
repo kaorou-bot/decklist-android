@@ -28,6 +28,9 @@ class CardInfoFragment : DialogFragment() {
     private var _binding: DialogCardDetailBinding? = null
     private val binding get() = _binding!!
 
+    @javax.inject.Inject
+    lateinit var imageFallbackLoader: com.mtgo.decklistmanager.util.CardImageFallbackLoader
+
     private var currentCardInfo: CardInfo? = null
     private var isShowingFront = true
 
@@ -226,11 +229,16 @@ class CardInfoFragment : DialogFragment() {
             }
 
             if (!imageUrl.isNullOrEmpty()) {
-                Glide.with(this@CardInfoFragment)
-                    .load(imageUrl)
-                    .placeholder(com.google.android.material.R.drawable.mtrl_ic_cancel)
-                    .error(com.google.android.material.R.drawable.mtrl_ic_error)
-                    .into(imageViewCard)
+                imageFallbackLoader.load(
+                    imageView = imageViewCard,
+                    primaryUrl = imageUrl,
+                    cardId = oracleId,
+                    isBack = cardInfo.isDualFaced && !isShowingFront,
+                    setCode = cardInfo.setCode,
+                    collectorNumber = cardInfo.cardNumber,
+                    placeholderRes = com.google.android.material.R.drawable.mtrl_ic_cancel,
+                    errorRes = com.google.android.material.R.drawable.mtrl_ic_error
+                )
             } else {
                 imageViewCard.visibility = View.GONE
             }

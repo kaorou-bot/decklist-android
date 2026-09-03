@@ -7,12 +7,14 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.mtgo.decklistmanager.databinding.ItemSearchResultBinding
+import com.mtgo.decklistmanager.util.CardImageFallbackLoader
 
 /**
  * 搜索结果适配器
  */
 class SearchResultAdapter(
-    private val onItemClick: (SearchResultItem) -> Unit
+    private val onItemClick: (SearchResultItem) -> Unit,
+    private val imageFallbackLoader: CardImageFallbackLoader? = null
 ) : ListAdapter<SearchResultItem, SearchResultAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -21,7 +23,7 @@ class SearchResultAdapter(
             parent,
             false
         )
-        return ViewHolder(binding, onItemClick)
+        return ViewHolder(binding, onItemClick, imageFallbackLoader)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -30,7 +32,8 @@ class SearchResultAdapter(
 
     class ViewHolder(
         private val binding: ItemSearchResultBinding,
-        private val onItemClick: (SearchResultItem) -> Unit
+        private val onItemClick: (SearchResultItem) -> Unit,
+        private val imageFallbackLoader: CardImageFallbackLoader?
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(result: SearchResultItem) {
@@ -44,14 +47,27 @@ class SearchResultAdapter(
                 // 显示法术力值
                 textViewManaCost.text = result.manaCost ?: ""
 
-                // 加载卡牌图片
+                // 加载卡牌图片（失败时按 printings 顺序回退）
                 if (!result.imageUrl.isNullOrEmpty()) {
                     imageViewCard.visibility = android.view.View.VISIBLE
-                    Glide.with(imageViewCard.context)
-                        .load(result.imageUrl)
-                        .placeholder(com.google.android.material.R.drawable.mtrl_ic_cancel)
-                        .error(com.google.android.material.R.drawable.mtrl_ic_error)
-                        .into(imageViewCard)
+                    if (imageFallbackLoader != null) {
+                        imageFallbackLoader.load(
+                            imageView = imageViewCard,
+                            primaryUrl = result.imageUrl,
+                            cardId = result.mtgchCard?.oracleId,
+                            isBack = false,
+                            setCode = result.setCode,
+                            collectorNumber = result.collectorNumber,
+                            placeholderRes = com.google.android.material.R.drawable.mtrl_ic_cancel,
+                            errorRes = com.google.android.material.R.drawable.mtrl_ic_error
+                        )
+                    } else {
+                        Glide.with(imageViewCard.context)
+                            .load(result.imageUrl)
+                            .placeholder(com.google.android.material.R.drawable.mtrl_ic_cancel)
+                            .error(com.google.android.material.R.drawable.mtrl_ic_error)
+                            .into(imageViewCard)
+                    }
                 } else {
                     imageViewCard.visibility = android.view.View.GONE
                 }
