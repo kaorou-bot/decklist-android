@@ -320,17 +320,25 @@ class DecklistRepository @Inject constructor(
                                     if (exactMatch != null) {
                                         val mtgchCard = exactMatch
 
-                                        // 更新所有同名卡牌的法术力值和中文名
-                                        var displayName = mtgchCard.nameZh
-                                            ?: mtgchCard.atomicTranslatedName
-                                            ?: mtgchCard.name
+                                        // 搜索接口不返回 layout（见 openapi.yaml：CardSummary 无 layout，
+                                        // 仅 CardDetail 才有），故对多面/多部分牌补调详情接口补全，
+                                        // 避免 card_info.layout 为空时只能靠 back_image_url / cardFaces.size 兜底
+                                        val resolvedLayout = mtgchCard.layout
+                                            ?: fetchLayoutForMultiFaceCard(mtgchCard)
+                                        val cardInfoEntity = mtgchCard.toEntity().let { entity ->
+                                            if (resolvedLayout != null) entity.copy(layout = resolvedLayout) else entity
+                                        }
 
-                                        displayName = getBasicLandChineseName(displayName) ?: displayName
+                                        // 显示名统一取自 MtgchMapper 的生成结果（双面牌为"正面 // 背面"），
+                                        // 保证 cards.display_name 与 card_info.name 用同一套规则，
+                                        // 否则不同写入路径会产生"巫祭附魔师"与"巫祭附魔师 // 巫魅草原"两种形态
+                                        val displayName = getBasicLandChineseName(cardInfoEntity.name)
+                                            ?: cardInfoEntity.name
 
                                         // 对于双面牌，从 card_faces[0] 获取正面的法术力值；
                                         // 多部分牌（历险/连体）使用顶层法术力值
                                         val isDualFaced = mtgchCard.isDoubleFaced == true ||
-                                            com.mtgo.decklistmanager.util.CardLayouts.isTrueDualFace(mtgchCard.layout)
+                                            com.mtgo.decklistmanager.util.CardLayouts.isTrueDualFace(resolvedLayout)
 
                                         val effectiveManaCost = if (isDualFaced &&
                                             mtgchCard.cardFaces != null &&
@@ -345,7 +353,7 @@ class DecklistRepository @Inject constructor(
                                         // 先更新所有同名卡牌的 display_name（确保其他套牌也能看到中文名）
                                         cardDao.updateDisplayNameByName(
                                             cardName = cardName,
-                                            displayName = displayName!!
+                                            displayName = displayName
                                         )
 
                                         // 然后更新当前套牌中卡牌的其他详细信息
@@ -362,7 +370,6 @@ class DecklistRepository @Inject constructor(
                                         }
 
                                         // 缓存到 CardInfo 表
-                                        val cardInfoEntity = mtgchCard.toEntity()
                                         val finalName = getBasicLandChineseName(cardInfoEntity.name)
                                         if (finalName != null) {
                                             cardInfoEntity.copy(name = finalName)
@@ -386,6 +393,42 @@ class DecklistRepository @Inject constructor(
         } catch (e: Exception) {
             AppLogger.e("DecklistRepository", "Error in fetchScryfallDetails: ${e.message}")
             e.printStackTrace()
+        }
+    }
+
+    /**
+     * 补取卡牌 layout
+     *
+     * Forge 搜索接口（CardSummary）不返回 layout，只有详情接口（CardDetail）才有。
+     * 但 layout 是判定"真双面牌（transform/modal/meld/flip）"与"多部分牌
+     * （adventure/split/aftermath）"的首选依据，缺失时只能靠 back_image_url 与
+     * cardFaces.size 兜底，一旦服务端调整字段行为就会误判。
+     *
+     * 仅对多面/多部分牌（faces > 1）补调详情，避免给单面牌增加无谓请求。
+     * 失败时返回 null，由调用方沿用既有兜底逻辑。
+     */
+    private suspend fun fetchLayoutForMultiFaceCard(
+        card: com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchCardDto
+    ): String? {
+        val oracleId = card.oracleId
+        val faceCount = card.cardFaces?.size ?: 0
+        if (oracleId.isNullOrBlank() || faceCount <= 1) return null
+
+        return try {
+            val response = mtgchApi.getCardById(oracleId)
+            if (response.isSuccessful) {
+                val layout = response.body()?.layout
+                if (layout != null) {
+                    AppLogger.d("DecklistRepository", "    Resolved layout for '${card.name}': $layout")
+                }
+                layout
+            } else {
+                AppLogger.w("DecklistRepository", "    Layout fetch failed for '${card.name}': HTTP ${response.code()}")
+                null
+            }
+        } catch (e: Exception) {
+            AppLogger.w("DecklistRepository", "    Layout fetch error for '${card.name}': ${e.message}")
+            null
         }
     }
 
@@ -1315,7 +1358,9 @@ class DecklistRepository @Inject constructor(
 
     private fun CardInfoEntity.toDomainModel() = CardInfo(
         id = id,
+        oracleId = oracleId,
         name = name,
+        enName = enName,
         manaCost = manaCost,
         cmc = cmc,
         typeLine = typeLine,
@@ -1355,8 +1400,28 @@ class DecklistRepository @Inject constructor(
         backFaceOracleText = backFaceOracleText,
         backFacePower = backFacePower,
         backFaceToughness = backFaceToughness,
-        backFaceLoyalty = backFaceLoyalty
+        backFaceLoyalty = backFaceLoyalty,
+        // 多部分牌（历险/连体/余波）：所有部分同页展示，不翻面
+        isMultiPart = isMultiPart,
+        multiParts = parseMultiParts(multiPartsJson),
+        // 卡牌布局（transform/adventure/split 等；旧缓存为 null）
+        layout = layout
     )
+
+    /** 解析多部分牌 JSON；解析失败时返回 null（由调用方回退到单面展示） */
+    private fun parseMultiParts(json: String?): List<com.mtgo.decklistmanager.domain.model.CardPart>? {
+        if (json.isNullOrBlank()) return null
+        return try {
+            val array = com.google.gson.Gson().fromJson(
+                json,
+                Array<com.mtgo.decklistmanager.domain.model.CardPart>::class.java
+            )
+            array?.toList()
+        } catch (e: Exception) {
+            AppLogger.w("DecklistRepository", "Failed to parse multi_parts_json: ${e.message}")
+            null
+        }
+    }
 
     /**
      * 从 MTGTop8 爬取牌组数据
