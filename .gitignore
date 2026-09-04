@@ -113,3 +113,5 @@ app/src/main/assets/mtgch_cards.jsonl
 *.backup.*
 .gitignore
 verify_deck_screen*.png
+verify_*.png
+decklists_*.db
