@@ -117,6 +117,7 @@ data class CardInfo(
                 null
             }
         },
+        layout = layout,
         lastUpdated = lastUpdated
     )
 }
