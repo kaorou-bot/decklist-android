@@ -50,6 +50,7 @@
   - 多部分牌同页展示：`CardPart` 模型 + `isMultiPart`/`multiParts` 字段，CardInfoFragment/CardDetailActivity 同页罗列所有部分、不切换卡图
   - 旧缓存治理：DB v13→v14 增加 `layout` 列；`getCardInfo` 对 `layout==null` 的旧缓存强制刷新；`clearMultiPartDualFacedFlag()` 清理误标
   - 实测：掘密师（transform）有翻面按钮且翻面正常；厚颜借物灵（adventure）、损耗//穿破（split）无翻面按钮、同页显示各部分
+  - 补充修复（commit e9bb7fb）：`CardInfo.toEntity()` 补传 `layout` 避免入库丢失；`CardInfoEntity.toDomainModel()` 顶层 `manaCost` 增加 `ManaCosts.normalize` 与 backFace 保持一致
 
 #### 待完成 📋
 - [ ] 服务端 forge-card-api 部署逐面法术力字段（cardapi4 已打包；SSH 22 端口被拒，待网络恢复后 `deploy/deploy-card-api.ps1` 部署）
