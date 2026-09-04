@@ -330,17 +330,10 @@ class SearchViewModel @Inject constructor(
      * MtgchCardDto 转 SearchResultItem
      */
     private fun MtgchCardDto.toSearchResultItem(): SearchResultItem {
-        // 真正的双面牌（需要显示背面和翻转功能）
-        val realDualFaceLayouts = listOf(
-            "transform",           // 标准双面牌（如：狼人）
-            "modal_dfc",           // 模态双面牌（如：札尔琴的地窖）
-            "double_faced_token"   // 双面指示物
-        )
-
-        // 严格的双面牌判断：优先使用 isDoubleFaced 字段
-        // split、adventure、flip 等伪双面牌虽然名称包含 "//"，但不需要显示背面
-        val isDualFaced = (isDoubleFaced == true) || layout in realDualFaceLayouts ||
-                         (cardFaces != null && cardFaces.size >= 2)
+        // 按 layout 区分真双面牌与多部分牌（历险/连体等）：
+        // 搜索接口可能不含 layout，此时用 back_image_url（isDoubleFaced 由 DTO 推导）判断
+        val isDualFaced = (isDoubleFaced == true) ||
+            com.mtgo.decklistmanager.util.CardLayouts.isTrueDualFace(layout)
 
         // 获取中文名称（优先使用新字段 nameZh）
         val getZhsName = nameZh ?: atomicTranslatedName

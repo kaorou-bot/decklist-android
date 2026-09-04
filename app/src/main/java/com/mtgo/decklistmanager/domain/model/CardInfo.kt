@@ -42,7 +42,7 @@ data class CardInfo(
     val lastUpdated: Long = System.currentTimeMillis(),
 
     // 双面牌相关字段
-    val isDualFaced: Boolean = false, // 是否是双面牌
+    val isDualFaced: Boolean = false, // 是否是双面牌（需要翻面切换）
     val frontFaceName: String? = null, // 正面名称
     val backFaceName: String? = null, // 反面名称
     val frontImageUri: String? = null, // 正面图片URI
@@ -52,7 +52,14 @@ data class CardInfo(
     val backFaceOracleText: String? = null, // 反面规则文本
     val backFacePower: String? = null, // 反面力量
     val backFaceToughness: String? = null, // 反面防御力
-    val backFaceLoyalty: String? = null // 反面忠诚度
+    val backFaceLoyalty: String? = null, // 反面忠诚度
+
+    // 多部分卡牌（历险牌/连体牌/余波牌等）：所有部分同页展示，不翻面
+    val isMultiPart: Boolean = false,
+    val multiParts: List<CardPart>? = null,
+
+    // 卡牌布局（transform/adventure/split 等；旧缓存为 null）
+    val layout: String? = null
 ) : Parcelable {
 
     /**
@@ -102,6 +109,14 @@ data class CardInfo(
         backFaceLoyalty = backFaceLoyalty,
         frontImageUri = frontImageUri,
         backImageUri = backImageUri,
+        isMultiPart = isMultiPart,
+        multiPartsJson = multiParts?.let { parts ->
+            try {
+                com.google.gson.Gson().toJson(parts)
+            } catch (e: Exception) {
+                null
+            }
+        },
         lastUpdated = lastUpdated
     )
 }

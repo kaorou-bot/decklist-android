@@ -73,19 +73,32 @@ data class ForgeCardDto(
     @SerializedName("defense") val defense: String?,
     @SerializedName("printings") val printings: List<ForgePrintingDto>?
 ) {
-    /** 是否双面牌：faces 多于 1 面即视为双面 */
+    /**
+     * 是否真双面牌：
+     * - 详情接口带 layout：按 CardLayouts 分类（transform/modal/meld/flip 等）
+     * - 搜索接口无 layout：以 back_image_url 非空作为真双面牌特征
+     *   （历险/连体等多部分牌 back_image_url 为 null）
+     */
     val isDoubleFaced: Boolean
-        get() = (faces?.size ?: 0) >= 2
+        get() = com.mtgo.decklistmanager.util.CardLayouts.isTrueDualFace(layout) ||
+                (layout == null && backImageUrl != null)
 }
 
 /** 卡牌的一个面 */
 data class ForgeFaceDto(
     @SerializedName("name") val name: String?,
     @SerializedName("name_zh") val nameZh: String?,
+    @SerializedName("mana_cost") val manaCost: String?,
+    @SerializedName("mana_value") val manaValue: Int?,
+    @SerializedName("colors") val colors: List<String>?,
     @SerializedName("type_line") val typeLine: String?,
     @SerializedName("type_line_zh") val typeLineZh: String?,
     @SerializedName("oracle_text") val oracleText: String?,
     @SerializedName("oracle_text_zh") val oracleTextZh: String?,
+    @SerializedName("power") val power: String?,
+    @SerializedName("toughness") val toughness: String?,
+    @SerializedName("loyalty") val loyalty: String?,
+    @SerializedName("defense") val defense: String?,
     @SerializedName("image_url") val imageUrl: String?
 )
 

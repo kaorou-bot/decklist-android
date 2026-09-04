@@ -44,8 +44,9 @@ class SearchResultAdapter(
                 // 显示类型
                 textViewType.text = result.typeLine ?: result.type ?: ""
 
-                // 显示法术力值
-                textViewManaCost.text = result.manaCost ?: ""
+                // 显示法术力值（规范化 "no cost"）
+                textViewManaCost.text =
+                    com.mtgo.decklistmanager.util.ManaCosts.normalize(result.manaCost) ?: ""
 
                 // 加载卡牌图片（主图缺失/失败时按 printings 顺序回退，最后 Scryfall）
                 if (imageFallbackLoader != null) {

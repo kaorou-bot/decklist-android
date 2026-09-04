@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
         DecklistFolderRelationEntity::class,
         DecklistTagRelationEntity::class
     ],
-    version = 12,  // 版本升级：11 -> 12 (添加 oracle_id 字段用于印刷版本切换)
+    version = 14,  // 版本升级：13 -> 14 (card_info 增加 layout 列，用于识别旧缓存中的误标双面牌)
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -65,7 +65,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addCallback(DatabaseCallback())
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                     .build()
                 INSTANCE = instance
                 instance
@@ -349,6 +349,23 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // 为 card_info 表添加 oracle_id 列
                 db.execSQL("ALTER TABLE card_info ADD COLUMN oracle_id TEXT")
+            }
+        }
+
+        /**
+         * 数据库版本 12 -> 13 迁移
+         * card_info 增加多部分卡牌字段（历险牌/连体牌等所有部分同页展示）
+         */
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE card_info ADD COLUMN is_multi_part INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE card_info ADD COLUMN multi_parts_json TEXT")
+            }
+        }
+
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE card_info ADD COLUMN layout TEXT")
             }
         }
     }

@@ -313,7 +313,9 @@ class DeckDetailActivity : AppCompatActivity() {
             showCardInfo(card.cardName)
         }
         val tvManaCost = cardView.findViewById<MaterialTextView>(R.id.tvManaCost)
-        tvManaCost.text = ManaSymbolRenderer.renderManaCost(card.manaCost, this)
+        // 规范化 "no cost"（土地等无费用卡牌显示为空）
+        tvManaCost.text = ManaSymbolRenderer.renderManaCost(
+            com.mtgo.decklistmanager.util.ManaCosts.normalize(card.manaCost), this)
 
         return cardView
     }

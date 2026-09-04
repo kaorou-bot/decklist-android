@@ -89,9 +89,21 @@ interface CardInfoDao {
 
     /**
      * 获取所有可能是双面牌的卡牌（名称包含 " // "）
+     * 排除多部分牌（历险/连体等，is_multi_part=1）——它们不是双面牌
      */
-    @Query("SELECT * FROM card_info WHERE name LIKE '% // %' AND is_dual_faced = 0")
+    @Query("SELECT * FROM card_info WHERE name LIKE '% // %' AND is_dual_faced = 0 AND is_multi_part = 0")
     suspend fun getPossibleDualFacedCards(): List<CardInfoEntity>
+
+    /**
+     * 修复历史数据：将误标为双面牌的多部分卡牌（历险/连体等）还原。
+     *
+     * 判定依据：
+     * - 已标记为多部分牌的记录（is_multi_part=1）；
+     * - 旧版未标记多部分、但名称含 " // " 的历险/连体牌（is_multi_part=0）。
+     *   （真双面牌名称不含 " // "，因此不会误伤。）
+     */
+    @Query("UPDATE card_info SET is_dual_faced = 0 WHERE is_dual_faced = 1 AND (is_multi_part = 1 OR name LIKE '% // %')")
+    suspend fun clearMultiPartDualFacedFlag(): Int
 
     /**
      * 批量更新卡牌信息

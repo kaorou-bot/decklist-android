@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.mtgo.decklistmanager.databinding.ItemCardBinding
 import com.mtgo.decklistmanager.domain.model.Card
+import com.mtgo.decklistmanager.util.ManaCosts
 import com.mtgo.decklistmanager.util.ManaSymbolRenderer
 
 /**
@@ -42,10 +43,12 @@ class CardAdapter(
 
                 // v4.0.0: 法术力值显示
                 // 土地等没有法术力值的卡牌显示空字符串是正常的
-                val manaDisplay = if (card.manaCost.isNullOrEmpty()) {
+                // 规范化 "no cost"（旧缓存/旧服务端可能残留该字符串）
+                val normalizedManaCost = ManaCosts.normalize(card.manaCost)
+                val manaDisplay = if (normalizedManaCost.isNullOrEmpty()) {
                     ""  // 土地卡没有法术力值
                 } else {
-                    ManaSymbolRenderer.renderManaCost(card.manaCost, btnCardName.context)
+                    ManaSymbolRenderer.renderManaCost(normalizedManaCost, btnCardName.context)
                 }
                 tvManaCost.text = manaDisplay
 

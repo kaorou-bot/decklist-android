@@ -170,6 +170,19 @@ data class CardInfoEntity(
     @SerializedName("back_image_uri")
     val backImageUri: String? = null, // 反面图片URI
 
+    // 卡牌布局（transform/adventure/split 等；旧缓存为 null）
+    @ColumnInfo(name = "layout")
+    val layout: String? = null,
+
+    // 多部分卡牌（历险牌/连体牌/余波牌等）：所有部分同页展示，不翻面
+    @ColumnInfo(name = "is_multi_part")
+    @SerializedName("is_multi_part")
+    val isMultiPart: Boolean = false,
+
+    @ColumnInfo(name = "multi_parts_json")
+    @SerializedName("multi_parts_json")
+    val multiPartsJson: String? = null, // CardPart 列表的 JSON 字符串
+
     @ColumnInfo(name = "last_updated")
     @SerializedName("last_updated")
     val lastUpdated: Long = System.currentTimeMillis()
@@ -179,6 +192,18 @@ data class CardInfoEntity(
  * 将 CardInfoEntity 转换为领域模型 CardInfo
  */
 fun CardInfoEntity.toDomainModel(): com.mtgo.decklistmanager.domain.model.CardInfo {
+    // 反序列化多部分信息
+    val multiParts: List<com.mtgo.decklistmanager.domain.model.CardPart>? = multiPartsJson?.let { json ->
+        try {
+            com.google.gson.Gson().fromJson(
+                json,
+                Array<com.mtgo.decklistmanager.domain.model.CardPart>::class.java
+            )?.toList()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     return com.mtgo.decklistmanager.domain.model.CardInfo(
     id = id,
     oracleId = oracleId,
@@ -216,11 +241,14 @@ fun CardInfoEntity.toDomainModel(): com.mtgo.decklistmanager.domain.model.CardIn
     backFaceName = backFaceName,
     frontImageUri = frontImageUri,
     backImageUri = backImageUri,
-    backFaceManaCost = backFaceManaCost,
+    backFaceManaCost = com.mtgo.decklistmanager.util.ManaCosts.normalize(backFaceManaCost),
     backFaceTypeLine = backFaceTypeLine,
     backFaceOracleText = backFaceOracleText,
     backFacePower = backFacePower,
     backFaceToughness = backFaceToughness,
-    backFaceLoyalty = backFaceLoyalty
+    backFaceLoyalty = backFaceLoyalty,
+    isMultiPart = isMultiPart,
+    multiParts = multiParts,
+    layout = layout
 )
 }

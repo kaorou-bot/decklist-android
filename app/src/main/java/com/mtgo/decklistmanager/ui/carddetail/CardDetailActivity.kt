@@ -229,6 +229,7 @@ class CardDetailActivity : AppCompatActivity() {
 
         binding.apply {
             // Update flip button visibility and text
+            // 翻面按钮只对真双面牌生效；多部分牌（历险/连体等）同页展示所有部分
             if (cardInfo.isDualFaced) {
                 btnFlipCard.visibility = View.VISIBLE
                 btnFlipCard.text = "查看其他部分"
@@ -241,7 +242,7 @@ class CardDetailActivity : AppCompatActivity() {
                 btnFlipCard.visibility = View.GONE
             }
 
-            // Load image
+            // Load image（多部分牌不切换卡图）
             val imageUrl = if (cardInfo.isDualFaced) {
                 if (isShowingFront) {
                     cardInfo.frontImageUri ?: cardInfo.imageUriNormal
@@ -264,7 +265,22 @@ class CardDetailActivity : AppCompatActivity() {
             )
 
             // Card info
-            if (cardInfo.isDualFaced) {
+            if (cardInfo.isMultiPart) {
+                // 多部分牌：主区域显示整体信息，下方同页展示所有部分
+                tvCardName.text = cardInfo.name
+                tvManaCost.text = cardInfo.manaCost ?: ""
+                tvTypeLine.text = cardInfo.typeLine ?: ""
+                tvOracleText.text = formatText(cardInfo.oracleText)
+
+                if (!cardInfo.power.isNullOrEmpty() && !cardInfo.toughness.isNullOrEmpty()) {
+                    tvPowerToughness.text = "${cardInfo.power}/${cardInfo.toughness}"
+                    tvPowerToughness.visibility = View.VISIBLE
+                } else {
+                    tvPowerToughness.visibility = View.GONE
+                }
+
+                showMultiParts(cardInfo)
+            } else if (cardInfo.isDualFaced) {
                 if (isShowingFront) {
                     tvCardName.text = cardInfo.frontFaceName ?: cardInfo.name
                     tvManaCost.text = cardInfo.manaCost ?: ""
@@ -323,6 +339,43 @@ class CardDetailActivity : AppCompatActivity() {
             // Legalities
             val legalitiesList = buildLegalitiesList(cardInfo)
             legalitiesAdapter.submitList(legalitiesList)
+        }
+    }
+
+    /**
+     * 多部分牌（历险/连体/余波等）：在反面信息区域同页展示所有部分，不切换卡图
+     */
+    private fun showMultiParts(cardInfo: CardInfo) {
+        binding.apply {
+            val parts = cardInfo.multiParts
+            if (parts.isNullOrEmpty()) {
+                llBackFace.visibility = View.GONE
+                return
+            }
+
+            llBackFace.visibility = View.VISIBLE
+            tvBackFaceLabel.text = "其他部分（共 ${parts.size} 部分）"
+
+            // 隐藏单一反面字段，将所有部分整合进文本区展示
+            tvBackFaceName.visibility = View.GONE
+            tvBackManaCost.visibility = View.GONE
+            tvBackTypeLine.visibility = View.GONE
+            tvBackOracleText.visibility = View.VISIBLE
+
+            val combined = parts.joinToString("\n\n") { part ->
+                buildString {
+                    appendLine("【${part.nameZh ?: part.name ?: ""}】")
+                    (part.typeLineZh ?: part.typeLine)?.let { appendLine("类别：$it") }
+                    part.manaCost?.let { mana ->
+                        if (mana.isNotEmpty() && mana != "N/A") appendLine("法术力：$mana")
+                    }
+                    val text = formatText(part.oracleTextZh ?: part.oracleText)
+                    if (text.isNotEmpty()) appendLine(text)
+                    part.power?.let { p -> part.toughness?.let { t -> appendLine("攻防：$p/$t") } }
+                    part.loyalty?.let { appendLine("忠诚：$it") }
+                }.trimEnd()
+            }
+            tvBackOracleText.text = combined
         }
     }
 

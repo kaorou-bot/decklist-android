@@ -1,6 +1,7 @@
 package com.mtgo.decklistmanager.data.remote.api.mtgch
 
 import com.mtgo.decklistmanager.data.local.entity.CardInfoEntity
+import com.mtgo.decklistmanager.util.ManaCosts
 import com.google.gson.Gson
 
 /**
@@ -14,32 +15,13 @@ import com.google.gson.Gson
  * - 系列名称: setName (旧: set_name)
  */
 fun MtgchCardDto.toEntity(): CardInfoEntity {
-    // 检测双面牌类型
-    // 真正的双面牌（需要显示背面）
-    val realDualFaceLayouts = listOf(
-        "transform",           // 标准双面牌（如：狼人）
-        "modal_dfc",           // 模态双面牌（如：札尔琴的地窖）
-        "double_faced_token"   // 双面指示物
-    )
+    // 真双面牌（transform/modal/meld/flip 等）：翻面按钮 + 切换卡图
+    // 多部分牌（adventure/split/aftermath 等）：所有部分同页展示，不翻面
+    val isDoubleFacedFlag = isDoubleFaced == true ||
+        com.mtgo.decklistmanager.util.CardLayouts.isTrueDualFace(layout)
 
-    // 伪双面牌（名字包含"//"但是单张牌）
-    val pseudoDualFaceLayouts = listOf(
-        "split",               // 分面牌（如：Consecrate // Consume）
-        "adventure",           // 冒险牌
-        "flip"                // 翻转牌
-    )
-
-    // 优先使用 isDoubleFaced 字段，如果没有则根据 layout 判断
-    val isDoubleFacedFlag = isDoubleFaced ?: (layout in realDualFaceLayouts)
-    val isPseudoDoubleFaced = layout in pseudoDualFaceLayouts
-
-    // 判断是否为任何类型的双面牌（包括真正和伪双面牌）
-    val isAnyDualFaced = isDoubleFacedFlag || isPseudoDoubleFaced
-        || (cardFaces != null && cardFaces.isNotEmpty())
-        || (otherFaces != null && otherFaces.isNotEmpty())
-        || (imageUris == null && zhsImageUris == null)
-        || (name?.contains(" // ") == true)
-        || (nameZh?.contains("//") == true)
+    val isMultiPartCard = com.mtgo.decklistmanager.util.CardLayouts.isMultiPart(layout) ||
+        (!isDoubleFacedFlag && cardFaces != null && cardFaces.size >= 2)
 
     // isDualFaced 用于标识需要显示背面和翻转功能的真双面牌
     // 对于 split/adventure/flip 等伪双面牌，isDualFaced 应该为 false
@@ -218,15 +200,37 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         gson.toJson(cardFaces)
     } else null
 
+    // 多部分牌（历险/连体/余波等）：序列化为 CardPart 列表 JSON，供同页展示
+    val multiPartsJson = if (isMultiPartCard && cardFaces != null && cardFaces.isNotEmpty()) {
+        val parts = cardFaces.map { face ->
+            com.mtgo.decklistmanager.domain.model.CardPart(
+                name = face.name,
+                nameZh = face.zhName,
+                typeLine = face.typeLine,
+                typeLineZh = face.zhTypeLine,
+                manaCost = face.manaCost,
+                oracleText = face.oracleText,
+                oracleTextZh = face.zhText,
+                power = face.power,
+                toughness = face.toughness,
+                loyalty = face.loyalty
+            )
+        }
+        gson.toJson(parts)
+    } else null
+
     // 使用 idString 或生成一个唯一 ID
     val entityId = idString ?: oracleId ?: "${name}_${setCode}_${collectorNumber}"
 
-    // 对于双面牌，从 card_faces[0] 获取正面的法术力值、攻防、忠诚度和规则文本
-    val finalManaCost = if (isDoubleFacedFlag && cardFaces != null && cardFaces.isNotEmpty()) {
-        cardFaces[0].manaCost  // 使用正面的法术力值
-    } else {
-        manaCost  // 单面牌或伪双面牌使用顶层法术力值
-    }
+    // 对于双面牌，优先使用正面（card_faces[0]）的法术力值、攻防、忠诚度和规则文本；
+    // 面数据缺失时回退到顶层字段（兼容旧服务端不返回逐面字段的情况）
+    val finalManaCost = ManaCosts.normalize(
+        if (isDoubleFacedFlag && cardFaces != null && cardFaces.isNotEmpty()) {
+            cardFaces[0].manaCost ?: manaCost
+        } else {
+            manaCost  // 单面牌或多部分牌使用顶层法术力值
+        }
+    )
 
     val finalPower = if (isDoubleFacedFlag && cardFaces != null && cardFaces.isNotEmpty() && cardFaces[0].power != null) {
         cardFaces[0].power
@@ -304,6 +308,9 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         backFaceLoyalty = backFaceLoyalty,
         frontImageUri = frontImageUri,
         backImageUri = backImageUri,
+        isMultiPart = isMultiPartCard,
+        multiPartsJson = multiPartsJson,
+        layout = layout,
         lastUpdated = System.currentTimeMillis()
     )
 }

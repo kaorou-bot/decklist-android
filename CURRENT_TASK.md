@@ -37,13 +37,22 @@
   - 模拟器实测：英文关键词命中中文卡牌，中文卡图 CDN 加载正常
 
 - [x] **卡图加载失败回退**（2026-09-03）
-  - 新增 `util/CardImageFallbackLoader.kt`：主图 → printings 候选（带缓存）→ Scryfall 最终回退
-  - Scryfall 回退：`api.scryfall.com/cards/{set}/{collector}?format=image`（双面牌背面加 `&face=back`）
-  - 三个调用点（SearchResultAdapter / CardInfoFragment / CardDetailActivity）传入 setCode/collectorNumber
+  - 新增 `util/CardImageFallbackLoader.kt`：主图（含 null）→ printings 候选（带缓存）→ Scryfall 最终回退
+  - Scryfall 回退：OkHttp 直抓 `api.scryfall.com/cards/{set}/{collector}?format=image`（双面牌背面 `&face=back`），必须带描述性 User-Agent + Accept 头（否则 400 generic_user_agent）；Glide 默认 UA 无法覆盖，故不用 Glide 直连
+  - 三个调用点（SearchResultAdapter / CardInfoFragment / CardDetailActivity）传入 setCode/collectorNumber，null 主图也走回退链
   - 修复 Glide 崩溃：RequestListener 回调内禁止发起新加载，改用主线程 Handler post
-  - 模拟器实测：幸运佩戴者比尔博主图 404 → 自动回退其他版本图正常显示，无崩溃
+  - 模拟器实测：幸运佩戴者比尔博主图 404 → printings 回退；刀枪不入斯毛格（HOC/9）主图+printings 全 404 → Scryfall 成功显示，无崩溃
+
+- [x] **双面牌/多部分牌显示修复**（2026-09-04，模拟器实测通过）
+  - 套牌页双面牌显示正面法术力：`ForgeMapper` 映射逐面 manaCost（原为 null）+ `?: manaCost` 兜底
+  - "no cost" 规范化：新增 `util/ManaCosts.kt`，映射层/实体层/显示层统一把 "no cost" → null（土地显示为空）
+  - 翻面按钮只对真双面牌生效：新增 `util/CardLayouts.kt` 分类（transform/modal/meld/flip… vs adventure/split/aftermath…）；修复 `ForgeCardDto.isDoubleFaced` getter（原 `faces.size>=2` 误判历险/连体）
+  - 多部分牌同页展示：`CardPart` 模型 + `isMultiPart`/`multiParts` 字段，CardInfoFragment/CardDetailActivity 同页罗列所有部分、不切换卡图
+  - 旧缓存治理：DB v13→v14 增加 `layout` 列；`getCardInfo` 对 `layout==null` 的旧缓存强制刷新；`clearMultiPartDualFacedFlag()` 清理误标
+  - 实测：掘密师（transform）有翻面按钮且翻面正常；厚颜借物灵（adventure）、损耗//穿破（split）无翻面按钮、同页显示各部分
 
 #### 待完成 📋
+- [ ] 服务端 forge-card-api 部署逐面法术力字段（cardapi4 已打包；SSH 22 端口被拒，待网络恢复后 `deploy/deploy-card-api.ps1` 部署）
 - [ ] 补齐代码内 8 处 TODO（ArenaFormatExporter、ScrapingOptionsDialog、FoldersActivity）
 - [ ] 补单元测试（当前为零）
 - [ ] 发布 v5.1.0 并同步 GitHub Release（目前 Release 停在 4.2.6）

@@ -4,6 +4,7 @@ import com.mtgo.decklistmanager.data.remote.api.mtgch.CardFace
 import com.mtgo.decklistmanager.data.remote.api.mtgch.ImageUris
 import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchCardDto
 import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchSearchResponse
+import com.mtgo.decklistmanager.util.ManaCosts
 
 /**
  * Forge 中文卡查 API → 旧 MtgchCardDto 适配映射
@@ -42,7 +43,7 @@ object ForgeMapper {
             scryfallId = null,
             name = name,
             nameZh = nameZh,
-            manaCost = manaCost,
+            manaCost = ManaCosts.normalize(manaCost),
             cmc = manaValue,
             colors = colors,
             colorIdentity = colorIdentity,
@@ -66,13 +67,13 @@ object ForgeMapper {
                 CardFace(
                     name = face.name,
                     faceName = face.name,
-                    manaCost = null,
+                    manaCost = ManaCosts.normalize(face.manaCost),
                     typeLine = face.typeLine,
                     oracleText = face.oracleText,
-                    power = null,
-                    toughness = null,
-                    loyalty = null,
-                    colors = null,
+                    power = face.power,
+                    toughness = face.toughness,
+                    loyalty = face.loyalty,
+                    colors = face.colors,
                     imageUris = face.imageUrl.toImageUris(),
                     zhName = face.nameZh,
                     zhText = face.oracleTextZh,
@@ -119,13 +120,13 @@ object ForgeMapper {
                 CardFace(
                     name = faces?.getOrNull(0)?.name ?: name,
                     faceName = faces?.getOrNull(0)?.name,
-                    manaCost = null,
+                    manaCost = faces?.getOrNull(0)?.manaCost ?: manaCost,
                     typeLine = faces?.getOrNull(0)?.typeLine ?: typeLine,
                     oracleText = faces?.getOrNull(0)?.oracleText ?: oracleText,
-                    power = power,
-                    toughness = toughness,
-                    loyalty = loyalty,
-                    colors = colors,
+                    power = faces?.getOrNull(0)?.power ?: power,
+                    toughness = faces?.getOrNull(0)?.toughness ?: toughness,
+                    loyalty = faces?.getOrNull(0)?.loyalty ?: loyalty,
+                    colors = faces?.getOrNull(0)?.colors ?: colors,
                     imageUris = printImage,
                     zhName = faces?.getOrNull(0)?.nameZh ?: nameZh,
                     zhText = faces?.getOrNull(0)?.oracleTextZh ?: oracleTextZh,
@@ -134,13 +135,13 @@ object ForgeMapper {
                 CardFace(
                     name = faces?.getOrNull(1)?.name,
                     faceName = faces?.getOrNull(1)?.name,
-                    manaCost = null,
+                    manaCost = ManaCosts.normalize(faces?.getOrNull(1)?.manaCost),
                     typeLine = faces?.getOrNull(1)?.typeLine,
                     oracleText = faces?.getOrNull(1)?.oracleText,
-                    power = null,
-                    toughness = null,
-                    loyalty = null,
-                    colors = null,
+                    power = faces?.getOrNull(1)?.power,
+                    toughness = faces?.getOrNull(1)?.toughness,
+                    loyalty = faces?.getOrNull(1)?.loyalty,
+                    colors = faces?.getOrNull(1)?.colors,
                     imageUris = backImage.toImageUris(),
                     zhName = faces?.getOrNull(1)?.nameZh,
                     zhText = faces?.getOrNull(1)?.oracleTextZh,

@@ -192,6 +192,7 @@ class CardInfoFragment : DialogFragment() {
 
     private fun displayCardInfo(cardInfo: CardInfo) {
         binding.apply {
+            // 翻面按钮只对真双面牌生效；多部分牌（历险/连体等）同页展示所有部分
             if (cardInfo.isDualFaced) {
                 btnFlipCard.visibility = View.VISIBLE
                 btnFlipCard.text = "查看其他部分"
@@ -210,12 +211,13 @@ class CardInfoFragment : DialogFragment() {
     private fun updateCardDisplay() {
         val cardInfo = currentCardInfo ?: return
 
-        AppLogger.d("CardInfoFragment", "updateCardDisplay - isDualFaced: ${cardInfo.isDualFaced}, isShowingFront: $isShowingFront")
+        AppLogger.d("CardInfoFragment", "updateCardDisplay - isDualFaced: ${cardInfo.isDualFaced}, isMultiPart: ${cardInfo.isMultiPart}, isShowingFront: $isShowingFront")
         AppLogger.d("CardInfoFragment", "frontImageUri: ${cardInfo.frontImageUri}")
         AppLogger.d("CardInfoFragment", "backImageUri: ${cardInfo.backImageUri}")
         AppLogger.d("CardInfoFragment", "imageUriNormal: ${cardInfo.imageUriNormal}")
 
         binding.apply {
+            // 卡图：真双面牌根据 isShowingFront 切换；多部分牌与普通牌一样始终显示主图
             val imageUrl = if (cardInfo.isDualFaced) {
                 if (isShowingFront) {
                     AppLogger.d("CardInfoFragment", "Showing front: ${cardInfo.frontImageUri ?: cardInfo.imageUriNormal}")
@@ -239,85 +241,139 @@ class CardInfoFragment : DialogFragment() {
                 errorRes = com.google.android.material.R.drawable.mtrl_ic_error
             )
 
-            if (cardInfo.isDualFaced) {
-                btnFlipCard.text = "查看其他部分"
-            }
-
             // 更新系列名称显示（使用中文）
             binding.textViewSetName.text = cardInfo.setName ?: "N/A"
 
-            val details = buildString {
-                if (cardInfo.isDualFaced && !isShowingFront) {
-                    appendLine("卡牌名称：${cardInfo.backFaceName ?: cardInfo.name}")
-                    appendLine()
-                    appendLine("类别：${cardInfo.backFaceTypeLine ?: ""}")
-                    // 法术力不为空才显示
-                    cardInfo.backFaceManaCost?.let { manaCost ->
-                        if (manaCost.isNotEmpty() && manaCost != "N/A") {
-                            appendLine("法术力：$manaCost")
-                        }
-                    }
-                    cardInfo.backFaceOracleText?.let {
-                        val text = formatText(it)
-                        if (text.isNotEmpty()) {
-                            appendLine("规则文本：\n$text")
-                        }
-                    }
-                } else {
-                    appendLine("卡牌名称：${cardInfo.name}")
-                    appendLine()
-                    appendLine("类别：${cardInfo.typeLine ?: ""}")
-                    // 法术力不为空才显示
-                    cardInfo.manaCost?.let { manaCost ->
-                        if (manaCost.isNotEmpty() && manaCost != "N/A") {
-                            appendLine("法术力：$manaCost")
-                        }
-                    }
-                    cardInfo.oracleText?.let {
-                        val text = formatText(it)
-                        if (text.isNotEmpty()) {
-                            appendLine("规则文本：\n$text")
-                        }
-                    }
-                }
-
-                val powerToUse = if (cardInfo.isDualFaced && !isShowingFront) {
-                    cardInfo.backFacePower
-                } else {
-                    cardInfo.power
-                }
-                val toughnessToUse = if (cardInfo.isDualFaced && !isShowingFront) {
-                    cardInfo.backFaceToughness
-                } else {
-                    cardInfo.toughness
-                }
-
-                powerToUse?.let { power ->
-                    toughnessToUse?.let { toughness ->
-                        appendLine("攻防：$power/$toughness")
-                    }
-                }
-
-                val loyaltyToUse = if (cardInfo.isDualFaced && !isShowingFront) {
-                    cardInfo.backFaceLoyalty
-                } else {
-                    cardInfo.loyalty
-                }
-
-                loyaltyToUse?.let { appendLine("忠诚：$it") }
-
-                appendLine()
-                cardInfo.artist?.let { appendLine("画家：$it") }
-                appendLine()
-                appendLine("稀有度：${cardInfo.rarity ?: "N/A"}")
-                cardInfo.colorIdentity?.let { colors ->
-                    if (colors.isNotEmpty()) {
-                        appendLine("颜色标识：${colors.joinToString()}")
-                    }
-                }
+            val details = when {
+                cardInfo.isMultiPart && cardInfo.multiParts != null -> buildMultiPartDetails(cardInfo)
+                cardInfo.isDualFaced && !isShowingFront -> buildBackFaceDetails(cardInfo)
+                else -> buildFrontDetails(cardInfo)
             }
 
             textViewCardDetails.text = details
+        }
+    }
+
+    /**
+     * 构建多部分卡牌（历险/连体等）的详情文本：所有部分依次展示
+     */
+    private fun buildMultiPartDetails(cardInfo: CardInfo): String {
+        return buildString {
+            appendLine("卡牌名称：${cardInfo.name}")
+            cardInfo.typeLine?.let { appendLine("类别：$it") }
+            cardInfo.manaCost?.let { manaCost ->
+                if (manaCost.isNotEmpty() && manaCost != "N/A") {
+                    appendLine("法术力：$manaCost")
+                }
+            }
+            appendLine()
+
+            cardInfo.multiParts.orEmpty().forEachIndexed { index, part ->
+                if (index > 0) appendLine()
+                appendLine("—— ${part.nameZh ?: part.name ?: ""} ——")
+                part.typeLineZh?.let { appendLine("类别：$it") } ?: part.typeLine?.let { appendLine("类别：$it") }
+                part.manaCost?.let { manaCost ->
+                    if (manaCost.isNotEmpty() && manaCost != "N/A") {
+                        appendLine("法术力：$manaCost")
+                    }
+                }
+                val text = formatText(part.oracleTextZh ?: part.oracleText)
+                if (text.isNotEmpty()) {
+                    appendLine("规则文本：\n$text")
+                }
+                part.power?.let { power ->
+                    part.toughness?.let { toughness ->
+                        appendLine("攻防：$power/$toughness")
+                    }
+                }
+                part.loyalty?.let { appendLine("忠诚：$it") }
+            }
+
+            appendLine()
+            cardInfo.artist?.let { appendLine("画家：$it") }
+            appendLine()
+            appendLine("稀有度：${cardInfo.rarity ?: "N/A"}")
+            cardInfo.colorIdentity?.let { colors ->
+                if (colors.isNotEmpty()) {
+                    appendLine("颜色标识：${colors.joinToString()}")
+                }
+            }
+        }
+    }
+
+    /**
+     * 构建真双面牌反面的详情文本
+     */
+    private fun buildBackFaceDetails(cardInfo: CardInfo): String {
+        return buildString {
+            appendLine("卡牌名称：${cardInfo.backFaceName ?: cardInfo.name}")
+            appendLine()
+            appendLine("类别：${cardInfo.backFaceTypeLine ?: ""}")
+            cardInfo.backFaceManaCost?.let { manaCost ->
+                if (manaCost.isNotEmpty() && manaCost != "N/A") {
+                    appendLine("法术力：$manaCost")
+                }
+            }
+            cardInfo.backFaceOracleText?.let {
+                val text = formatText(it)
+                if (text.isNotEmpty()) {
+                    appendLine("规则文本：\n$text")
+                }
+            }
+            cardInfo.backFacePower?.let { power ->
+                cardInfo.backFaceToughness?.let { toughness ->
+                    appendLine("攻防：$power/$toughness")
+                }
+            }
+            cardInfo.backFaceLoyalty?.let { appendLine("忠诚：$it") }
+
+            appendLine()
+            cardInfo.artist?.let { appendLine("画家：$it") }
+            appendLine()
+            appendLine("稀有度：${cardInfo.rarity ?: "N/A"}")
+            cardInfo.colorIdentity?.let { colors ->
+                if (colors.isNotEmpty()) {
+                    appendLine("颜色标识：${colors.joinToString()}")
+                }
+            }
+        }
+    }
+
+    /**
+     * 构建正面（普通牌/双面牌正面）的详情文本
+     */
+    private fun buildFrontDetails(cardInfo: CardInfo): String {
+        return buildString {
+            appendLine("卡牌名称：${cardInfo.name}")
+            appendLine()
+            appendLine("类别：${cardInfo.typeLine ?: ""}")
+            cardInfo.manaCost?.let { manaCost ->
+                if (manaCost.isNotEmpty() && manaCost != "N/A") {
+                    appendLine("法术力：$manaCost")
+                }
+            }
+            cardInfo.oracleText?.let {
+                val text = formatText(it)
+                if (text.isNotEmpty()) {
+                    appendLine("规则文本：\n$text")
+                }
+            }
+            cardInfo.power?.let { power ->
+                cardInfo.toughness?.let { toughness ->
+                    appendLine("攻防：$power/$toughness")
+                }
+            }
+            cardInfo.loyalty?.let { appendLine("忠诚：$it") }
+
+            appendLine()
+            cardInfo.artist?.let { appendLine("画家：$it") }
+            appendLine()
+            appendLine("稀有度：${cardInfo.rarity ?: "N/A"}")
+            cardInfo.colorIdentity?.let { colors ->
+                if (colors.isNotEmpty()) {
+                    appendLine("颜色标识：${colors.joinToString()}")
+                }
+            }
         }
     }
 

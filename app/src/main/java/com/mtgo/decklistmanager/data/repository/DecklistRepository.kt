@@ -327,16 +327,15 @@ class DecklistRepository @Inject constructor(
 
                                         displayName = getBasicLandChineseName(displayName) ?: displayName
 
-                                        // 对于双面牌，从 card_faces[0] 获取正面的法术力值
-                                        val isDualFaced = mtgchCard.layout in listOf(
-                                            "transform", "modal_dfc", "reversible_card",
-                                            "double_faced_token", "flip", "adventure", "split"
-                                        ) || (mtgchCard.cardFaces != null && mtgchCard.cardFaces.isNotEmpty())
+                                        // 对于双面牌，从 card_faces[0] 获取正面的法术力值；
+                                        // 多部分牌（历险/连体）使用顶层法术力值
+                                        val isDualFaced = mtgchCard.isDoubleFaced == true ||
+                                            com.mtgo.decklistmanager.util.CardLayouts.isTrueDualFace(mtgchCard.layout)
 
                                         val effectiveManaCost = if (isDualFaced &&
                                             mtgchCard.cardFaces != null &&
                                             mtgchCard.cardFaces.isNotEmpty()) {
-                                            mtgchCard.cardFaces[0].manaCost
+                                            mtgchCard.cardFaces[0].manaCost ?: mtgchCard.manaCost
                                         } else {
                                             mtgchCard.manaCost
                                         }
@@ -507,7 +506,10 @@ class DecklistRepository @Inject constructor(
             AppLogger.d("DecklistRepository", "  backPower: ${cachedInfo.backFacePower}, backLoyalty: ${cachedInfo.backFaceLoyalty}")
             AppLogger.d("DecklistRepository", "  backPowerMissing: $backPowerMissing, backLoyaltyMissing: $backLoyaltyMissing")
 
-            val needsRefresh = !hasAnyBackData || backImageMissing || backPowerMissing || backLoyaltyMissing
+            // 旧缓存（v14 之前）没有 layout 列，双面牌判定可能错误（如历险牌被误标为双面牌），
+            // 遇到这类缓存强制刷新一次，刷新后 layout 会写入新值
+            val staleCache = cachedInfo.layout == null
+            val needsRefresh = !hasAnyBackData || backImageMissing || backPowerMissing || backLoyaltyMissing || staleCache
 
             if (needsRefresh) {
                 AppLogger.d("DecklistRepository", "⚠ Dual-faced card needs refresh")
@@ -1562,10 +1564,20 @@ class DecklistRepository @Inject constructor(
 
     /**
      * 修复数据库中双面牌的标记
-     * 更新所有包含 " // " 的卡牌为双面牌
+     * 更新所有包含 " // " 的卡牌为双面牌（多部分牌除外）
      */
     suspend fun fixDualFacedCards(): Int = withContext(Dispatchers.IO) {
         try {
+            // 修复历史数据：多部分牌（历险/连体）曾被误标为双面牌
+            try {
+                val cleared = cardInfoDao.clearMultiPartDualFacedFlag()
+                if (cleared > 0) {
+                    AppLogger.d("DecklistRepository", "Cleared dual-faced flag on $cleared multi-part cards")
+                }
+            } catch (e: Exception) {
+                AppLogger.w("DecklistRepository", "clearMultiPartDualFacedFlag failed (pre-v13 DB?): ${e.message}")
+            }
+
             // 获取所有可能是双面牌的卡牌
             val cards = cardInfoDao.getPossibleDualFacedCards()
 
