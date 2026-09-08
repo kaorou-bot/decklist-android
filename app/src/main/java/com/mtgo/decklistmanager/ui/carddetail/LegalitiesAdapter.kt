@@ -33,7 +33,7 @@ class LegalitiesAdapter : ListAdapter<CardDetailActivity.LegalityItem, Legalitie
 
         fun bind(item: CardDetailActivity.LegalityItem) {
             binding.apply {
-                tvFormat.text = item.format
+                tvFormat.text = com.mtgo.decklistmanager.util.FormatMapper.codeToName(item.format)
                 tvLegality.text = item.legality
 
                 // Set color based on legality

@@ -50,7 +50,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="赛事页面"
+                    android:text="赛事详情"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
@@ -66,15 +66,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
-
-            <!-- Hint Text -->
-            <com.google.android.material.textview.MaterialTextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="点击套牌栏进入套牌页面"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"
-                android:layout_marginBottom="16dp" />
 
             <!-- Event Info Card -->
             <com.google.android.material.card.MaterialCardView
@@ -157,9 +148,9 @@
                 android:id="@+id/btnDownloadDecklists"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="下载所有套牌"
+                android:text="获取或更新套牌"
                 android:textSize="14sp"
-                app:backgroundTint="@color/divider"
+                app:backgroundTint="@color/md_primary_container"
                 android:textColor="@color/text_primary"
                 app:cornerRadius="8dp"
                 android:padding="12dp"
@@ -289,7 +280,7 @@
         app:itemTextColor="@color/nav_active"
         app:itemIconSize="24dp"
         app:itemRippleColor="@color/md_primary_container"
-        app:labelVisibilityMode="selected"
+        app:labelVisibilityMode="labeled"
         app:menu="@menu/bottom_navigation_menu" />
 
     <!-- Progress Overlay -->

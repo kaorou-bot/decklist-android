@@ -60,6 +60,9 @@ class TypeDistributionFragment : Fragment() {
 
         // 获取父 Activity 的 ViewModel
         val viewModel = ViewModelProvider(requireActivity()).get(DeckAnalysisViewModel::class.java)
+        viewModel.sideboard.observe(viewLifecycleOwner) { sideboard ->
+            setSideboardMode(sideboard)
+        }
         viewModel.analysis.observe(viewLifecycleOwner) { analysis ->
             analysis?.let {
                 currentAnalysis = it
@@ -69,6 +72,7 @@ class TypeDistributionFragment : Fragment() {
     }
 
     private fun setupChart(analysis: DeckAnalysis) {
+        if (_binding == null) return
         val chart = binding.barChart
 
         // 准备数据 - 根据当前模式选择数据源
@@ -122,7 +126,20 @@ class TypeDistributionFragment : Fragment() {
 
         chart.description.isEnabled = false
 
-        chart.animateY(1000)
+        chart.animateY(300)
+        chart.legend.isEnabled = false
+        chart.axisLeft.axisMinimum = 0f
+        chart.axisLeft.granularity = 1f
+        chart.axisLeft.setDrawAxisLine(false)
+        chart.xAxis.granularity = 1f
+        chart.xAxis.setDrawAxisLine(false)
+        chart.xAxis.textSize = 11f
+        chart.setScaleEnabled(false)
+        chart.setPinchZoom(false)
+        chart.setExtraOffsets(4f, 16f, 4f, 8f)
+        chart.data.barWidth = 0.58f
+        chart.setFitBars(true)
+        chart.setNoDataText("暂无可分析的数据")
         chart.invalidate()
     }
 

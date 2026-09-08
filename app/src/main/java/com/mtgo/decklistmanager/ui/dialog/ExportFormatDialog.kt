@@ -43,6 +43,10 @@ class ExportFormatDialog : BottomSheetDialogFragment() {
     }
 
     private fun setupClickListeners() {
+        binding.btnExportImage.setOnClickListener {
+            listener?.onExportFormatSelected(ExportFormat.IMAGE)
+            dismiss()
+        }
         // MTGO 格式导出
         binding.btnExportMtgo.setOnClickListener {
             listener?.onExportFormatSelected(ExportFormat.MTGO)
@@ -100,7 +104,8 @@ class ExportFormatDialog : BottomSheetDialogFragment() {
     enum class ExportFormat {
         MTGO,
         ARENA,
-        TEXT
+        TEXT,
+        IMAGE
     }
 
     /**

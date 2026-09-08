@@ -94,6 +94,8 @@
             android:parentActivityName=".ui.decklist.MainActivity"
             android:label="@string/deck_comparison" />
 
+        <activity android:name=".ui.decklist.DeckImagePreviewActivity" android:exported="false" />
+
         <!-- FileProvider for sharing files -->
         <provider
             android:name="androidx.core.content.FileProvider"

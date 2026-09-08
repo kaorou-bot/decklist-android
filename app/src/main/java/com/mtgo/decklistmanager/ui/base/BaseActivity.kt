@@ -45,10 +45,10 @@ abstract class BaseActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(title)
             .setMessage(message)
-            .setPositiveButton("Confirm") { _, _ ->
+            .setPositiveButton(com.mtgo.decklistmanager.R.string.confirm) { _, _ ->
                 onConfirm()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(com.mtgo.decklistmanager.R.string.cancel, null)
             .show()
     }
 
@@ -63,7 +63,7 @@ abstract class BaseActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(title)
             .setMessage(message)
-            .setPositiveButton("OK") { _, _ ->
+            .setPositiveButton(com.mtgo.decklistmanager.R.string.confirm) { _, _ ->
                 onDismiss()
             }
             .setOnCancelListener {
@@ -103,7 +103,7 @@ abstract class BaseActivity : AppCompatActivity() {
                 onSelected(which, selected)
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(com.mtgo.decklistmanager.R.string.cancel, null)
             .show()
     }
 
@@ -130,10 +130,10 @@ abstract class BaseActivity : AppCompatActivity() {
             .setTitle(title)
             .setMessage(message)
             .setView(container)
-            .setPositiveButton("OK") { _, _ ->
+            .setPositiveButton(com.mtgo.decklistmanager.R.string.confirm) { _, _ ->
                 onConfirm(input.text.toString())
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(com.mtgo.decklistmanager.R.string.cancel, null)
             .show()
     }
 }

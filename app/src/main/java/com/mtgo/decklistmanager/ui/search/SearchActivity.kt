@@ -1,6 +1,8 @@
 package com.mtgo.decklistmanager.ui.search
 
 import android.os.Bundle
+import android.os.Parcelable
+import android.view.View
 import android.view.MenuItem
 import android.view.LayoutInflater
 import android.widget.ArrayAdapter
@@ -38,10 +40,12 @@ class SearchActivity : AppCompatActivity() {
     private lateinit var historyAdapter: SearchHistoryAdapter
 
     // 当前应用的筛选条件
-    private var currentFilters: SearchFilters = SearchFilters.empty()
+    private var currentFilters: SearchFilters
+        get() = viewModel.activeFilters
+        set(value) { viewModel.activeFilters = value }
 
     // 当前显示的卡牌详情对话框（防止重复打开）
-    private var currentDetailDialog: androidx.appcompat.app.AlertDialog? = null
+    private var pendingResultScroll: Parcelable? = null
 
     // 搜索防抖器（用户停止输入 300ms 后自动搜索）
     private val searchDebouncer = Debouncer(delayMillis = 300, scope = lifecycleScope)
@@ -65,9 +69,14 @@ class SearchActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.search)
 
+        @Suppress("DEPRECATION")
+        val scrollState = savedInstanceState?.getParcelable<Parcelable>("resultScroll")
+        pendingResultScroll = scrollState
         setupRecyclerViews()
         observeViewModel()
         setupSearchDebouncer()
+        binding.editTextQuery.setText(viewModel.searchQuery.value)
+        updateFilterButton()
         setupListeners()
     }
 
@@ -85,6 +94,12 @@ class SearchActivity : AppCompatActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putParcelable("resultScroll", pendingResultScroll
+            ?: binding.recyclerViewResults.layoutManager?.onSaveInstanceState())
+        super.onSaveInstanceState(outState)
+    }
+
     private fun setupRecyclerViews() {
         resultAdapter = SearchResultAdapter(
             onItemClick = { result ->
@@ -99,7 +114,9 @@ class SearchActivity : AppCompatActivity() {
 
         historyAdapter = SearchHistoryAdapter(
             onItemClick = { query ->
-                viewModel.searchFromHistory(query)
+                binding.editTextQuery.setText(query)
+                binding.editTextQuery.setSelection(query.length)
+                performSearch()
             },
             onDeleteClick = { id ->
                 viewModel.deleteSearchHistory(id)
@@ -119,7 +136,8 @@ class SearchActivity : AppCompatActivity() {
      */
     private fun showCardDetail(result: SearchResultItem) {
         // 如果已有对话框打开，先关闭
-        currentDetailDialog?.dismiss()
+        if (supportFragmentManager.isStateSaved ||
+            supportFragmentManager.findFragmentByTag("card_detail") != null) return
 
         val mtgchCard = result.mtgchCard ?: return
 
@@ -146,45 +164,54 @@ class SearchActivity : AppCompatActivity() {
 
         // 显示 CardInfoFragment，传递 oracleId 用于加载印刷版本
         val fragment = CardInfoFragment.newInstance(cardInfo, mtgchCard.oracleId)
-        fragment.show(supportFragmentManager, "card_detail")
+        fragment.showNow(supportFragmentManager, "card_detail")
 
-        currentDetailDialog = null
+
     }
 
     private fun observeViewModel() {
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.searchResults.collect { results ->
-                        resultAdapter.submitList(results)
-                        binding.textViewEmpty.visibility = if (results.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+                    viewModel.uiState.collect { state ->
+                        renderSearchState(state)
                     }
                 }
                 launch {
                     viewModel.searchHistory.collect { history ->
                         historyAdapter.submitList(history)
-                    }
-                }
-                launch {
-                    viewModel.isSearching.collect { searching ->
-                        binding.progressBar.visibility = if (searching) android.view.View.VISIBLE else android.view.View.GONE
-                    }
-                }
-                launch {
-                    viewModel.showHistory.collect { show ->
-                        binding.layoutHistory.visibility = if (show) android.view.View.VISIBLE else android.view.View.GONE
-                    }
-                }
-                launch {
-                    viewModel.errorMessage.collect { error ->
-                        error?.let {
-                            android.widget.Toast.makeText(this@SearchActivity, it, android.widget.Toast.LENGTH_SHORT).show()
-                            viewModel.clearError()
-                        }
+                        renderSearchState(viewModel.uiState.value)
                     }
                 }
             }
         }
+    }
+
+    private fun renderSearchState(state: SearchViewModel.UiState) {
+        val initial = state is SearchViewModel.UiState.Initial
+        val hasHistory = viewModel.searchHistory.value.isNotEmpty()
+        val results = (state as? SearchViewModel.UiState.Results)?.items.orEmpty()
+        binding.progressBar.visibility = if (state is SearchViewModel.UiState.Loading) View.VISIBLE else View.GONE
+        binding.layoutHistory.visibility = if (initial && hasHistory) View.VISIBLE else View.GONE
+        binding.buttonClearHistory.visibility = if (hasHistory) View.VISIBLE else View.GONE
+        binding.recyclerViewResults.visibility = if (results.isNotEmpty()) View.VISIBLE else View.GONE
+        resultAdapter.submitList(results) {
+            if (state is SearchViewModel.UiState.Results && results.isNotEmpty()) {
+                pendingResultScroll?.let { saved ->
+                    binding.recyclerViewResults.layoutManager?.onRestoreInstanceState(saved)
+                    pendingResultScroll = null
+                }
+            }
+        }
+        binding.buttonRetry.visibility = if (state is SearchViewModel.UiState.Error) View.VISIBLE else View.GONE
+        val message = when {
+            initial && !hasHistory -> "输入中英文牌名，或使用筛选查找卡牌"
+            state is SearchViewModel.UiState.Results && results.isEmpty() -> "没有找到匹配的卡牌，请尝试其他关键词或调整筛选"
+            state is SearchViewModel.UiState.Error -> state.message
+            else -> null
+        }
+        binding.textViewEmpty.text = message
+        binding.textViewEmpty.visibility = if (message != null) View.VISIBLE else View.GONE
     }
 
     private fun setupListeners() {
@@ -193,6 +220,15 @@ class SearchActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
+                val query = s?.toString().orEmpty()
+                if (query == viewModel.searchQuery.value) return
+                pendingResultScroll = null
+                viewModel.updateSearchQuery(query)
+                if (query.isBlank()) {
+                    searchDebouncer.cancel()
+                    viewModel.search(query, filters = currentFilters)
+                    return
+                }
                 // 触发防抖，用户停止输入 300ms 后才搜索
                 searchDebouncer.debounce()
             }
@@ -208,6 +244,7 @@ class SearchActivity : AppCompatActivity() {
         binding.buttonSearch.setOnClickListener {
             performSearch()
         }
+        binding.buttonRetry.setOnClickListener { performSearch() }
 
         // 清空历史按钮
         binding.buttonClearHistory.setOnClickListener {
@@ -224,6 +261,8 @@ class SearchActivity : AppCompatActivity() {
      * 执行搜索（允许空文本）
      */
     private fun performSearch() {
+        pendingResultScroll = null
+        searchDebouncer.cancel()
         val query = binding.editTextQuery.text?.toString() ?: ""
         viewModel.search(query, filters = currentFilters)
     }

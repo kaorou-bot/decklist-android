@@ -268,7 +268,7 @@ class CardDetailActivity : AppCompatActivity() {
             if (cardInfo.isMultiPart) {
                 // 多部分牌：主区域显示整体信息，下方同页展示所有部分
                 tvCardName.text = cardInfo.name
-                tvManaCost.text = cardInfo.manaCost ?: ""
+                tvManaCost.text = com.mtgo.decklistmanager.util.ManaSymbolRenderer.renderManaCost(cardInfo.manaCost, this@CardDetailActivity)
                 tvTypeLine.text = cardInfo.typeLine ?: ""
                 tvOracleText.text = formatText(cardInfo.oracleText)
 
@@ -283,7 +283,7 @@ class CardDetailActivity : AppCompatActivity() {
             } else if (cardInfo.isDualFaced) {
                 if (isShowingFront) {
                     tvCardName.text = cardInfo.frontFaceName ?: cardInfo.name
-                    tvManaCost.text = cardInfo.manaCost ?: ""
+                    tvManaCost.text = com.mtgo.decklistmanager.util.ManaSymbolRenderer.renderManaCost(cardInfo.manaCost, this@CardDetailActivity)
                     tvTypeLine.text = cardInfo.typeLine ?: ""
                     tvOracleText.text = formatText(cardInfo.oracleText)
 
@@ -297,7 +297,7 @@ class CardDetailActivity : AppCompatActivity() {
                     llBackFace.visibility = View.GONE
                 } else {
                     tvCardName.text = cardInfo.backFaceName ?: ""
-                    tvManaCost.text = cardInfo.backFaceManaCost ?: ""
+                    tvManaCost.text = com.mtgo.decklistmanager.util.ManaSymbolRenderer.renderManaCost(cardInfo.backFaceManaCost, this@CardDetailActivity)
                     tvTypeLine.text = cardInfo.backFaceTypeLine ?: ""
                     tvOracleText.text = formatText(cardInfo.backFaceOracleText)
                     tvPowerToughness.visibility = View.GONE
@@ -305,7 +305,7 @@ class CardDetailActivity : AppCompatActivity() {
                 }
             } else {
                 tvCardName.text = cardInfo.name
-                tvManaCost.text = cardInfo.manaCost ?: ""
+                tvManaCost.text = com.mtgo.decklistmanager.util.ManaSymbolRenderer.renderManaCost(cardInfo.manaCost, this@CardDetailActivity)
                 tvTypeLine.text = cardInfo.typeLine ?: ""
                 tvOracleText.text = formatText(cardInfo.oracleText)
 

@@ -1,5 +1,7 @@
 package com.mtgo.decklistmanager.ui.search
 
+import androidx.lifecycle.SavedStateHandle
+import com.google.gson.Gson
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mtgo.decklistmanager.data.remote.api.mtgch.MtgchApi
@@ -12,6 +14,9 @@ import com.mtgo.decklistmanager.util.AppLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import javax.inject.Inject
 
 /**
@@ -23,37 +28,49 @@ import javax.inject.Inject
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val mtgchApi: MtgchApi,
-    private val searchHistoryDao: SearchHistoryDao
+    private val searchHistoryDao: SearchHistoryDao,
+    private val savedState: SavedStateHandle = SavedStateHandle()
 ) : ViewModel() {
 
-    private val _searchQuery = MutableStateFlow("")
+    sealed class UiState {
+        object Initial : UiState()
+        object Loading : UiState()
+        data class Results(val items: List<SearchResultItem>) : UiState()
+        data class Error(val message: String) : UiState()
+    }
+
+    private val _uiState = MutableStateFlow<UiState>(UiState.Initial)
+    val uiState = _uiState.asStateFlow()
+    private var searchJob: Job? = null
+    var activeFilters: SearchFilters = savedState.get<String>("filters")?.let {
+        runCatching { Gson().fromJson(it, SearchFilters::class.java) }.getOrNull()
+    } ?: SearchFilters.empty()
+        set(value) {
+            field = value
+            savedState["filters"] = Gson().toJson(value)
+        }
+
+    private val _searchQuery = MutableStateFlow(savedState.get<String>("query") ?: "")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    private val _searchResults = MutableStateFlow<List<SearchResultItem>>(emptyList())
-    val searchResults: StateFlow<List<SearchResultItem>> = _searchResults.asStateFlow()
-
-    private val _isSearching = MutableStateFlow(false)
-    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
     private val _searchHistory = MutableStateFlow<List<SearchHistory>>(emptyList())
     val searchHistory: StateFlow<List<SearchHistory>> = _searchHistory.asStateFlow()
 
-    private val _showHistory = MutableStateFlow(true)
-    val showHistory: StateFlow<Boolean> = _showHistory.asStateFlow()
-
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
-
     init {
         loadSearchHistory()
+        if (_searchQuery.value.isNotBlank() || hasActiveFilters(activeFilters)) {
+            search(_searchQuery.value, filters = activeFilters)
+        }
     }
 
     /**
      * 更新搜索关键词
      */
     fun updateSearchQuery(query: String) {
+        searchJob?.cancel()
         _searchQuery.value = query
-        _showHistory.value = query.isEmpty()
+        savedState["query"] = query
+        _uiState.value = if (query.isBlank()) UiState.Initial else UiState.Loading
     }
 
     /**
@@ -71,19 +88,19 @@ class SearchViewModel @Inject constructor(
         limit: Int = 20,
         filters: SearchFilters? = null
     ) {
+        searchJob?.cancel()
+        _searchQuery.value = query
+        savedState["query"] = query
+        activeFilters = filters ?: SearchFilters.empty()
         // 允许空文本搜索（当有筛选条件时）
         val hasFilters = hasActiveFilters(filters)
         if (query.isBlank() && !hasFilters) {
-            _searchResults.value = emptyList()
-            _showHistory.value = true
+            _uiState.value = UiState.Initial
             return
         }
 
-        viewModelScope.launch {
-            _isSearching.value = true
-            _showHistory.value = false
-            _errorMessage.value = null
-
+        _uiState.value = UiState.Loading
+        searchJob = viewModelScope.launch {
             try {
                 // 构建搜索查询字符串
                 val searchQuery = buildSearchQuery(query, filters)
@@ -96,6 +113,7 @@ class SearchViewModel @Inject constructor(
                     offset = offset,
                     limit = limit
                 )
+                ensureActive()
 
                 if (response.isSuccessful) {
                     val body = response.body()
@@ -108,7 +126,7 @@ class SearchViewModel @Inject constructor(
 
                         // 转换为 SearchResult
                         val results = cards.map { it.toSearchResultItem() }
-                        _searchResults.value = results
+                        _uiState.value = UiState.Results(results)
 
                         // 保存搜索历史（仅在非空搜索时）
                         if (query.isNotBlank() && results.isNotEmpty()) {
@@ -117,21 +135,19 @@ class SearchViewModel @Inject constructor(
                     } else {
                         val errorMsg = "搜索失败: ${body?.success}"
                         AppLogger.e("SearchViewModel", errorMsg)
-                        _errorMessage.value = errorMsg
-                        _searchResults.value = emptyList()
+                        _uiState.value = UiState.Error("搜索服务暂时不可用，请重试")
                     }
                 } else {
                     val errorMsg = "搜索失败: ${response.code()} ${response.message()}"
                     AppLogger.e("SearchViewModel", errorMsg)
-                    _errorMessage.value = errorMsg
-                    _searchResults.value = emptyList()
+                    _uiState.value = UiState.Error("搜索失败，请稍后重试")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                ensureActive()
                 AppLogger.e("SearchViewModel", "Search error", e)
-                _errorMessage.value = "搜索出错: ${e.message}"
-                _searchResults.value = emptyList()
-            } finally {
-                _isSearching.value = false
+                _uiState.value = UiState.Error("无法完成搜索，请检查网络连接后重试")
             }
         }
     }
@@ -274,8 +290,7 @@ class SearchViewModel @Inject constructor(
         // 限制历史记录数量（保留最近 50 条）
         searchHistoryDao.deleteOldSearchHistory(50)
 
-        // 重新加载历史
-        loadSearchHistory()
+        // Room 的现有 Flow 订阅会接收更新，不重复创建收集协程。
     }
 
     /**
@@ -317,13 +332,6 @@ class SearchViewModel @Inject constructor(
     fun searchFromHistory(query: String) {
         updateSearchQuery(query)
         search(query)
-    }
-
-    /**
-     * 清除错误消息
-     */
-    fun clearError() {
-        _errorMessage.value = null
     }
 
     /**

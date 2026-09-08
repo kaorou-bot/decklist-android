@@ -58,7 +58,7 @@ class DecklistAdapter(
             binding.apply {
                 // 优先显示套牌名称，如果没有则显示赛事名称
                 tvEventName.text = decklist.deckName ?: decklist.eventName
-                tvFormat.text = "Format: ${decklist.format}"
+                tvFormat.text = "赛制：${com.mtgo.decklistmanager.util.FormatMapper.codeToName(decklist.format)}"
                 tvDate.text = decklist.date
                 tvPlayer.text = decklist.playerName?.let { "Player: $it" } ?: "Player: N/A"
                 tvRecord.text = decklist.record ?: "N/A"

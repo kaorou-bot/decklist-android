@@ -70,6 +70,7 @@ class EventDetailViewModel @Inject constructor(
      * 加载赛事详情
      */
     fun loadEventDetail(eventId: Long) {
+        if (downloadJob?.isActive == true) return
         // 重置标志，每次加载新赛事时重新评估
         hasShownDownloadDialog = false
         AppLogger.d("EventDetailViewModel", "loadEventDetail called for eventId: $eventId, hasShownDownloadDialog reset to false")
@@ -100,16 +101,21 @@ class EventDetailViewModel @Inject constructor(
                 // 这样在 shouldAutoDownload() 检查时能获取到正确的值
                 _decklists.value = items
                 _event.value = eventEntity
-                _uiState.value = UiState.Success("Loaded ${items.size} decklists")
+                if (downloadJob?.isActive != true) {
+                    _uiState.value = UiState.Success("已加载 ${items.size} 套牌")
+                }
 
                 AppLogger.d("EventDetailViewModel", "Loaded ${items.size} decklists for event $eventId")
 
                 if (items.isEmpty()) {
-                    _statusMessage.value = "No decklists found in this event"
+                    _statusMessage.value = "该赛事暂无本地套牌，可获取赛事套牌"
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _uiState.value = UiState.Error("Error loading event: ${e.message}")
-                _statusMessage.value = "Error: ${e.message}"
+                AppLogger.e("EventDetailViewModel", "加载赛事失败", e)
+                _uiState.value = UiState.Error("赛事加载失败，请重试")
+                _statusMessage.value = "赛事加载失败，请重试"
             }
         }
     }
@@ -119,17 +125,29 @@ class EventDetailViewModel @Inject constructor(
      * @param sourceUrl 赛事的源 URL
      * @param format 赛制代码 (ST, MO, PI, etc.)
      */
+    private var downloadJob: kotlinx.coroutines.Job? = null
+
     fun downloadEventDecklists(sourceUrl: String, format: String) {
-        viewModelScope.launch {
-            _uiState.value = UiState.Downloading
+        if (downloadJob?.isActive == true) return
+        downloadJob = viewModelScope.launch {
+            _uiState.value = UiState.Downloading()
             try {
                 // 直接使用 MtgTop8Scraper 下载卡组
-                val result = repository.scrapeSingleEvent(sourceUrl, format)
+                val result = repository.scrapeSingleEvent(sourceUrl, format) { message ->
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        _uiState.value = UiState.Downloading(message)
+                    }
+                }
 
                 result.fold(
-                    onSuccess = { count ->
-                        _statusMessage.value = "Successfully downloaded $count decklists"
-                        _uiState.value = UiState.Success("Downloaded $count decklists")
+                    onSuccess = { result ->
+                        val message = buildString {
+                            append("已保存 ${result.saved} / ${result.total} 副完整牌表，可直接打开浏览。")
+                            if (result.saved < result.total) append(" 部分牌表下载失败，请重新获取。")
+                            if (result.incompleteDetails > 0) append(" ${result.incompleteDetails} 副的中文名等资料未补齐，将显示已有牌名。")
+                        }
+                        _statusMessage.value = message
+                        _uiState.value = UiState.Success(message)
 
                         // 重新加载赛事详情
                         val eventEntity = repository.getEventById(
@@ -155,13 +173,17 @@ class EventDetailViewModel @Inject constructor(
                         }
                     },
                     onFailure = { error ->
-                        _statusMessage.value = "Download failed: ${error.message}"
-                        _uiState.value = UiState.Error("Download failed: ${error.message}")
+                        AppLogger.e("EventDetailViewModel", "获取套牌失败", error)
+                        _statusMessage.value = "获取套牌失败，请检查网络后重试"
+                        _uiState.value = UiState.Error("获取套牌失败，请检查网络后重试")
                     }
                 )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _statusMessage.value = "Download error: ${e.message}"
-                _uiState.value = UiState.Error("Download error: ${e.message}")
+                AppLogger.e("EventDetailViewModel", "获取套牌失败", e)
+                _statusMessage.value = "获取套牌失败，请稍后重试"
+                _uiState.value = UiState.Error("获取套牌失败，请稍后重试")
             }
         }
     }
@@ -179,7 +201,7 @@ class EventDetailViewModel @Inject constructor(
     sealed class UiState {
         object Initial : UiState()
         object Loading : UiState()
-        object Downloading : UiState()
+        data class Downloading(val message: String = "正在下载全部套牌的完整牌表…") : UiState()
         data class Success(val message: String) : UiState()
         data class Error(val message: String) : UiState()
     }

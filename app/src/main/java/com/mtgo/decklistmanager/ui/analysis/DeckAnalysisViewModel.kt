@@ -16,8 +16,11 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class DeckAnalysisViewModel @Inject constructor(
+    private val savedState: androidx.lifecycle.SavedStateHandle,
     private val analyzer: DeckAnalyzer
 ) : ViewModel() {
+
+    val sideboard = savedState.getLiveData("sideboard", false)
 
     private val _analysis = MutableLiveData<DeckAnalysis?>()
     val analysis: LiveData<DeckAnalysis?> = _analysis

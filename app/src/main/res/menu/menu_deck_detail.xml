@@ -6,28 +6,28 @@
     <item
         android:id="@+id/action_favorite"
         android:title="收藏套牌"
-        android:icon="@android:drawable/star_big_on"
+        android:icon="@drawable/ic_favorite_filled"
         app:showAsAction="ifRoom" />
 
     <!-- 导出套牌 -->
     <item
         android:id="@+id/action_export"
         android:title="导出套牌"
-        android:icon="@android:drawable/ic_menu_save"
+        android:icon="@drawable/ic_save"
         app:showAsAction="ifRoom" />
 
     <!-- 分析套牌 -->
     <item
         android:id="@+id/action_analyze"
         android:title="套牌分析"
-        android:icon="@android:drawable/ic_menu_info_details"
+        android:icon="@drawable/ic_info"
         app:showAsAction="ifRoom" />
 
     <!-- 分享 -->
     <item
         android:id="@+id/action_share"
         android:title="分享"
-        android:icon="@android:drawable/ic_menu_share"
+        android:icon="@drawable/ic_share"
         app:showAsAction="never" />
 
 </menu>

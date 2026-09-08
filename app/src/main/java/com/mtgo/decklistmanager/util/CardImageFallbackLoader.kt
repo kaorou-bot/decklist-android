@@ -39,6 +39,8 @@ class CardImageFallbackLoader @Inject constructor(
     private val mtgchApi: MtgchApi
 ) {
 
+    private val requests = java.util.WeakHashMap<ImageView, Any>()
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /** 主线程 Handler：Glide 禁止在 RequestListener 回调内发起新加载，需 post 到下一轮消息循环 */
@@ -85,19 +87,23 @@ class CardImageFallbackLoader @Inject constructor(
         placeholderRes: Int,
         errorRes: Int
     ) {
+        val request = Any()
+        requests[imageView] = request
+        Glide.with(imageView).clear(imageView)
         if (primaryUrl.isNullOrEmpty()) {
             // 主图缺失（服务器无该版本图）：若有标识信息则直接进回退链
             // （printings 候选 → Scryfall），否则隐藏视图
             val hasFallbackData = !cardId.isNullOrEmpty() ||
                 (!setCode.isNullOrBlank() && !collectorNumber.isNullOrBlank())
             if (!hasFallbackData) {
-                imageView.visibility = ImageView.GONE
+                imageView.visibility = ImageView.VISIBLE
+                imageView.setImageResource(errorRes)
                 return
             }
             imageView.visibility = ImageView.VISIBLE
             loadWithFallbacks(
                 imageView, emptyList(), cardId, isBack, 0,
-                setCode, collectorNumber, placeholderRes, errorRes
+                setCode, collectorNumber, placeholderRes, errorRes, request
             )
             return
         }
@@ -105,8 +111,13 @@ class CardImageFallbackLoader @Inject constructor(
 
         loadWithFallbacks(
             imageView, listOf(primaryUrl), cardId, isBack, 0,
-            setCode, collectorNumber, placeholderRes, errorRes
+            setCode, collectorNumber, placeholderRes, errorRes, request
         )
+    }
+
+    fun clear(imageView: ImageView) {
+        requests.remove(imageView)
+        Glide.with(imageView).clear(imageView)
     }
 
     /**
@@ -122,28 +133,32 @@ class CardImageFallbackLoader @Inject constructor(
         setCode: String?,
         collectorNumber: String?,
         placeholderRes: Int,
-        errorRes: Int
+        errorRes: Int,
+        request: Any,
+        candidatesLoaded: Boolean = false
     ) {
+        if (requests[imageView] !== request) return
         if (index >= urls.size) {
-            if (urls.size <= 1 && !cardId.isNullOrEmpty()) {
+            if (!candidatesLoaded && !cardId.isNullOrEmpty()) {
                 // 主图失败且无缓存候选：拉取 printings 后重试
                 fetchCandidates(cardId, isBack) { candidates ->
+                    if (requests[imageView] !== request) return@fetchCandidates
                     val remaining = candidates.filter { it !in urls }
                     if (remaining.isEmpty()) {
                         tryScryfall(
-                            imageView, isBack, setCode, collectorNumber, placeholderRes, errorRes
+                            imageView, isBack, setCode, collectorNumber, placeholderRes, errorRes, request
                         )
                     } else {
                         loadWithFallbacks(
                             imageView, remaining, cardId, isBack, 0,
-                            setCode, collectorNumber, placeholderRes, errorRes
+                            setCode, collectorNumber, placeholderRes, errorRes, request, true
                         )
                     }
                 }
             } else {
                 // 候选耗尽：回退 Scryfall
                 tryScryfall(
-                    imageView, isBack, setCode, collectorNumber, placeholderRes, errorRes
+                    imageView, isBack, setCode, collectorNumber, placeholderRes, errorRes, request
                 )
             }
             return
@@ -169,7 +184,7 @@ class CardImageFallbackLoader @Inject constructor(
                     mainHandler.post {
                         loadWithFallbacks(
                             imageView, urls, cardId, isBack, index + 1,
-                            setCode, collectorNumber, placeholderRes, errorRes
+                            setCode, collectorNumber, placeholderRes, errorRes, request, candidatesLoaded
                         )
                     }
                     return true // 接管错误处理，不让 Glide 显示 error 图
@@ -195,8 +210,10 @@ class CardImageFallbackLoader @Inject constructor(
         setCode: String?,
         collectorNumber: String?,
         placeholderRes: Int,
-        errorRes: Int
+        errorRes: Int,
+        request: Any
     ) {
+        if (requests[imageView] !== request) return
         if (setCode.isNullOrBlank() || collectorNumber.isNullOrBlank()) {
             Glide.with(imageView).load(errorRes).into(imageView)
             return
@@ -236,6 +253,7 @@ class CardImageFallbackLoader @Inject constructor(
             }
 
             withContext(Dispatchers.Main) {
+                if (requests[imageView] !== request) return@withContext
                 if (bytes != null && bytes.isNotEmpty()) {
                     AppLogger.d(
                         "CardImageFallback",
@@ -278,7 +296,7 @@ class CardImageFallbackLoader @Inject constructor(
                     }
                 }.distinct()
 
-                cache[cardId] = candidates
+                if (candidates.isNotEmpty()) cache[cardId] = candidates
                 AppLogger.d("CardImageFallback", "Fetched ${candidates.size} candidates for $cardId (back=$isBack)")
                 onResult(candidates)
             } catch (e: Exception) {

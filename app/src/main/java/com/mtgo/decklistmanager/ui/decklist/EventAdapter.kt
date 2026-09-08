@@ -47,11 +47,11 @@ class EventAdapter(
                 tvEventName.text = event.eventName
 
                 // Setup format chip
-                formatChip.text = event.format
+                formatChip.text = com.mtgo.decklistmanager.util.FormatMapper.codeToName(event.format)
                 formatChip.isClickable = false
 
                 tvDate.text = event.date
-                tvDeckCount.text = "${event.deckCount} Decks"
+                tvDeckCount.text = root.context.getString(com.mtgo.decklistmanager.R.string.event_deck_count, event.deckCount)
 
                 root.setOnClickListener {
                     onItemClick(event)

@@ -23,6 +23,13 @@
         android:textSize="14sp"
         android:paddingBottom="8dp" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnExportImage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:text="导出套牌图片（PNG）" />
+
     <!-- MTGO 格式 -->
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"

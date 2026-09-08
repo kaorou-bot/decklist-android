@@ -6,6 +6,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp" android:text="横轴为法术力值 · 7+ 合并七费及以上" android:textSize="12sp" android:textColor="@color/text_secondary"/>
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/toggleGroup"
         android:layout_width="wrap_content"

@@ -2,6 +2,7 @@ package com.mtgo.decklistmanager.ui.decklist
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
@@ -17,6 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 /**
@@ -27,8 +30,10 @@ class MainViewModel @Inject constructor(
     private val repository: DecklistRepository,
     private val eventDao: EventDao,
     private val decklistDao: DecklistDao,
-    private val tagRepository: TagRepository
+    private val tagRepository: TagRepository,
+    private val savedState: SavedStateHandle
 ) : ViewModel() {
+    private var listJob: Job? = null
 
     // UI State
     private val _uiState = MutableStateFlow<UiState>(UiState.Initial)
@@ -43,17 +48,17 @@ class MainViewModel @Inject constructor(
     val events: LiveData<List<EventItem>> = _events
 
     // Filter states
-    private val _selectedFormat = MutableStateFlow<String?>(null)
-    val selectedFormat: StateFlow<String?> = _selectedFormat.asStateFlow()
+    private val _selectedFormat = savedState.getStateFlow<String?>("selectedFormat", null)
+    val selectedFormat: StateFlow<String?> = _selectedFormat
 
-    private val _selectedFormatName = MutableStateFlow<String?>("All Formats")
-    val selectedFormatName: StateFlow<String?> = _selectedFormatName.asStateFlow()
+    private val _selectedFormatName = savedState.getStateFlow<String?>("selectedFormatName", "All Formats")
+    val selectedFormatName: StateFlow<String?> = _selectedFormatName
 
-    private val _selectedTag = MutableStateFlow<Long?>(null)
-    val selectedTag: StateFlow<Long?> = _selectedTag.asStateFlow()
+    private val _selectedTag = savedState.getStateFlow<Long?>("selectedTag", null)
+    val selectedTag: StateFlow<Long?> = _selectedTag
 
-    private val _selectedDate = MutableStateFlow<String?>(null)
-    val selectedDate: StateFlow<String?> = _selectedDate.asStateFlow()
+    private val _selectedDate = savedState.getStateFlow<String?>("selectedDate", null)
+    val selectedDate: StateFlow<String?> = _selectedDate
 
     // Available options
     private val _availableFormats = MutableStateFlow<List<String>>(emptyList())
@@ -190,13 +195,13 @@ class MainViewModel @Inject constructor(
     fun applyFormatFilter(formatName: String?) {
         // 将格式名称转换为格式代码
         val formatCode = if (formatName == null || formatName == "All Formats") {
-            _selectedFormatName.value = "All Formats"
+            savedState["selectedFormatName"] = "All Formats"
             null
         } else {
-            _selectedFormatName.value = formatName
+            savedState["selectedFormatName"] = formatName
             FormatMapper.nameToCode(formatName)
         }
-        _selectedFormat.value = formatCode
+        savedState["selectedFormat"] = formatCode
         // 不在这里调用load方法，由MainActivity根据当前tab调用相应的load方法
     }
 
@@ -204,7 +209,7 @@ class MainViewModel @Inject constructor(
      * 应用日期筛选
      */
     fun applyDateFilter(date: String?) {
-        _selectedDate.value = if (date == "All Dates") null else date
+        savedState["selectedDate"] = if (date == "All Dates") null else date
         // 日期筛选只用于赛事列表
         loadEvents()
     }
@@ -213,7 +218,7 @@ class MainViewModel @Inject constructor(
      * 应用标签筛选
      */
     fun applyTagFilter(tagId: Long?) {
-        _selectedTag.value = tagId
+        savedState["selectedTag"] = tagId
         // 标签筛选只用于收藏夹
         loadFavoriteDecklists()
     }
@@ -354,50 +359,20 @@ class MainViewModel @Inject constructor(
      * @param date 日期筛选
      * @param maxEvents 最大赛事数量
      */
+    private val eventDownloader = EventDownloadController(viewModelScope) { request ->
+        repository.scrapeEventsFromMtgTop8(request.format, request.date, request.count,
+            request.decksPerEvent).getOrThrow()
+    }
+    internal val eventDownloadState = eventDownloader.state
+
     fun startEventScraping(format: String, date: String?, maxEvents: Int, maxDecksPerEvent: Int = 0) {
-        viewModelScope.launch {
-            _uiState.value = UiState.Scraping
-            _statusMessage.value = "正在下载比赛列表，请稍候..."
+        eventDownloader.start(EventDownloadRequest(format, date, maxEvents, maxDecksPerEvent))
+    }
 
-            try {
-                // 添加60秒超时
-                val result = kotlinx.coroutines.withTimeout(60000L) {
-                    repository.scrapeEventsFromMtgTop8(
-                        format = format,
-                        date = date,
-                        maxEvents = maxEvents,
-                        maxDecksPerEvent = maxDecksPerEvent
-                    )
-                }
+    fun retryEventDownload() = eventDownloader.retry()
 
-                result.fold(
-                    onSuccess = { count ->
-                        _statusMessage.value = "成功下载 $count 个比赛！点击比赛查看详情"
-                        _uiState.value = UiState.Success("Event scraping complete")
-
-                        // 重新加载数据
-                        loadFilterOptions()
-                        loadEvents()
-                    },
-                    onFailure = { error ->
-                        val errorMsg = "下载失败: ${error.message}"
-                        _statusMessage.value = errorMsg
-                        _uiState.value = UiState.Error("Event scraping failed")
-                        AppLogger.e("MainViewModel", errorMsg, error)
-                    }
-                )
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                val errorMsg = "下载超时（60秒）。请检查网络连接或减少下载数量。"
-                _statusMessage.value = errorMsg
-                _uiState.value = UiState.Error("Timeout")
-                AppLogger.e("MainViewModel", errorMsg, e)
-            } catch (e: Exception) {
-                val errorMsg = "下载失败: ${e.message}"
-                _statusMessage.value = errorMsg
-                _uiState.value = UiState.Error("Event scraping failed")
-                AppLogger.e("MainViewModel", errorMsg, e)
-            }
-        }
+    fun refreshDownloadedEvents() {
+        loadFilterOptions()
     }
 
     /**
@@ -410,8 +385,9 @@ class MainViewModel @Inject constructor(
     /**
      * 加载收藏的牌组列表
      */
-    fun loadFavoriteDecklists() {
-        viewModelScope.launch {
+    fun loadFavoriteDecklists(notify: Boolean = false) {
+        listJob?.cancel()
+        listJob = viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
                 val format = _selectedFormat.value
@@ -441,8 +417,9 @@ class MainViewModel @Inject constructor(
                     )
                 }
 
-                _decklists.postValue(items)
+                _decklists.value = items
                 _uiState.value = UiState.Success("Loaded ${items.size} favorites")
+                if (notify) _statusMessage.value = "本地收藏列表已刷新"
 
                 // 移除提示
                 /*
@@ -450,9 +427,10 @@ class MainViewModel @Inject constructor(
                     _statusMessage.value = "No favorites yet. Tap the star on any deck to add it."
                 }
                 */
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _uiState.value = UiState.Error("Error loading favorites: ${e.message}")
-                _statusMessage.value = "Error: ${e.message}"
+                _uiState.value = UiState.Error("收藏加载失败，请重试")
             }
         }
     }
@@ -509,8 +487,9 @@ class MainViewModel @Inject constructor(
     /**
      * 加载赛事列表
      */
-    fun loadEvents() {
-        viewModelScope.launch {
+    fun loadEvents(notify: Boolean = false) {
+        listJob?.cancel()
+        listJob = viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
                 val format = _selectedFormat.value
@@ -533,8 +512,9 @@ class MainViewModel @Inject constructor(
                     )
                 }
 
-                _events.postValue(items)
+                _events.value = items
                 _uiState.value = UiState.Success("Loaded ${items.size} events")
+                if (notify) _statusMessage.value = "本地赛事列表已刷新"
 
                 // 移除提示
                 /*
@@ -542,10 +522,23 @@ class MainViewModel @Inject constructor(
                     _statusMessage.value = "No events found. Try downloading from MTGTop8."
                 }
                 */
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _uiState.value = UiState.Error("Error loading events: ${e.message}")
-                _statusMessage.value = "Error: ${e.message}"
+                _uiState.value = UiState.Error("赛事加载失败，请重试")
             }
+        }
+    }
+
+    fun clearListFilters(favorites: Boolean) {
+        savedState["selectedFormat"] = null
+        savedState["selectedFormatName"] = "All Formats"
+        if (favorites) {
+            savedState["selectedTag"] = null
+            loadFavoriteDecklists()
+        } else {
+            savedState["selectedDate"] = null
+            loadEvents()
         }
     }
 

@@ -56,6 +56,7 @@ class CardAdapter(
                     // 点击时使用原始卡名（英文）进行查询
                     onCardClick(card.cardName)
                 }
+                root.setOnClickListener { onCardClick(card.cardName) }
             }
         }
     }

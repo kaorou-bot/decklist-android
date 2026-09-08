@@ -10,6 +10,9 @@ import com.mtgo.decklistmanager.domain.model.CardPart
  */
 object CardDetailHelper {
 
+    fun firstNonBlank(vararg values: String?): String? = values.firstOrNull { !it.isNullOrBlank() }
+
+
     /**
      * 从 MtgchCardDto 构建 CardInfo（用于显示卡牌详情）
      *
@@ -108,7 +111,7 @@ object CardDetailHelper {
         // 反面名称 - 仅真双面牌
         val backFaceName = if (isDualFaced) {
             when {
-                cardFaces != null && cardFaces.size >= 2 -> cardFaces[1].zhName ?: cardFaces[1].name
+                cardFaces != null && cardFaces.size >= 2 -> firstNonBlank(cardFaces[1].zhName, cardFaces[1].name)
                 otherFaces != null && otherFaces.isNotEmpty() ->
                     otherFaces[0].faceName ?: otherFaces[0].nameZh ?: otherFaces[0].name
                 else -> null
@@ -128,9 +131,9 @@ object CardDetailHelper {
         val backFaceTypeLine = if (isDualFaced) {
             when {
                 cardFaces != null && cardFaces.size >= 2 ->
-                    cardFaces[1].zhTypeLine ?: cardFaces[1].typeLine
+                    firstNonBlank(cardFaces[1].zhTypeLine, cardFaces[1].typeLine)
                 otherFaces != null && otherFaces.isNotEmpty() ->
-                    otherFaces[0].typeLineZh ?: otherFaces[0].typeLine
+                    firstNonBlank(otherFaces[0].typeLineZh, otherFaces[0].typeLine)
                 else -> null
             }
         } else null
@@ -139,9 +142,9 @@ object CardDetailHelper {
         val backFaceOracleText = if (isDualFaced) {
             when {
                 cardFaces != null && cardFaces.size >= 2 ->
-                    cardFaces[1].zhText ?: cardFaces[1].oracleText
+                    firstNonBlank(cardFaces[1].zhText, cardFaces[1].oracleText)
                 otherFaces != null && otherFaces.isNotEmpty() ->
-                    otherFaces[0].oracleTextZh ?: otherFaces[0].oracleText
+                    firstNonBlank(otherFaces[0].oracleTextZh, otherFaces[0].oracleText)
                 else -> null
             }
         } else null
@@ -205,22 +208,22 @@ object CardDetailHelper {
         } else null
 
         // 获取中文名称（优先使用新字段 nameZh）
-        val getZhsName = mtgchCard.nameZh ?: mtgchCard.atomicTranslatedName
+        val getZhsName = firstNonBlank(mtgchCard.nameZh, mtgchCard.atomicTranslatedName)
 
         // 获取中文类型行（优先使用新字段 typeLineZh）
-        val getTypeLineZh = mtgchCard.typeLineZh ?: mtgchCard.atomicTranslatedType
+        val getTypeLineZh = firstNonBlank(mtgchCard.typeLineZh, mtgchCard.atomicTranslatedType)
 
         // 获取中文规则文本（优先使用新字段 oracleTextZh）
-        val getOracleTextZh = mtgchCard.oracleTextZh ?: mtgchCard.atomicTranslatedText
+        val getOracleTextZh = firstNonBlank(mtgchCard.oracleTextZh, mtgchCard.atomicTranslatedText)
 
         return CardInfo(
             id = cardInfoId,
             oracleId = mtgchCard.oracleId, // 设置 Oracle ID
-            name = displayName ?: (getZhsName ?: mtgchCard.name ?: ""),
+            name = firstNonBlank(displayName, getZhsName, mtgchCard.name) ?: "",
             manaCost = ManaCosts.normalize(manaCost ?: mtgchCard.manaCost),
             cmc = cmc ?: mtgchCard.cmc?.toDouble(),
-            typeLine = typeLine ?: (getTypeLineZh ?: mtgchCard.typeLine),
-            oracleText = oracleText ?: (getOracleTextZh ?: mtgchCard.oracleText),
+            typeLine = firstNonBlank(typeLine, getTypeLineZh, mtgchCard.typeLine),
+            oracleText = firstNonBlank(oracleText, getOracleTextZh, mtgchCard.oracleText),
             colors = colors ?: mtgchCard.colors,
             colorIdentity = mtgchCard.colorIdentity,
             power = power ?: mtgchCard.power,
@@ -228,7 +231,7 @@ object CardDetailHelper {
             loyalty = loyalty ?: mtgchCard.loyalty,
             rarity = rarity ?: mtgchCard.rarity,
             setCode = setCode ?: mtgchCard.setCode,
-            setName = setName ?: (mtgchCard.setNameZh ?: mtgchCard.setTranslatedName ?: mtgchCard.setName),
+            setName = firstNonBlank(setName, mtgchCard.setNameZh, mtgchCard.setTranslatedName, mtgchCard.setName),
             artist = artist ?: mtgchCard.artist,
             cardNumber = collectorNumber ?: mtgchCard.collectorNumber,
             legalStandard = mtgchCard.legalities?.get("standard"),

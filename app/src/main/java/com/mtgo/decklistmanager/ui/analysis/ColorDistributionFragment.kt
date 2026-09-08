@@ -69,6 +69,9 @@ class ColorDistributionFragment : Fragment() {
 
         // 获取父 Activity 的 ViewModel
         val viewModel = ViewModelProvider(requireActivity()).get(DeckAnalysisViewModel::class.java)
+        viewModel.sideboard.observe(viewLifecycleOwner) { sideboard ->
+            setSideboardMode(sideboard)
+        }
         viewModel.analysis.observe(viewLifecycleOwner) { analysis ->
             analysis?.let {
                 currentAnalysis = it
@@ -78,6 +81,7 @@ class ColorDistributionFragment : Fragment() {
     }
 
     private fun setupChart(analysis: DeckAnalysis) {
+        if (_binding == null) return
         val chart = binding.pieChart
 
         // 准备数据 - 根据当前模式选择数据源
@@ -101,10 +105,10 @@ class ColorDistributionFragment : Fragment() {
             }
         }
 
-        val dataSet = PieDataSet(entries, "颜色分布")
+        val dataSet = PieDataSet(entries, "")
         dataSet.colors = colorValues
         dataSet.sliceSpace = 3f
-        // 禁用 value 的显示，只显示 entry labels
+        // 文字说明由独立图例提供。
         dataSet.setDrawValues(false)
 
         val pieData = PieData(dataSet)
@@ -112,17 +116,61 @@ class ColorDistributionFragment : Fragment() {
 
         // 设置格式化器
         chart.setUsePercentValues(false)  // 不使用百分比
-        chart.setDrawEntryLabels(true)   // 显示标签（使用 PieEntry 的 label）
+        chart.setDrawEntryLabels(false)
         chart.setEntryLabelTextSize(14f)
         chart.setEntryLabelColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
         chart.description.isEnabled = false
         chart.centerText = "颜色分布"
         chart.setCenterTextSize(18f)
         chart.setCenterTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
-        chart.legend.isEnabled = false  // 禁用图例
+        chart.setHoleColor(ContextCompat.getColor(requireContext(), R.color.card_background))
+        chart.holeRadius = 66f
+        chart.transparentCircleRadius = 70f
+        chart.centerText = "${selectedColors.values.sum()}\n${if (isByQuantity) "张非地牌" else "种非地牌"}"
+        chart.setCenterTextSize(16f)
+        chart.isRotationEnabled = false
+        chart.legend.isEnabled = false
+        chart.setExtraOffsets(4f, 4f, 4f, 4f)
+        renderColorLegend(selectedColors)
 
-        chart.animateY(1000)
+        chart.animateY(300)
         chart.invalidate()
+    }
+
+    private fun renderColorLegend(colors: Map<ManaColor, Int>) {
+        val context = requireContext()
+        val density = resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).toInt()
+        binding.colorLegend.removeAllViews()
+        ManaColor.entries.forEach { color ->
+            val count = colors[color] ?: 0
+            val row = android.widget.LinearLayout(context).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(dp(4), dp(8), dp(4), dp(8))
+                layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                    width = 0
+                    columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
+                }
+            }
+            row.addView(View(context).apply {
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(getColor(color))
+                    setStroke(dp(1), ContextCompat.getColor(context, R.color.outline))
+                }
+                layoutParams = android.widget.LinearLayout.LayoutParams(dp(12), dp(12)).apply {
+                    marginEnd = dp(8)
+                }
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            })
+            row.addView(android.widget.TextView(context).apply {
+                text = "${color.displayName}  ${count}${if (isByQuantity) "张" else "种"}"
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+            })
+            binding.colorLegend.addView(row)
+        }
     }
 
     private fun getColor(manaColor: ManaColor): Int {

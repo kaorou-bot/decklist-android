@@ -43,6 +43,7 @@
             <!-- Format Selector -->
             <LinearLayout
                 android:id="@+id/formatSelector"
+                android:minHeight="48dp"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -62,7 +63,7 @@
                     android:textColor="@color/text_primary"
                     android:maxLines="1"
                     android:ellipsize="end"
-                    android:drawableEnd="@android:drawable/arrow_down_float"
+                    android:drawableEnd="@drawable/ic_chevron_down"
                     android:drawablePadding="4dp" />
 
             </LinearLayout>
@@ -75,6 +76,7 @@
             <!-- Tag Selector -->
             <LinearLayout
                 android:id="@+id/tagSelector"
+                android:minHeight="48dp"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -94,19 +96,15 @@
                     android:textColor="@color/text_primary"
                     android:maxLines="1"
                     android:ellipsize="end"
-                    android:drawableEnd="@android:drawable/arrow_down_float"
+                    android:drawableEnd="@drawable/ic_chevron_down"
                     android:drawablePadding="4dp" />
 
             </LinearLayout>
 
-            <View
-                android:layout_width="1dp"
-                android:layout_height="16dp"
-                android:background="@color/outline" />
-
             <!-- Date Selector -->
             <LinearLayout
                 android:id="@+id/dateSelector"
+                android:minHeight="48dp"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -126,7 +124,7 @@
                     android:textColor="@color/text_primary"
                     android:maxLines="1"
                     android:ellipsize="end"
-                    android:drawableEnd="@android:drawable/arrow_down_float"
+                    android:drawableEnd="@drawable/ic_chevron_down"
                     android:drawablePadding="4dp" />
 
             </LinearLayout>
@@ -136,11 +134,11 @@
     </com.google.android.material.card.MaterialCardView>
 
     <!-- Main Content Area -->
-    <androidx.core.widget.NestedScrollView
+    <LinearLayout
         android:id="@+id/mainContent"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:fillViewport="true"
+        android:orientation="vertical"
         app:layout_constraintTop_toBottomOf="@id/filterStatusBar"
         app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
         app:layout_constraintStart_toStartOf="parent"
@@ -148,7 +146,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical"
             android:padding="16dp">
 
@@ -166,7 +164,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     android:gravity="center"
                     android:padding="8dp">
 
@@ -178,26 +176,84 @@
                         android:text="下载赛事"
                         android:textSize="14sp"
                         android:padding="8dp"
-                        app:icon="@android:drawable/ic_input_add"
+                        app:icon="@drawable/ic_add"
                         app:iconGravity="textStart"
                         app:iconPadding="8dp"
                         style="@style/Widget.Material3.Button.TonalButton" />
 
+                    <ProgressBar
+                        android:id="@+id/eventDownloadProgress"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:indeterminate="true"
+                        android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/tvEventDownloadStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_primary"
+                        android:accessibilityLiveRegion="polite"
+                        android:visibility="gone" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRetryEventDownload"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
+                        android:text="按原条件重试"
+                        android:visibility="gone" />
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
+
+            <ProgressBar
+                android:id="@+id/listLoading"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:indeterminate="true"
+                android:visibility="invisible" />
+
+            <LinearLayout
+                android:id="@+id/listState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="24dp"
+                android:visibility="gone">
+                <TextView
+                    android:id="@+id/tvListState"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textColor="@color/text_primary"
+                    android:accessibilityLiveRegion="polite" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnListStateAction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:layout_marginTop="16dp" />
+            </LinearLayout>
 
             <!-- Decklist RecyclerView -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvDecklists"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:saveEnabled="false"
+                android:clipToPadding="false"
                 tools:listitem="@layout/item_decklist" />
 
         </LinearLayout>
 
-    </androidx.core.widget.NestedScrollView>
+    </LinearLayout>
 
     <!-- Bottom Navigation Bar -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
@@ -213,7 +269,7 @@
         app:itemTextColor="@color/nav_active"
         app:itemIconSize="24dp"
         app:itemRippleColor="@color/md_primary_container"
-        app:labelVisibilityMode="selected"
+        app:labelVisibilityMode="labeled"
         app:menu="@menu/bottom_navigation_menu" />
 
     <!-- Progress Overlay -->

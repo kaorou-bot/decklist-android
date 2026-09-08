@@ -48,7 +48,7 @@ class EventDetailActivity : AppCompatActivity() {
 
         eventId = intent.getLongExtra("eventId", -1)
         if (eventId == -1L) {
-            Toast.makeText(this, "Invalid event ID", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "无法打开该赛事", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -132,9 +132,9 @@ class EventDetailActivity : AppCompatActivity() {
         viewModel.event.observe(this) { event ->
             event?.let {
                 tvEventName.text = it.eventName
-                tvFormat.text = it.format
+                tvFormat.text = com.mtgo.decklistmanager.util.FormatMapper.codeToName(it.format)
                 tvDate.text = it.date
-                tvDeckCount.text = "${it.deckCount} Decks"
+                tvDeckCount.text = getString(R.string.event_deck_count, it.deckCount)
 
                 // 不再自动下载，而是在 decklists observer 中检查是否需要提示
             }
@@ -162,17 +162,8 @@ class EventDetailActivity : AppCompatActivity() {
                     isLoading = isDownloading  // Show loading indicator for all items during download
                 )
             }
-            // 按URL中的d=参数排序
-            val sortedDecklists = decklists.sortedBy { decklist ->
-                // 从url中提取d=参数的数字部分，格式: "...?d=123" 或 "...&d=123"
-                val dPattern = Regex("[?&]d=(\\d+)")
-                val match = dPattern.find(decklist.url)
-                if (match != null) {
-                    match.groupValues[1].toIntOrNull() ?: 0
-                } else {
-                    0
-                }
-            }
+            // 按实际名次升序；同名次保持原顺序，无名次置后。
+            val sortedDecklists = decklists.sortedBy { EventPlacementOrder.rank(it.record) }
             decklistTableAdapter.submitList(sortedDecklists)
 
             AppLogger.d("EventDetailActivity", "sortedDecklists size: ${sortedDecklists.size}")
@@ -193,6 +184,7 @@ class EventDetailActivity : AppCompatActivity() {
         // Observe UI state to control progress indicator
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
+                btnDownloadDecklists.isEnabled = state !is EventDetailViewModel.UiState.Downloading
                 when (state) {
                     is EventDetailViewModel.UiState.Loading -> {
                         // Initial loading - don't show overlay
@@ -201,7 +193,7 @@ class EventDetailActivity : AppCompatActivity() {
                     is EventDetailViewModel.UiState.Downloading -> {
                         // Show inline progress
                         progressContainer.visibility = View.VISIBLE
-                        tvStatus.text = "正在下载套牌..."
+                        tvStatus.text = state.message
                     }
                     is EventDetailViewModel.UiState.Success -> {
                         // Hide progress
@@ -226,7 +218,7 @@ class EventDetailActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.statusMessage.collect { message ->
                 message?.let {
-                    tvStatus.text = "Status: $it"
+                    tvStatus.text = it
                     Toast.makeText(this@EventDetailActivity, it, Toast.LENGTH_SHORT).show()
                     viewModel.clearStatusMessage()
                 }
@@ -251,7 +243,7 @@ class EventDetailActivity : AppCompatActivity() {
                 // Show confirmation dialog
                 android.app.AlertDialog.Builder(this)
                     .setTitle("下载套牌")
-                    .setMessage("下载此赛事的所有套牌?\n\n赛事: ${event.eventName}\n赛制: ${event.format}")
+                    .setMessage("下载此赛事的所有套牌?\n\n赛事: ${event.eventName}\n赛制: ${com.mtgo.decklistmanager.util.FormatMapper.codeToName(event.format)}")
                     .setPositiveButton("下载") { _, _ ->
                         viewModel.downloadEventDecklists(event.sourceUrl, formatCode)
                     }
@@ -271,7 +263,7 @@ class EventDetailActivity : AppCompatActivity() {
         if (event != null && event.sourceUrl != null) {
             android.app.AlertDialog.Builder(this)
                 .setTitle("赛事暂无套牌")
-                .setMessage("当前赛事还没有套牌数据，是否下载该赛事的套牌?\n\n赛事: ${event.eventName}\n赛制: ${event.format}")
+                .setMessage("当前赛事还没有套牌数据，是否下载该赛事的套牌?\n\n赛事: ${event.eventName}\n赛制: ${com.mtgo.decklistmanager.util.FormatMapper.codeToName(event.format)}")
                 .setPositiveButton("下载") { _, _ ->
                     val formatCode = event.format
                     viewModel.downloadEventDecklists(event.sourceUrl, formatCode)

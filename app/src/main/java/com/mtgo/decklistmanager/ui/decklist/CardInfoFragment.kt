@@ -1,5 +1,6 @@
 package com.mtgo.decklistmanager.ui.decklist
 
+import com.mtgo.decklistmanager.util.CardDetailHelper.firstNonBlank
 import android.app.Dialog
 import android.os.Bundle
 import android.view.View
@@ -36,7 +37,7 @@ class CardInfoFragment : DialogFragment() {
 
     private var oracleId: String? = null
     private var printings: List<MtgchCardDto> = emptyList()
-    private var currentPrintingIndex: Int = 0
+    private var currentPrintingIndex: Int = -1
     private var loadingJob: Job? = null
 
     private val searchViewModel by lazy {
@@ -50,11 +51,14 @@ class CardInfoFragment : DialogFragment() {
         _binding = DialogCardDetailBinding.inflate(layoutInflater)
 
         setupVersionSelector()
+        binding.imageViewCard.setOnClickListener { updateCardDisplay() }
 
-        val cardInfo = arguments?.getParcelable(ARG_CARD_INFO, CardInfo::class.java)
+        @Suppress("DEPRECATION")
+        val cardInfo = savedInstanceState?.getParcelable<CardInfo>(ARG_CARD_INFO)
+            ?: arguments?.getParcelable<CardInfo>(ARG_CARD_INFO)
         cardInfo?.let {
             currentCardInfo = it
-            isShowingFront = true
+            isShowingFront = savedInstanceState?.getBoolean("showingFront", true) ?: true
             displayCardInfo(it)
         }
 
@@ -132,6 +136,23 @@ class CardInfoFragment : DialogFragment() {
     private fun updateVersionSelectorItems() {
         AppLogger.d("CardInfoFragment", "updateVersionSelectorItems - printings size: ${printings.size}")
         // 如果有多个版本，显示选择按钮
+        currentPrintingIndex = printings.indexOfFirst {
+            it.setCode == currentCardInfo?.setCode && it.collectorNumber == currentCardInfo?.cardNumber
+        }
+        val current = currentCardInfo
+        if (current != null && currentPrintingIndex >= 0) {
+            val complete = com.mtgo.decklistmanager.util.CardDetailHelper.buildCardInfo(printings[currentPrintingIndex])
+            currentCardInfo = current.copy(
+                typeLine = firstNonBlank(current.typeLine, complete.typeLine),
+                oracleText = firstNonBlank(current.oracleText, complete.oracleText),
+                power = firstNonBlank(current.power, complete.power),
+                toughness = firstNonBlank(current.toughness, complete.toughness),
+                loyalty = firstNonBlank(current.loyalty, complete.loyalty),
+                backFaceTypeLine = firstNonBlank(current.backFaceTypeLine, complete.backFaceTypeLine),
+                backFaceOracleText = firstNonBlank(current.backFaceOracleText, complete.backFaceOracleText)
+            )
+            updateCardDisplay()
+        }
         val shouldShow = printings.size > 1
         binding.btnSelectVersion.visibility = if (shouldShow) View.VISIBLE else View.GONE
         AppLogger.d("CardInfoFragment", "Button visibility set to: ${if (shouldShow) "VISIBLE" else "GONE"}")
@@ -250,7 +271,7 @@ class CardInfoFragment : DialogFragment() {
                 else -> buildFrontDetails(cardInfo)
             }
 
-            textViewCardDetails.text = details
+            textViewCardDetails.text = com.mtgo.decklistmanager.util.ManaSymbolRenderer.renderManaCost(details, requireContext())
         }
     }
 
@@ -270,14 +291,14 @@ class CardInfoFragment : DialogFragment() {
 
             cardInfo.multiParts.orEmpty().forEachIndexed { index, part ->
                 if (index > 0) appendLine()
-                appendLine("—— ${part.nameZh ?: part.name ?: ""} ——")
+                appendLine("—— ${firstNonBlank(part.nameZh, part.name) ?: ""} ——")
                 part.typeLineZh?.let { appendLine("类别：$it") } ?: part.typeLine?.let { appendLine("类别：$it") }
                 part.manaCost?.let { manaCost ->
                     if (manaCost.isNotEmpty() && manaCost != "N/A") {
                         appendLine("法术力：$manaCost")
                     }
                 }
-                val text = formatText(part.oracleTextZh ?: part.oracleText)
+                val text = formatText(firstNonBlank(part.oracleTextZh, part.oracleText))
                 if (text.isNotEmpty()) {
                     appendLine("规则文本：\n$text")
                 }
@@ -377,9 +398,16 @@ class CardInfoFragment : DialogFragment() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putParcelable(ARG_CARD_INFO, currentCardInfo)
+        outState.putBoolean("showingFront", isShowingFront)
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         loadingJob?.cancel()
+        _binding?.let { imageFallbackLoader.clear(it.imageViewCard) }
         _binding = null
     }
 

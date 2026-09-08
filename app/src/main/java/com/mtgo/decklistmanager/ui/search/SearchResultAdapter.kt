@@ -30,11 +30,21 @@ class SearchResultAdapter(
         holder.bind(getItem(position))
     }
 
+    override fun onViewRecycled(holder: ViewHolder) {
+        holder.clearImage()
+        super.onViewRecycled(holder)
+    }
+
     class ViewHolder(
         private val binding: ItemSearchResultBinding,
         private val onItemClick: (SearchResultItem) -> Unit,
         private val imageFallbackLoader: CardImageFallbackLoader?
     ) : RecyclerView.ViewHolder(binding.root) {
+
+        fun clearImage() {
+            if (imageFallbackLoader != null) imageFallbackLoader.clear(binding.imageViewCard)
+            else Glide.with(binding.imageViewCard).clear(binding.imageViewCard)
+        }
 
         fun bind(result: SearchResultItem) {
             binding.apply {
@@ -46,7 +56,7 @@ class SearchResultAdapter(
 
                 // 显示法术力值（规范化 "no cost"）
                 textViewManaCost.text =
-                    com.mtgo.decklistmanager.util.ManaCosts.normalize(result.manaCost) ?: ""
+                    com.mtgo.decklistmanager.util.ManaSymbolRenderer.renderManaCost(result.manaCost, root.context)
 
                 // 加载卡牌图片（主图缺失/失败时按 printings 顺序回退，最后 Scryfall）
                 if (imageFallbackLoader != null) {
@@ -68,6 +78,7 @@ class SearchResultAdapter(
                         .error(com.google.android.material.R.drawable.mtrl_ic_error)
                         .into(imageViewCard)
                 } else {
+                    clearImage()
                     imageViewCard.visibility = android.view.View.GONE
                 }
             }

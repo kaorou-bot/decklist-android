@@ -25,6 +25,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.coroutineContext
 import javax.inject.Inject
 
 /**
@@ -37,10 +41,40 @@ class DeckDetailViewModel @Inject constructor(
     private val mtgoExporter: MtgoFormatExporter,
     private val arenaExporter: ArenaFormatExporter,
     private val textExporter: TextFormatExporter,
+    private val deckImageExporter: com.mtgo.decklistmanager.exporter.DeckImageExporter,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val decklistId: Long = checkNotNull(savedStateHandle["decklistId"])
+
+    sealed class ImageExportState {
+        object Idle : ImageExportState()
+        data class Loading(val message: String) : ImageExportState()
+        data class Ready(val result: com.mtgo.decklistmanager.exporter.DeckImageExporter.Result) : ImageExportState()
+        data class Error(val message: String) : ImageExportState()
+    }
+    private val _imageExportState = MutableLiveData<ImageExportState>(ImageExportState.Idle)
+    val imageExportState: LiveData<ImageExportState> = _imageExportState
+    private var imageExportJob: Job? = null
+
+    fun exportDeckImage() {
+        if (imageExportJob?.isActive == true) return
+        val deck = _decklist.value ?: return
+        val cards = getAllCards().toList()
+        _imageExportState.value = ImageExportState.Loading("正在生成套牌图片…")
+        imageExportJob = viewModelScope.launch {
+            try {
+                val result = deckImageExporter.export(deck, cards) { done, total ->
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        _imageExportState.value = ImageExportState.Loading("正在生成图片：$done / $total")
+                    }
+                }
+                _imageExportState.value = ImageExportState.Ready(result)
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { _imageExportState.value = ImageExportState.Error("图片生成失败，请稍后重试。") }
+        }
+    }
+    fun clearImageExportState() { _imageExportState.value = ImageExportState.Idle }
 
     // Decklist detail
     private val _decklist = MutableLiveData<Decklist?>()
@@ -122,21 +156,12 @@ class DeckDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // v4.1.0: 首先修复所有 NULL 的 display_name 和 mana_cost
-                repository.fixAllNullDisplayNames()
-
-                // 首次加载时修复双面牌数据
-                repository.fixDualFacedCards()
-
                 // 加载牌组信息
                 val decklistEntity = repository.getDecklistById(decklistId)
                 if (decklistEntity != null) {
                     _decklist.value = decklistEntity.toDecklist()
 
-                    // v4.1.0: 确保卡牌详情已获取后再加载卡牌列表
-                    // fetchScryfallDetails 会等待所有异步任务完成
-                    repository.ensureCardDetails(decklistId)
-
+                    // 完整牌表在赛事下载阶段准备；打开详情只读取本地数据。
                     // 加载所有卡牌（重新查询确保获取最新数据）
                     val allCards = repository.getCardsByDecklistId(decklistId)
 
@@ -164,31 +189,33 @@ class DeckDetailViewModel @Inject constructor(
      * v4.1.0: 直接使用 repository.getCardInfo()，依赖数据库缓存
      * 数据库缓存速度很快（< 50ms）且持久化，无需内存缓存
      */
+    private var cardInfoJob: Job? = null
+    var lastRequestedCardName: String? = null
+        private set
+
     fun loadCardInfo(cardName: String) {
-        viewModelScope.launch {
+        cardInfoJob?.cancel()
+        lastRequestedCardName = cardName
+        _cardInfo.value = null
+        _cardInfoError.value = null
+        _isCardInfoLoading.value = true
+        cardInfoJob = viewModelScope.launch {
             try {
-                _isCardInfoLoading.value = true
-                _cardInfoError.value = null
-
-                AppLogger.d("DeckDetailViewModel", "loadCardInfo called for: $cardName")
-
-                // 直接使用 repository.getCardInfo()，它会自动处理数据库缓存
                 val cardInfo = repository.getCardInfo(cardName)
-
+                coroutineContext.ensureActive()
                 if (cardInfo != null) {
                     _cardInfo.value = cardInfo
                 } else {
-                    // v4.0.0: 提供更友好的错误提示
-                    _cardInfoError.value = "未找到卡牌: $cardName\n\n提示：\n" +
-                        "• 请检查卡牌名称拼写\n" +
-                        "• 某些特殊卡牌可能需要完整名称\n" +
-                        "• 系统已自动重试3次，请稍后再试"
+                    _cardInfoError.value = "未能获取「$cardName」的详情，请检查网络或稍后重试。"
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                e.printStackTrace()
-                _cardInfoError.value = "加载失败: ${e.message}\n\n请检查网络连接后重试"
+                coroutineContext.ensureActive()
+                AppLogger.e("DeckDetailViewModel", "Card detail request failed: ${e.message}")
+                _cardInfoError.value = "加载「$cardName」失败，请重试。"
             } finally {
-                _isCardInfoLoading.value = false
+                if (coroutineContext[Job]?.isActive == true) _isCardInfoLoading.value = false
             }
         }
     }

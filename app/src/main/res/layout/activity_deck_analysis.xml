@@ -1,218 +1,39 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/background">
-
-    <com.google.android.material.appbar.AppBarLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/card_background"
-            app:title="套牌分析"
-            app:navigationIcon="?attr/homeAsUpIndicator" />
-
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tabLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/card_background"
-            app:tabMode="fixed"
-            app:tabGravity="fill">
-
-            <com.google.android.material.tabs.TabItem
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="法术力曲线" />
-
-            <com.google.android.material.tabs.TabItem
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="非地牌颜色分布" />
-
-            <com.google.android.material.tabs.TabItem
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="类型分布" />
-
-        </com.google.android.material.tabs.TabLayout>
-
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <!-- 套牌名称 -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:id="@+id/tvDeckName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary"
-                        tools:text="Modern Event - MTGO League" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- 统计摘要 -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="12dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="📊 统计摘要"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-
-                        <!-- 主牌/备牌切换按钮组 -->
-                        <com.google.android.material.button.MaterialButtonToggleGroup
-                            android:id="@+id/toggleGroup"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:singleSelection="true"
-                            app:selectionRequired="true">
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnMainDeck"
-                                style="@style/Widget.Material3.Button.OutlinedButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="主牌"
-                                android:minWidth="60dp" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnSideboard"
-                                style="@style/Widget.Material3.Button.OutlinedButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="备牌"
-                                android:minWidth="60dp" />
-
-                        </com.google.android.material.button.MaterialButtonToggleGroup>
-
+<?xml version="1.0" ?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/background">
+    <com.google.android.material.appbar.MaterialToolbar android:id="@+id/toolbar" android:layout_width="match_parent" android:layout_height="?attr/actionBarSize" app:title="套牌分析" app:navigationIcon="?attr/homeAsUpIndicator"/>
+    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+            <TextView android:id="@+id/tvDeckName" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="24sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="构筑概览 · 曲线、颜色与类型" android:textSize="13sp" android:textColor="@color/text_secondary"/>
+            <com.google.android.material.button.MaterialButtonToggleGroup android:id="@+id/toggleGroup" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" app:singleSelection="true" app:selectionRequired="true">
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnMainDeck" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="48dp" android:text="主牌"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnSideboard" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="48dp" android:text="备牌"/>
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+            <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeWidth="0dp" app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="12dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:padding="8dp">
+                            <TextView android:id="@+id/tvTotalCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="—" android:textSize="28sp" android:textStyle="bold" android:textColor="?attr/colorPrimary"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="卡牌总数" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:padding="8dp">
+                            <TextView android:id="@+id/tvLandCount" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="—" android:textSize="28sp" android:textStyle="bold" android:textColor="?attr/colorPrimary"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="地牌数量" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:padding="8dp">
+                            <TextView android:id="@+id/tvAverageMana" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="—" android:textSize="28sp" android:textStyle="bold" android:textColor="?attr/colorPrimary"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="平均法术力值" android:textSize="12sp" android:textColor="@color/text_secondary"/>
+                        </LinearLayout>
                     </LinearLayout>
-
-                    <GridLayout
-                        android:id="@+id/statsGrid"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:columnCount="2"
-                        android:rowCount="3">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:text="总卡牌数"
-                            android:textColor="@color/text_secondary"
-                            android:layout_marginBottom="4dp" />
-
-                        <TextView
-                            android:id="@+id/tvTotalCount"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_primary"
-                            android:gravity="end"
-                            tools:text="60" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:text="地牌数"
-                            android:textColor="@color/text_secondary"
-                            android:layout_marginBottom="4dp" />
-
-                        <TextView
-                            android:id="@+id/tvLandCount"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_primary"
-                            android:gravity="end"
-                            tools:text="24" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:text="平均法术力"
-                            android:textColor="@color/text_secondary"
-                            android:layout_marginBottom="4dp" />
-
-                        <TextView
-                            android:id="@+id/tvAverageMana"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_primary"
-                            android:gravity="end"
-                            tools:text="2.3" />
-
-                    </GridLayout>
-
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="8dp" android:text="平均值按非地牌张数计算" android:textSize="12sp" android:textColor="@color/text_secondary"/>
                 </LinearLayout>
-
             </com.google.android.material.card.MaterialCardView>
-
-            <!-- 图表容器 -->
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/viewPager"
-                android:layout_width="match_parent"
-                android:layout_height="400dp" />
-
+            <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" app:cardCornerRadius="20dp" app:cardElevation="0dp" app:strokeWidth="1dp" app:strokeColor="@color/divider" app:cardBackgroundColor="@color/card_background">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                    <com.google.android.material.tabs.TabLayout android:id="@+id/tabLayout" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@android:color/transparent" app:tabMode="fixed" app:tabIndicatorFullWidth="false"/>
+                    <androidx.viewpager2.widget.ViewPager2 android:id="@+id/viewPager" android:layout_width="match_parent" android:layout_height="400dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
-
     </androidx.core.widget.NestedScrollView>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</LinearLayout>

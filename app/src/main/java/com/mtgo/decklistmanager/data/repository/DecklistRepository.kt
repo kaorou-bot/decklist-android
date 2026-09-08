@@ -2,6 +2,8 @@
 package com.mtgo.decklistmanager.data.repository
 
 import android.util.Log
+import androidx.room.withTransaction
+import com.mtgo.decklistmanager.data.local.database.AppDatabase
 import com.mtgo.decklistmanager.data.local.dao.CardDao
 import com.mtgo.decklistmanager.data.local.dao.CardInfoDao
 import com.mtgo.decklistmanager.data.local.dao.DecklistDao
@@ -19,6 +21,8 @@ import com.mtgo.decklistmanager.data.remote.api.dto.ScryfallCardDto
 import com.mtgo.decklistmanager.domain.model.*
 import com.mtgo.decklistmanager.util.AppLogger
 import com.mtgo.decklistmanager.util.LanguagePreferenceManager
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -36,6 +40,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class DecklistRepository @Inject constructor(
+    private val database: AppDatabase,
     private val decklistDao: DecklistDao,
     private val cardDao: CardDao,
     private val cardInfoDao: CardInfoDao,
@@ -382,6 +387,8 @@ class DecklistRepository @Inject constructor(
                                 }
                             }
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         AppLogger.e("DecklistRepository", "Error fetching card '$cardName': ${e.message}")
                     } finally {
@@ -390,7 +397,9 @@ class DecklistRepository @Inject constructor(
                 }
             }.awaitAll()
 
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
             AppLogger.e("DecklistRepository", "Error in fetchScryfallDetails: ${e.message}")
             e.printStackTrace()
         }
@@ -1030,95 +1039,52 @@ class DecklistRepository @Inject constructor(
      * @param eventUrl 赛事 URL
      * @param format 赛制代码 (ST, MO, PI, etc.)
      */
+    data class EventDeckDownloadResult(val saved: Int, val total: Int, val incompleteDetails: Int)
+
     suspend fun scrapeSingleEvent(
         eventUrl: String,
-        format: String
-    ): Result<Int> = withContext(Dispatchers.IO) {
+        format: String,
+        onProgress: suspend (String) -> Unit = {}
+    ): Result<EventDeckDownloadResult> = withContext(Dispatchers.IO) {
         try {
-            // 获取该事件下的所有卡组
-            val eventDecklists = mtgTop8Scraper.fetchEventDecklists(
-                eventUrl = eventUrl,
-                maxDecks = 0 // 下载所有卡组
-            )
-
-            if (eventDecklists == null || eventDecklists.decklists.isEmpty()) {
-                return@withContext Result.failure(Exception("No decklists found in this event"))
-            }
-
-            // 保存或更新赛事
+            onProgress("正在读取赛事中的全部套牌…")
+            val eventDecklists = mtgTop8Scraper.fetchEventDecklists(eventUrl, maxDecks = 0)
+                ?: return@withContext Result.failure(Exception("未能获取赛事套牌"))
+            if (eventDecklists.decklists.isEmpty()) return@withContext Result.failure(Exception("赛事没有可下载的套牌"))
             val eventId = saveEventData(eventDecklists.event)
-
-            // 第一阶段：快速下载并保存所有卡组（不获取Scryfall详情）
-            val semaphore = Semaphore(8) // 增加并发数到8
-            var totalDecklistsSaved = 0
-            val decklistIds = mutableListOf<Long>()
-
-            val saveResults = coroutineScope {
-                eventDecklists.decklists.map { decklistDto ->
-                    async {
-                        semaphore.acquire()
-                        try {
-                            // 获取卡组详情
-                            val decklistDetail = mtgTop8Scraper.fetchDecklistDetail(decklistDto.url)
-
-                            if (decklistDetail != null) {
-                                // 保存卡组数据并关联到事件
-                                val decklistId = saveMtgTop8DecklistDataWithEvent(
-                                    decklistDto = decklistDto,
-                                    detail = decklistDetail,
-                                    format = format,
-                                    eventId = eventId
-                                )
-                                decklistIds.add(decklistId)
-                                1 // 成功保存1个卡组
-                            } else {
-                                0 // 失败
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            0 // 失败
-                        } finally {
-                            semaphore.release()
-                        }
-                    }
-                }.awaitAll()
-            }
-
-            totalDecklistsSaved += saveResults.sum()
-
-            // 第二阶段：后台异步获取Scryfall详情（不阻塞返回结果）
-            if (decklistIds.isNotEmpty()) {
-                launch {
+            val total = eventDecklists.decklists.size
+            val semaphore = Semaphore(4)
+            val completed = java.util.concurrent.atomic.AtomicInteger()
+            val ids = coroutineScope {
+                eventDecklists.decklists.map { dto -> async {
+                    semaphore.acquire()
                     try {
-                        // 并发获取所有卡组的Scryfall详情
-                        decklistIds.map { decklistId ->
-                            async {
-                                try {
-                                    fetchScryfallDetails(decklistId)
-                                } catch (e: Exception) {
-                                    AppLogger.e("DecklistRepository", "Error fetching Scryfall details: ${e.message}")
-                                }
-                            }
-                        }.awaitAll()
-                        AppLogger.d("DecklistRepository", "Scryfall details fetched for ${decklistIds.size} decklists")
-                    } catch (e: Exception) {
-                        AppLogger.e("DecklistRepository", "Error in Scryfall batch fetch: ${e.message}")
+                        val detail = mtgTop8Scraper.fetchDecklistDetail(dto.url)
+                        if (detail == null || detail.mainDeck.isEmpty()) null
+                        else saveMtgTop8DecklistDataWithEvent(dto, detail, format, eventId)
+                    } catch (e: CancellationException) { throw e }
+                    catch (e: Exception) {
+                        AppLogger.e("DecklistRepository", "牌表下载失败: ${dto.url}", e)
+                        null
+                    } finally {
+                        semaphore.release()
+                        onProgress("正在保存完整牌表：${completed.incrementAndGet()} / $total")
                     }
-                }
+                } }.awaitAll().filterNotNull()
             }
-
-            // 更新事件的卡组数量
-            eventDao.updateDeckCount(eventId, eventDecklists.decklists.size)
-
-            if (totalDecklistsSaved == 0) {
-                Result.failure(Exception("Failed to scrape any decklists"))
-            } else {
-                Result.success(totalDecklistsSaved)
+            // Await preparation before reporting completion; sequential decks reuse the shared card cache.
+            var incomplete = 0
+            for ((index, id) in ids.withIndex()) {
+                ensureActive()
+                onProgress("正在准备中文牌名和法术力费用：${index + 1} / ${ids.size}")
+                fetchScryfallDetails(id)
+                if (cardDao.getCardsByDecklistId(id).any { it.displayName.isNullOrBlank() }) incomplete++
             }
-
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+            eventDao.updateDeckCount(eventId, decklistDao.getDecklistsByEventId(eventId).size)
+            if (ids.isEmpty()) Result.failure(Exception("所有牌表均下载失败，请重试"))
+            else Result.success(EventDeckDownloadResult(ids.size, total, incomplete))
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(e) }
     }
 
     /**
@@ -1167,7 +1133,7 @@ class DecklistRepository @Inject constructor(
         detail: com.mtgo.decklistmanager.data.remote.api.dto.MtgTop8DecklistDetailDto,
         format: String,
         eventId: Long
-    ): Long {
+    ): Long = database.withTransaction {
         // 检查是否已存在相同的牌组（根据 URL）
         val existing = decklistDao.getDecklistByUrl(decklistDto.url)
 
@@ -1242,7 +1208,7 @@ class DecklistRepository @Inject constructor(
         }
         cardDao.insertAll(sideboardCards)
 
-        return decklistId
+        decklistId
     }
 
     // Extension functions for mapping

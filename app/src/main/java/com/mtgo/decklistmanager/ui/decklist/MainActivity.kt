@@ -3,6 +3,7 @@ package com.mtgo.decklistmanager.ui.decklist
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -49,7 +50,9 @@ class MainActivity : BaseActivity() {
     private lateinit var tvCurrentTag: android.widget.TextView
     private lateinit var tvCurrentDate: android.widget.TextView
 
-    private var currentTab = TAB_EVENT_LIST
+    private var currentTab = -1
+    private val scrollStates = mutableMapOf<Int, Parcelable>()
+    private var pendingScrollTab: Int? = null
     private var itemTouchHelper: ItemTouchHelper? = null
     private var isProgrammaticNav = false // Flag to prevent listener loops
     private var selectedTag: Tag? = null
@@ -78,22 +81,34 @@ class MainActivity : BaseActivity() {
         // v4.1.0: 一次性修复所有 NULL 的 display_name
         viewModel.fixAllNullDisplayNames()
 
-        // Initial tab selection - don't trigger listener
-        isProgrammaticNav = true
-        val requestedTab = intent.getStringExtra("tab")
-        when (requestedTab) {
-            "favorites" -> switchToTab(TAB_FAVORITES)
-            else -> switchToTab(TAB_EVENT_LIST)
+        for (tab in TAB_EVENT_LIST..TAB_FAVORITES) {
+            @Suppress("DEPRECATION")
+            val state = savedInstanceState?.getParcelable<Parcelable>("scroll_$tab")
+            if (state != null) scrollStates[tab] = state
         }
-        isProgrammaticNav = false
+        switchToTab(savedInstanceState?.getInt("currentTab") ?: requestedTab(intent))
+    }
+
+    private fun requestedTab(intent: Intent): Int =
+        if (intent.getStringExtra("tab") == "favorites") TAB_FAVORITES else TAB_EVENT_LIST
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        switchToTab(requestedTab(intent))
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        saveScrollPosition()
+        scrollStates.forEach { (tab, state) -> outState.putParcelable("scroll_$tab", state) }
+        outState.putInt("currentTab", currentTab)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
         super.onResume()
         // 刷新赛事列表（当从赛事详情页返回时，可能需要更新赛事的卡组数量）
-        if (currentTab == TAB_EVENT_LIST) {
-            viewModel.loadEvents()
-        }
+        reloadCurrentList()
     }
 
     private fun initViews() {
@@ -142,7 +157,9 @@ class MainActivity : BaseActivity() {
             return
         }
 
+        saveScrollPosition()
         currentTab = tab
+        pendingScrollTab = tab
 
         when (tab) {
             TAB_EVENT_LIST -> {
@@ -184,7 +201,39 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    private fun saveScrollPosition() {
+        if (currentTab >= 0 && pendingScrollTab == null) {
+            rvDecklists.layoutManager?.onSaveInstanceState()?.let { scrollStates[currentTab] = it }
+        }
+    }
+
+    private fun restoreScrollPosition(tab: Int) {
+        if (currentTab != tab || pendingScrollTab != tab) return
+        val state = scrollStates[tab]
+        if (state != null) rvDecklists.layoutManager?.onRestoreInstanceState(state)
+        else (rvDecklists.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(0, 0)
+        pendingScrollTab = null
+    }
+
+    private fun resetScrollPosition(allTabs: Boolean = false) {
+        if (allTabs) scrollStates.clear() else scrollStates.remove(currentTab)
+        pendingScrollTab = currentTab
+    }
+
     private fun setupClickListeners() {
+        findViewById<MaterialButton>(R.id.btnListStateAction).setOnClickListener {
+            when {
+                viewModel.uiState.value is MainViewModel.UiState.Error -> reloadCurrentList()
+                hasListFilters() -> {
+                    selectedTag = null
+                    tvCurrentTag.text = "标签: 全部"
+                    resetScrollPosition(allTabs = true)
+                    viewModel.clearListFilters(currentTab == TAB_FAVORITES)
+                }
+                currentTab == TAB_FAVORITES -> switchToTab(TAB_EVENT_LIST)
+                else -> showDownloadEventDialog()
+            }
+        }
         // Format selector in status bar
         formatSelector.setOnClickListener {
             showFormatFilterDialog()
@@ -222,7 +271,7 @@ class MainActivity : BaseActivity() {
                     val newState = viewModel.toggleFavorite(decklist.id)
                     Toast.makeText(
                         this@MainActivity,
-                        if (newState) "Added to favorites" else "Removed from favorites",
+                        if (newState) "已添加收藏" else "已取消收藏",
                         Toast.LENGTH_SHORT
                     ).show()
 
@@ -282,7 +331,9 @@ class MainActivity : BaseActivity() {
                 viewHolder: RecyclerView.ViewHolder
             ): Int {
                 // 只在赛事列表标签页启用滑动，收藏页面禁用滑动以允许正常滚动
-                return if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter) {
+                return if (currentTab == TAB_EVENT_LIST && rvDecklists.adapter == eventSectionAdapter &&
+                    viewHolder.adapterPosition != RecyclerView.NO_POSITION &&
+                    eventSectionAdapter.getItemAtPosition(viewHolder.adapterPosition) is EventListItem.EventItem) {
                     ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
                 } else {
                     0 // 其他页面不支持滑动，确保可以正常滚动
@@ -436,7 +487,7 @@ class MainActivity : BaseActivity() {
 
             // 按日期分组
             val grouped: List<EventListItem> = groupEventsByDate(events)
-            eventSectionAdapter.submitList(grouped)
+            eventSectionAdapter.submitList(grouped) { restoreScrollPosition(TAB_EVENT_LIST) }
         }
 
         // Observe decklists (收藏列表)
@@ -455,15 +506,37 @@ class MainActivity : BaseActivity() {
                     record = item.record
                 )
             }
-            decklistAdapter.submitList(decklists)
+            decklistAdapter.submitList(decklists) { restoreScrollPosition(TAB_FAVORITES) }
+        }
+
+        collectFlow(viewModel.eventDownloadState) { state ->
+            val running = state is EventDownloadState.Running
+            btnDownloadEvent.isEnabled = !running
+            btnDownloadEvent.text = if (running) "正在获取赛事…" else "获取赛事"
+            findViewById<View>(R.id.eventDownloadProgress).visibility = if (running) View.VISIBLE else View.GONE
+            findViewById<View>(R.id.btnRetryEventDownload).apply {
+                visibility = if (state is EventDownloadState.Failure) View.VISIBLE else View.GONE
+                setOnClickListener { viewModel.retryEventDownload() }
+            }
+            findViewById<android.widget.TextView>(R.id.tvEventDownloadStatus).apply {
+                visibility = if (state is EventDownloadState.Idle) View.GONE else View.VISIBLE
+                text = when (state) {
+                    is EventDownloadState.Running -> "正在获取 ${com.mtgo.decklistmanager.util.FormatMapper.codeToName(state.request.format)} 赛事，最多 ${state.request.count} 场。你可以继续浏览。"
+                    is EventDownloadState.Success -> if (state.count == 0) "未找到符合条件的赛事，请调整日期或赛制。"
+                        else "已获取 ${state.count} 场赛事，点击赛事查看套牌。"
+                    is EventDownloadState.Failure -> state.message
+                    else -> ""
+                }
+            }
+            if (state is EventDownloadState.Success) {
+                viewModel.refreshDownloadedEvents()
+                reloadCurrentList()
+            }
         }
 
         collectFlow(viewModel.uiState) { state ->
-            when (state) {
-                is MainViewModel.UiState.Loading,
-                is MainViewModel.UiState.Scraping -> showLoading()
-                else -> hideLoading()
-            }
+            if (state is MainViewModel.UiState.Scraping) showLoading() else hideLoading()
+            renderListState(state)
         }
 
         collectFlow(viewModel.favoriteCount) { _ ->
@@ -476,13 +549,18 @@ class MainActivity : BaseActivity() {
             val displayText = if (formatName == null || formatName == "All Formats") {
                 "全部"
             } else {
-                formatName
+                com.mtgo.decklistmanager.util.FormatMapper.codeToName(formatName)
             }
 
             tvCurrentFormat.text = "赛制: $displayText"
         }
 
         // Update date filter status bar text with current selection
+        collectFlow(viewModel.selectedTag) { tagId ->
+            selectedTag = tagViewModel.getAllTags().firstOrNull { it.id == tagId }
+            tvCurrentTag.text = "标签: ${selectedTag?.name ?: "全部"}"
+        }
+
         collectFlow(viewModel.selectedDate) { date ->
             val displayText = date ?: "全部"
 
@@ -506,9 +584,10 @@ class MainActivity : BaseActivity() {
                 return@launch
             }
 
-            val items = arrayOf("All Formats") + formats.toTypedArray()
+            val items = arrayOf(getString(R.string.all_formats)) + formats.toTypedArray()
             showSingleChoiceDialog("选择赛制", items) { _, selected ->
-                val format = if (selected == "All Formats") null else selected
+                val format = if (selected == getString(R.string.all_formats)) null else selected
+                resetScrollPosition(allTabs = true)
                 viewModel.applyFormatFilter(format)
                 // 根据当前tab加载相应数据
                 if (currentTab == TAB_FAVORITES) {
@@ -517,6 +596,39 @@ class MainActivity : BaseActivity() {
                     viewModel.loadEvents()
                 }
             }
+        }
+    }
+
+    private fun reloadCurrentList(notify: Boolean = false) {
+        if (currentTab == TAB_FAVORITES) viewModel.loadFavoriteDecklists(notify)
+        else viewModel.loadEvents(notify)
+    }
+
+    private fun hasListFilters(): Boolean = viewModel.selectedFormat.value != null ||
+        if (currentTab == TAB_FAVORITES) viewModel.selectedTag.value != null
+        else viewModel.selectedDate.value != null
+
+    private fun renderListState(state: MainViewModel.UiState) {
+        val loading = state is MainViewModel.UiState.Loading
+        findViewById<View>(R.id.listLoading).visibility = if (loading) View.VISIBLE else View.INVISIBLE
+        val empty = if (currentTab == TAB_FAVORITES) viewModel.decklists.value.isNullOrEmpty()
+            else viewModel.events.value.isNullOrEmpty()
+        val error = state is MainViewModel.UiState.Error
+        val show = error || (state is MainViewModel.UiState.Success && empty)
+        findViewById<View>(R.id.listState).visibility = if (show) View.VISIBLE else View.GONE
+        if (!show) return
+        val filtered = hasListFilters()
+        findViewById<android.widget.TextView>(R.id.tvListState).text = when {
+            error -> "加载失败，已有内容仍可浏览，请重试。"
+            filtered -> "没有符合筛选条件的内容"
+            currentTab == TAB_FAVORITES -> "还没有收藏套牌\n在套牌详情点击收藏，就能在这里找到它。"
+            else -> "还没有赛事\n获取赛事后即可浏览套牌。"
+        }
+        findViewById<MaterialButton>(R.id.btnListStateAction).text = when {
+            error -> "重试"
+            filtered -> "清除筛选"
+            currentTab == TAB_FAVORITES -> "浏览赛事"
+            else -> "获取赛事"
         }
     }
 
@@ -538,6 +650,7 @@ class MainActivity : BaseActivity() {
             android.app.AlertDialog.Builder(this@MainActivity)
                 .setTitle("选择标签")
                 .setSingleChoiceItems(tagNames, checkedIndex) { dialog, which ->
+                    resetScrollPosition()
                     if (which == 0) {
                         selectedTag = null
                         tvCurrentTag.text = "标签: 全部"
@@ -564,128 +677,19 @@ class MainActivity : BaseActivity() {
                 return@launch
             }
 
-            val items = arrayOf("All Dates") + dates.toTypedArray()
+            val items = arrayOf(getString(R.string.all_dates)) + dates.toTypedArray()
             showSingleChoiceDialog("选择日期", items) { _, selected ->
-                val date = if (selected == "All Dates") null else selected
+                val date = if (selected == getString(R.string.all_dates)) null else selected
+                resetScrollPosition()
                 viewModel.applyDateFilter(date)
             }
         }
     }
 
     private fun showDownloadEventDialog() {
-        lifecycleScope.launch {
-            // 获取当前选中的赛制
-            val currentFormat = viewModel.selectedFormatName.value
-            val formats = arrayOf("Modern", "Standard", "Legacy", "Vintage", "Pauper", "Pioneer", "Historic", "Alchemy", "Premodern")
-            // 默认选中当前筛选的赛制，如果没有则默认Modern
-            val defaultIndex = if (currentFormat != null && currentFormat != "All Formats") {
-                formats.indexOf(currentFormat).let { if (it >= 0) it else 0 }
-            } else {
-                0
-            }
-            var selectedFormat = formats[defaultIndex]
-
-            val dialog = android.app.AlertDialog.Builder(this@MainActivity)
-                .setTitle("下载赛事列表")
-                .setMessage("选择赛制下载赛事列表。下载后点击赛事可以查看详情并下载套牌。")
-                .setSingleChoiceItems(formats, defaultIndex) { _, which ->
-                    selectedFormat = formats[which]
-                }
-                .setPositiveButton("下一步") { _, _ ->
-                    // 使用FormatMapper转换format name到code
-                    val formatCode = com.mtgo.decklistmanager.util.FormatMapper.nameToCode(selectedFormat) ?: "MO"
-                    // 日期选择对话框
-                    showDateSelectionDialog(formatCode)
-                }
-                .setNegativeButton("取消", null)
-                .create()
-
-            dialog.show()
-        }
-    }
-
-    private fun showDateSelectionDialog(formatCode: String) {
-        // Create date selection dialog
-        val container = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(50, 20, 50, 20)
-        }
-
-        // Date label
-        val dateLabel = android.widget.TextView(this).apply {
-            text = "选择日期 (可选):"
-            textSize = 16f
-        }
-        container.addView(dateLabel)
-
-        // Date button
-        val dateButton = android.widget.Button(this).apply {
-            text = "全部日期"
-            setPadding(0, 10, 0, 0)
-            setBackgroundColor(getColor(android.R.color.holo_blue_light))
-            setTextColor(getColor(android.R.color.white))
-        }
-
-        var selectedDate: String? = null
-
-        dateButton.setOnClickListener {
-            val calendar = java.util.Calendar.getInstance()
-            val year = calendar.get(java.util.Calendar.YEAR)
-            val month = calendar.get(java.util.Calendar.MONTH)
-            val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
-
-            val datePickerDialog = android.app.DatePickerDialog(
-                this@MainActivity,
-                { _, selectedYear, selectedMonth, dayOfMonth ->
-                    selectedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, dayOfMonth)
-                    dateButton.text = "已选择: $selectedDate"
-                    dateButton.setBackgroundColor(getColor(android.R.color.holo_green_light))
-                },
-                year, month, day
-            )
-            datePickerDialog.show()
-        }
-
-        // Clear date button
-        val clearDateButton = android.widget.Button(this).apply {
-            text = "清除日期"
-            setPadding(0, 10, 0, 0)
-            setBackgroundColor(getColor(android.R.color.darker_gray))
-            setTextColor(getColor(android.R.color.white))
-        }
-        clearDateButton.setOnClickListener {
-            selectedDate = null
-            dateButton.text = "全部日期"
-            dateButton.setBackgroundColor(getColor(android.R.color.holo_blue_light))
-        }
-
-        container.addView(dateButton)
-        container.addView(clearDateButton)
-
-        android.app.AlertDialog.Builder(this)
-            .setTitle("筛选日期")
-            .setView(container)
-            .setPositiveButton("下一步") { _, _ ->
-                showNumberOfEventsDialog(formatCode, selectedDate)
-            }
-            .setNegativeButton("返回", null)
-            .show()
-    }
-
-    private fun showNumberOfEventsDialog(formatCode: String, selectedDate: String?) {
-        android.app.AlertDialog.Builder(this)
-            .setTitle("赛事数量")
-            .setItems(arrayOf("5", "10", "20")) { _, which ->
-                val maxEvents = when (which) {
-                    0 -> 5
-                    1 -> 10
-                    2 -> 20
-                    else -> 10
-                }
-                viewModel.startEventScraping(formatCode, selectedDate, maxEvents, 0)
-            }
-            .setNegativeButton("返回", null)
-            .show()
+        if (supportFragmentManager.isStateSaved ||
+            supportFragmentManager.findFragmentByTag("event_download") != null) return
+        DownloadEventsDialogFragment().showNow(supportFragmentManager, "event_download")
     }
 
     private fun showDeleteEventDialog(event: MainViewModel.EventItem, _position: Int, viewHolder: RecyclerView.ViewHolder) {
@@ -713,12 +717,7 @@ class MainActivity : BaseActivity() {
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
             R.id.menu_refresh -> {
-                // 刷新当前列表
-                when (currentTab) {
-                    TAB_EVENT_LIST -> viewModel.loadEvents()
-                    TAB_FAVORITES -> viewModel.loadFavoriteDecklists()
-                }
-                Toast.makeText(this, "已刷新", Toast.LENGTH_SHORT).show()
+                reloadCurrentList(notify = true)
                 true
             }
             R.id.menu_settings -> {

@@ -45,5 +45,5 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
-        app:icon="@android:drawable/ic_menu_delete" />
+        app:icon="@drawable/ic_delete" />
 </LinearLayout>

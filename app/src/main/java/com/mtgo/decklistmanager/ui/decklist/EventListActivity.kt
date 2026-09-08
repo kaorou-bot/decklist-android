@@ -173,8 +173,8 @@ class EventListActivity : AppCompatActivity() {
 
     private fun showScrapingDialog() {
         // 显示下载选项对话框
-        val formats = arrayOf("Modern", "Standard", "Legacy", "Vintage", "Pauper", "Pioneer", "Historic", "Alchemy", "Premodern")
-        var selectedFormat = "Modern"
+        val formats = arrayOf("Modern", "Standard", "Legacy", "Vintage", "Pauper", "Pioneer", "Historic", "Alchemy", "Premodern").map(com.mtgo.decklistmanager.util.FormatMapper::codeToName).toTypedArray()
+        var selectedFormat = formats.first()
 
         val dialog = android.app.AlertDialog.Builder(this)
             .setTitle("下载比赛列表")

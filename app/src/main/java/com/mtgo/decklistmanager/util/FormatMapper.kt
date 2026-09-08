@@ -35,6 +35,14 @@ object FormatMapper {
         "Limited" to "format_limited"
     )
 
+    private val chineseNames = mapOf(
+        "MO" to "摩登", "ST" to "标准", "LE" to "薪传", "VI" to "特选",
+        "PAU" to "纯普", "PI" to "先驱", "HI" to "史迹", "ALCH" to "炼金",
+        "BL" to "环境构筑", "EXP" to "探索", "HIGH" to "高地人",
+        "PEA" to "农民", "PREM" to "前摩登", "cEDH" to "竞技指挥官",
+        "EDH" to "指挥官", "format_limited" to "限制"
+    )
+
     /**
      * 所有支持的格式名称列表（按常用程度排序）
      */
@@ -55,7 +63,7 @@ object FormatMapper {
         "cEDH",
         "EDH",
         "Limited"
-    )
+    ).map(::codeToName)
 
     /**
      * 将格式名称转换为格式代码
@@ -63,7 +71,10 @@ object FormatMapper {
      * @return 格式代码（如 "MO"），如果未找到则返回null
      */
     fun nameToCode(name: String): String? {
-        return formatMap[name]
+        val value = name.trim()
+        return chineseNames.entries.find { it.value == value }?.key
+            ?: formatMap.entries.find { it.key.equals(value, true) || it.value.equals(value, true) }?.value
+            ?: if (value.equals("Commander", true)) "EDH" else null
     }
 
     /**
@@ -72,7 +83,7 @@ object FormatMapper {
      * @return 格式名称（如 "Modern"），如果未找到则返回原代码
      */
     fun codeToName(code: String): String {
-        return formatMap.entries.find { it.value == code }?.key ?: code
+        return nameToCode(code)?.let { chineseNames[it] } ?: code
     }
 
     /**
@@ -102,6 +113,6 @@ object FormatMapper {
      * @return 是否有效
      */
     fun isValidName(name: String): Boolean {
-        return formatMap.containsKey(name)
+        return nameToCode(name) != null
     }
 }

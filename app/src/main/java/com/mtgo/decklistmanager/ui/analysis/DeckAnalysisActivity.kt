@@ -76,7 +76,7 @@ class DeckAnalysisActivity : AppCompatActivity() {
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             tab.text = when (position) {
                 0 -> getString(R.string.tab_mana_curve)
-                1 -> getString(R.string.tab_color_distribution)
+                1 -> "颜色分布"
                 2 -> getString(R.string.tab_type_distribution)
                 else -> ""
             }
@@ -102,7 +102,8 @@ class DeckAnalysisActivity : AppCompatActivity() {
 
     private fun setupToggleButtons() {
         // 默认选中主牌
-        binding.toggleGroup.check(R.id.btnMainDeck)
+        isSideboardMode = viewModel.sideboard.value == true
+        binding.toggleGroup.check(if (isSideboardMode) R.id.btnSideboard else R.id.btnMainDeck)
 
         binding.btnMainDeck.setOnClickListener {
             isSideboardMode = false
@@ -118,15 +119,7 @@ class DeckAnalysisActivity : AppCompatActivity() {
     }
 
     private fun notifyFragmentsModeChanged() {
-        // 通知所有 Fragment 更新显示
-        val adapter = binding.viewPager.adapter as? DeckAnalysisPagerAdapter
-        adapter?.fragmentMap?.values?.forEach { fragment ->
-            when (fragment) {
-                is ManaCurveFragment -> fragment.setSideboardMode(isSideboardMode)
-                is ColorDistributionFragment -> fragment.setSideboardMode(isSideboardMode)
-                is TypeDistributionFragment -> fragment.setSideboardMode(isSideboardMode)
-            }
-        }
+        viewModel.sideboard.value = isSideboardMode
     }
 
     private fun updateUI(analysis: com.mtgo.decklistmanager.domain.model.DeckAnalysis) {

@@ -43,6 +43,12 @@ class SettingsActivity : AppCompatActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.settings_preferences, rootKey)
 
+            findPreference<Preference>("version")?.summary = com.mtgo.decklistmanager.BuildConfig.VERSION_NAME
+            findPreference<Preference>("license")?.setOnPreferenceClickListener {
+                OpenSourceLicensesDialog().show(parentFragmentManager, "open_source_licenses")
+                true
+            }
+
             // Theme preference
             val themePreference = findPreference<ListPreference>("theme_mode")
             themePreference?.setOnPreferenceChangeListener { _, newValue ->

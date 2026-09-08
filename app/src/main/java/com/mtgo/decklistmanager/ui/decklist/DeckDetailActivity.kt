@@ -52,8 +52,10 @@ class DeckDetailActivity : AppCompatActivity() {
     private lateinit var tvMainboardCount: MaterialTextView
     private lateinit var tvSideboardCount: MaterialTextView
 
+    private var pendingScrollY: Int? = null
     private var currentDecklist: Decklist? = null
     private var allCards: List<Card> = emptyList()
+    private var cardErrorSnackbar: com.google.android.material.snackbar.Snackbar? = null
     private var isFavorite = false
     private var currentTags: List<Tag> = emptyList()
 
@@ -62,8 +64,15 @@ class DeckDetailActivity : AppCompatActivity() {
         binding = ActivityDeckDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        pendingScrollY = savedInstanceState?.getInt("deckScrollY")
         setupButtons()
         setupCardLists()
+        if (savedInstanceState?.getBoolean("mainCollapsed") == true) {
+            toggleSection(llMainDeck, binding.btnToggleMainboard)
+        }
+        if (savedInstanceState?.getBoolean("sideCollapsed") == true) {
+            toggleSection(llSideboard, binding.btnToggleSideboard)
+        }
         setupTagsAndNotes()
         setupObservers()
         setupNoteObserver()
@@ -124,6 +133,7 @@ class DeckDetailActivity : AppCompatActivity() {
         binding.btnEditNote.setOnClickListener {
             showNoteEditBottomSheet()
         }
+        binding.tvNotePreview.setOnClickListener { showNoteEditBottomSheet() }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -149,7 +159,7 @@ class DeckDetailActivity : AppCompatActivity() {
 
                 android.widget.Toast.makeText(
                     this@DeckDetailActivity,
-                    if (newState) "Added to favorites" else "Removed from favorites",
+                    if (newState) "已收藏套牌" else "已取消收藏",
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
             }
@@ -167,11 +177,19 @@ class DeckDetailActivity : AppCompatActivity() {
     }
 
     private fun updateFavoriteIcon() {
+        binding.btnFavorite.contentDescription = if (isFavorite) "取消收藏" else "收藏套牌"
         if (isFavorite) {
             binding.btnFavorite.setIconResource(R.drawable.ic_favorite_filled)
         } else {
             binding.btnFavorite.setIconResource(R.drawable.ic_favorite_border)
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt("deckScrollY", pendingScrollY ?: binding.deckScroll.scrollY)
+        outState.putBoolean("mainCollapsed", llMainDeck.visibility == View.GONE)
+        outState.putBoolean("sideCollapsed", llSideboard.visibility == View.GONE)
+        super.onSaveInstanceState(outState)
     }
 
     private fun setupCardLists() {
@@ -254,11 +272,12 @@ class DeckDetailActivity : AppCompatActivity() {
             val chip = Chip(this).apply {
                 text = tag.name
                 isCloseIconVisible = false
-                setChipBackgroundColorResource(android.R.color.holo_blue_light)
-                setTextColor(resources.getColor(android.R.color.white, null))
+                setChipBackgroundColorResource(R.color.md_primary_container)
+                setTextColor(androidx.core.content.ContextCompat.getColor(this@DeckDetailActivity, R.color.text_primary))
                 // 让芯片更小巧 (24dp)
                 chipMinHeight = 24f * resources.displayMetrics.density
-                textSize = 11f
+                textSize = 13f
+                isClickable = false
             }
             binding.chipGroupTags.addView(chip)
         }
@@ -268,6 +287,7 @@ class DeckDetailActivity : AppCompatActivity() {
         } else {
             binding.chipGroupTags.visibility = View.VISIBLE
         }
+        binding.btnManageTags.text = if (currentTags.isEmpty()) "添加标签" else "标签 (${currentTags.size})"
     }
 
     /**
@@ -312,6 +332,7 @@ class DeckDetailActivity : AppCompatActivity() {
         btnCardName.setOnClickListener {
             showCardInfo(card.cardName)
         }
+        cardView.setOnClickListener { showCardInfo(card.cardName) }
         val tvManaCost = cardView.findViewById<MaterialTextView>(R.id.tvManaCost)
         // 规范化 "no cost"（土地等无费用卡牌显示为空）
         tvManaCost.text = ManaSymbolRenderer.renderManaCost(
@@ -344,6 +365,31 @@ class DeckDetailActivity : AppCompatActivity() {
     }
 
     private fun setupObservers() {
+        var imageProgress: com.google.android.material.snackbar.Snackbar? = null
+        viewModel.imageExportState.observe(this) { state ->
+            binding.btnExportShare.isEnabled = state !is DeckDetailViewModel.ImageExportState.Loading
+            when (state) {
+                is DeckDetailViewModel.ImageExportState.Loading -> {
+                    if (imageProgress == null) imageProgress = com.google.android.material.snackbar.Snackbar.make(
+                        binding.root, state.message, com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE)
+                    imageProgress?.setText(state.message)?.show()
+                }
+                is DeckDetailViewModel.ImageExportState.Ready -> {
+                    imageProgress?.dismiss(); imageProgress = null
+                    startActivity(Intent(this, DeckImagePreviewActivity::class.java)
+                        .putExtra("path", state.result.file.absolutePath).putExtra("missing", state.result.missingImages))
+                    viewModel.clearImageExportState()
+                }
+                is DeckDetailViewModel.ImageExportState.Error -> {
+                    imageProgress?.dismiss(); imageProgress = null
+                    com.google.android.material.snackbar.Snackbar.make(binding.root, state.message,
+                        com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE)
+                        .setAction("重试") { viewModel.exportDeckImage() }.show()
+                    viewModel.clearImageExportState()
+                }
+                else -> Unit
+            }
+        }
         // Observe decklist
         viewModel.decklist.observe(this) { decklist ->
             decklist?.let {
@@ -355,13 +401,19 @@ class DeckDetailActivity : AppCompatActivity() {
         // Observe main deck
         viewModel.mainDeck.observe(this) { cards ->
             populateCardList(llMainDeck, cards)
-            updateCardCount(tvMainboardCount, cards, "Mainboard")
+            updateCardCount(tvMainboardCount, cards, getString(R.string.main_deck))
         }
 
         // Observe sideboard
         viewModel.sideboard.observe(this) { cards ->
             populateCardList(llSideboard, cards)
-            updateCardCount(tvSideboardCount, cards, "Sideboard")
+            updateCardCount(tvSideboardCount, cards, getString(R.string.sideboard))
+            pendingScrollY?.let { position ->
+                binding.deckScroll.post {
+                    binding.deckScroll.scrollTo(0, position)
+                    pendingScrollY = null
+                }
+            }
         }
 
         // Observe loading state
@@ -372,10 +424,11 @@ class DeckDetailActivity : AppCompatActivity() {
         // Observe card info loading state
         viewModel.isCardInfoLoading.observe(this) { isLoading ->
             if (isLoading) {
+                cardErrorSnackbar?.dismiss()
                 // Show loading toast
                 android.widget.Toast.makeText(
                     this,
-                    "Loading card info...",
+                    "正在加载卡牌详情…",
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
             }
@@ -384,11 +437,13 @@ class DeckDetailActivity : AppCompatActivity() {
         // Observe card info error
         viewModel.cardInfoError.observe(this) { errorMessage ->
             errorMessage?.let {
-                android.widget.Toast.makeText(
-                    this,
-                    it,
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
+                val cardName = viewModel.lastRequestedCardName
+                cardErrorSnackbar?.dismiss()
+                cardErrorSnackbar = com.google.android.material.snackbar.Snackbar.make(
+                    binding.root, it, com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
+                ).setAction("重试") {
+                    cardName?.let(viewModel::loadCardInfo)
+                }.also { it.show() }
                 viewModel.clearCardInfoError()
             }
         }
@@ -425,8 +480,11 @@ class DeckDetailActivity : AppCompatActivity() {
     private fun setupNoteObserver() {
         lifecycleScope.launch {
             noteViewModel.currentNote.collect { note ->
-                if (note != null && note.note.isNotEmpty()) {
-                    binding.tvNotePreview.text = note.note
+                val hasNote = !note?.note.isNullOrBlank()
+                binding.tvNotePreview.visibility = if (hasNote) View.VISIBLE else View.GONE
+                binding.btnEditNote.text = getString(if (hasNote) R.string.edit_note_action else R.string.add_note_action)
+                if (hasNote) {
+                    binding.tvNotePreview.text = note?.note
                 } else {
                     binding.tvNotePreview.text = getString(R.string.no_note)
                 }
@@ -454,14 +512,15 @@ class DeckDetailActivity : AppCompatActivity() {
 
     private fun updateDecklistInfo(decklist: Decklist) {
         // 设置顶部标题
-        binding.tvDeckNameTitle.text = decklist.deckName ?: decklist.eventName ?: "Unknown Deck"
+        binding.tvDeckNameTitle.text = decklist.deckName ?: decklist.eventName
 
         binding.apply {
             tvEventName.text = decklist.eventName
-            tvFormat.text = "Format: ${decklist.format}"
-            tvDate.text = "Date: ${decklist.date}"
-            tvPlayer.text = decklist.playerName?.let { "Player: $it" } ?: "Player: N/A"
-            tvRecord.text = decklist.record ?: "N/A"
+            tvFormat.text = com.mtgo.decklistmanager.util.FormatMapper.codeToName(decklist.format)
+            tvDate.text = decklist.date
+            tvPlayer.text = getString(R.string.player_name, decklist.playerName?.takeIf { it.isNotBlank() } ?: "未提供")
+            tvRecord.text = decklist.record.orEmpty()
+            tvRecord.visibility = if (decklist.record.isNullOrBlank()) View.GONE else View.VISIBLE
         }
 
         // 加载标签和备注
@@ -473,8 +532,10 @@ class DeckDetailActivity : AppCompatActivity() {
     }
 
     private fun showCardInfoDialog(cardInfo: com.mtgo.decklistmanager.domain.model.CardInfo) {
+        if (supportFragmentManager.isStateSaved ||
+            supportFragmentManager.findFragmentByTag("card_info") != null) return
         // Show card info popup，传递 oracleId 用于加载印刷版本
-        CardInfoFragment.newInstance(cardInfo, cardInfo.oracleId).show(
+        CardInfoFragment.newInstance(cardInfo, cardInfo.oracleId).showNow(
             supportFragmentManager,
             "card_info"
         )
@@ -615,6 +676,7 @@ class DeckDetailActivity : AppCompatActivity() {
             override fun onExportFormatSelected(format: ExportFormatDialog.ExportFormat) {
                 currentDecklist?.let { decklist ->
                     when (format) {
+                        ExportFormatDialog.ExportFormat.IMAGE -> viewModel.exportDeckImage()
                         ExportFormatDialog.ExportFormat.MTGO -> {
                             exportDecklist(decklist, "mtgo")
                         }

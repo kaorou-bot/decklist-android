@@ -1,5 +1,7 @@
 package com.mtgo.decklistmanager.data.remote.api.mtgch
 
+import com.mtgo.decklistmanager.util.CardDetailHelper.firstNonBlank
+
 import com.mtgo.decklistmanager.data.local.entity.CardInfoEntity
 import com.mtgo.decklistmanager.util.ManaCosts
 import com.google.gson.Gson
@@ -251,16 +253,16 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
     }
 
     // 获取中文类型行
-    val getTypeLineZh = typeLineZh ?: atomicTranslatedType
+    val getTypeLineZh = firstNonBlank(typeLineZh, atomicTranslatedType)
 
     // 获取中文规则文本
-    val getOracleTextZh = oracleTextZh ?: atomicTranslatedText
+    val getOracleTextZh = firstNonBlank(oracleTextZh, atomicTranslatedText)
 
     val finalOracleText = if (isDoubleFacedFlag && cardFaces != null && cardFaces.isNotEmpty()) {
         // 优先使用中文规则文本，其次英文
-        cardFaces[0].zhText ?: cardFaces[0].oracleText
+        firstNonBlank(cardFaces[0].zhText, cardFaces[0].oracleText)
     } else {
-        getOracleTextZh ?: oracleText
+        firstNonBlank(getOracleTextZh, oracleText)
     }
 
     return CardInfoEntity(
@@ -271,7 +273,7 @@ fun MtgchCardDto.toEntity(): CardInfoEntity {
         manaCost = finalManaCost,
         cmc = cmc?.toDouble(),
         // 优先使用官方中文，其次机器翻译，最后英文原文
-        typeLine = getTypeLineZh ?: typeLine,
+        typeLine = firstNonBlank(getTypeLineZh, typeLine),
         oracleText = finalOracleText,
         colors = colors?.joinToString(","),
         colorIdentity = colorIdentity?.joinToString(","),

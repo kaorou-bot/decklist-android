@@ -13,7 +13,17 @@
         android:layout_height="280dp"
         android:layout_gravity="center_horizontal"
         android:scaleType="fitCenter"
-        android:contentDescription="卡牌图片" />
+        android:contentDescription="卡牌图片，点按重新加载"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="点按卡图重新加载"
+        android:textSize="12sp"
+        android:textColor="@color/text_primary" />
 
     <!-- 双面牌切换按钮 -->
     <com.google.android.material.button.MaterialButton
